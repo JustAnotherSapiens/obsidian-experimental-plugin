@@ -7,14 +7,12 @@ export default class ExperimentalPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		// await this.saveSettings();
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon(
-			'dice',
-			'Experimental Plugin',
-			(evt: MouseEvent) => { // Called when the user clicks the icon.
-				new Notice('This is the experimental plugin ribbon icon!');
+		// Find icons on: https://lucide.dev/
+		const ribbonIconEl = this.addRibbonIcon('file-code', 'Experimental Plugin',
+			(event: MouseEvent) => { // Called when the user clicks the icon.
+				new Notice(window.moment().format("YYYY-MM-DD HH:mm:ss Z"), 5000);
 			}
 		);
 		// Perform additional things with the ribbon
@@ -22,7 +20,7 @@ export default class ExperimentalPlugin extends Plugin {
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('status_bar_text');
+		statusBarItemEl.setText(window.moment().format("Do MMM YYYY (HH:mm:ss)"));
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
