@@ -9,17 +9,7 @@ const scriptComplexityLevels = [
   "Expert",
   "God",
 ] as const;
-
 type scriptComplexityLevel = typeof scriptComplexityLevels[number];
-
-// enum scriptComplexityLevel {
-// 	minimal = "Minimal",
-// 	simple = "Simple",
-// 	intermediate = "Intermediate",
-// 	advanced = "Advanced",
-// 	expert = "Expert",
-// 	god = "God",
-// }
 
 export interface Settings {
 	scriptsPath: string;
@@ -31,7 +21,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
 	scriptsPath: '',
-	vimModeScripts: true,
+	vimModeScripts: false,
 	scriptComplexity: "Minimal",
 	emergencyBreak: true,
 	breakTriggerTime: 3000,
@@ -108,13 +98,15 @@ export class SettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       })
-			.addText((text) => text
-				.setPlaceholder('time_in_milliseconds')
-				.setValue(String(this.plugin.settings.breakTriggerTime))
-				.onChange(async (value) => {
+			.addText((textField) => {
+				textField.setPlaceholder('time_in_milliseconds');
+				textField.inputEl.type = 'number';
+				textField.setValue(String(this.plugin.settings.breakTriggerTime));
+				textField.onChange(async (value) => {
 					this.plugin.settings.breakTriggerTime = Number(value);
 					await this.plugin.saveSettings();
-				})
+				});
+			}
 			);
 
 		new Setting(containerEl)
@@ -136,21 +128,16 @@ export class SettingTab extends PluginSettingTab {
 			.setDesc('Filter the scripts you want to run based on their complexity')
       .setClass('script-runner-script-complexity')
 			.addDropdown((dropdown) => {
-				dropdown.setValue(this.plugin.settings.scriptComplexity as string);
         scriptComplexityLevels.forEach((compexityLevel) => {
           dropdown.addOption(compexityLevel, compexityLevel);
-        })
-				// for (const complexity in scriptComplexityLevel) {
-				// 	dropdown.addOption(complexity, complexity);
-				// }
-				dropdown.onChange(async (value) => {
-					this.plugin.settings.scriptComplexity = value as scriptComplexityLevel;
+        });
+				// Always call setValue after adding options to dropdown
+				dropdown.setValue(this.plugin.settings.scriptComplexity);
+				dropdown.onChange(async (value: scriptComplexityLevel) => {
+					this.plugin.settings.scriptComplexity = value;
 					await this.plugin.saveSettings();
 				});
 			});
-    // const scriptComplexitySelect = this.containerEl.querySelector<HTMLSelectElement>(
-    //   '.script-runner-script-complexity select'
-    // )
 
 	}
 }
