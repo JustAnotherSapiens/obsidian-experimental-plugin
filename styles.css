@@ -1,8 +1,38 @@
-/*
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* SettingTab Elements */
 
-If your plugin does not need CSS, delete this file.
+/* warning-banner div */
 
-*/
+.warning-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--color-orange);
+  background-color: var(--color-base-10);
+  border: 3px solid var(--color-orange);
+  border-radius: 4px;
+  padding: 5px;
+  margin-bottom: 25px;
+}
+.warning-banner > * {
+  margin: 2px 2px
+}
+
+/* break-trigger-time Setting */
+
+.break-trigger-time-item-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.break-trigger-time-button-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  width: 100%;
+}
+.break-trigger-time-button-container > * {
+  margin-right: 4%;
+  padding: 0 4%;
+}
