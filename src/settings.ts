@@ -79,11 +79,11 @@ export class SettingTab extends PluginSettingTab {
 					if (value === false) {
 						this.containerEl.querySelector<HTMLInputElement>(
 							".break-trigger-time"
-						)!.style.display = "none";
+						)!.hide();
 					} else {
 						this.containerEl.querySelector<HTMLInputElement>(
 							".break-trigger-time"
-						)!.style.display = "flex";
+						)!.show();
 					}
 					this.plugin.settings.emergencyBreak = value;
 					await this.plugin.saveSettings();
@@ -144,7 +144,7 @@ export class SettingTab extends PluginSettingTab {
 		if (!this.plugin.settings.emergencyBreak) {
 			containerEl.querySelector<HTMLInputElement>(
 				".break-trigger-time"
-			)!.style.display = "none";
+			)!.hide();
 		}
 
 

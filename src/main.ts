@@ -6,21 +6,22 @@ export default class ExperimentalPlugin extends Plugin {
 	settings: Settings;
 
 	async onload() {
+		console.log("Loading Experimental Plugin");
 		await this.loadSettings();
+		this.addPluginCommands();
+		this.addPluginRibbonIcons();
+		this.addPluginStatusBarItems();
+		this.addSettingTab(new SettingTab(this.app, this));
+		this.addPluginEventsAndIntervals();
+	}
 
-		// This creates an icon in the left ribbon.
-		// Find icons on: https://lucide.dev/
-		const ribbonIconEl = this.addRibbonIcon("file-code", "Experimental Plugin",
-			(event: MouseEvent) => { // Called when the user clicks the icon.
-				new Notice(window.moment().format("YYYY-MM-DD HH:mm:ss Z"), 5000);
-			}
-		);
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass("experimental-plugin-ribbon-class");
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText(window.moment().format("Do MMM YYYY (HH:mm:ss)"));
+	onunload() {
+		console.log("Unloading Experimental Plugin");
+	}
+
+
+	addPluginCommands() {
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
@@ -30,6 +31,7 @@ export default class ExperimentalPlugin extends Plugin {
 				new SampleModal(this.app).open();
 			}
 		});
+
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: "sample-editor-command",
@@ -39,6 +41,7 @@ export default class ExperimentalPlugin extends Plugin {
 				editor.replaceSelection("Sample Editor Command");
 			}
 		});
+
 		// This adds a complex command that can check whether the current state of the app allows execution of the command
 		this.addCommand({
 			id: "open-sample-modal-complex",
@@ -52,16 +55,58 @@ export default class ExperimentalPlugin extends Plugin {
 					if (!checking) {
 						new SampleModal(this.app).open();
 					}
-
 					// This command will only show up in Command Palette when the check function returns true
 					return true;
 				}
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SettingTab(this.app, this));
+	}
 
+
+	addPluginRibbonIcons() { // Find icons on: https://lucide.dev/
+
+		const newMultilinePluginNotice = (
+			texts: string[], style: string, duration?: number | undefined
+		) => {
+			const fragment = document.createDocumentFragment();
+			texts.forEach((text) => {
+				const p = document.createElement("p");
+				p.textContent = text;
+				p.setAttribute("style", style);
+				fragment.appendChild(p);
+			});
+			const pluginNotice = new Notice(fragment, duration);
+			pluginNotice.noticeEl.addClass("experimental-plugin-notice");
+		}
+
+		const ribbonIconEl = this.addRibbonIcon("calendar-clock", "Timestamp Notice",
+			(event: MouseEvent) => { // Called when the user clicks the icon.
+
+				newMultilinePluginNotice([
+					window.moment().format("dddd ([UTC]Z)"),
+					window.moment().format("YYYY-MM-DD HH:mm:ss.SSS"),
+				], "font-size: 1em; font-style: italic; text-align: center;", 0);
+
+				newMultilinePluginNotice([
+					window.moment().format("ddd YYYY-MM-DD HH:mm:ss Z"),
+				], "font-size: 1em; font-style: italic; text-align: center;", 0);
+
+			}
+		);
+		ribbonIconEl.addClass("experimental-plugin-ribbon-class");
+
+	}
+
+
+	addPluginStatusBarItems() {
+		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
+		const statusBarItemEl = this.addStatusBarItem();
+		statusBarItemEl.setText(window.moment().format("ddd, MMM Do (HH:mm:ss)"));
+	}
+
+
+	addPluginEventsAndIntervals() {
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
 		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
@@ -72,32 +117,37 @@ export default class ExperimentalPlugin extends Plugin {
 		this.registerInterval(window.setInterval(() => console.log("setInterval"), 5 * 60 * 1000));
 	}
 
-	onunload() {
-
-	}
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 
+
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
 }
 
+
+
 class SampleModal extends Modal {
+
 	constructor(app: App) {
 		super(app);
 	}
+
 
 	onOpen() {
 		const {contentEl} = this;
 		contentEl.setText("Woah!");
 	}
 
+
 	onClose() {
 		const {contentEl} = this;
 		contentEl.empty();
 	}
+
 }
 

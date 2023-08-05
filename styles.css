@@ -1,4 +1,26 @@
 
+/* General */
+
+/* Plugin Notice */
+
+.experimental-plugin-notice {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.experimental-plugin-notice > :first-child {
+  margin-top: 0;
+}
+.experimental-plugin-notice > :last-child {
+  margin-bottom: 0;
+}
+
+.experimental-plugin-notice > * {
+  margin: .3em 0;
+}
+
+
 /* SettingTab Elements */
 
 /* warning-banner div */
