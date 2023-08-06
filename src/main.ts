@@ -1,5 +1,22 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin } from "obsidian";
-import { DEFAULT_SETTINGS, Settings, SettingTab } from "./settings";
+import {
+	App,
+	Editor,
+	MarkdownView,
+	Modal,
+	Plugin,
+} from "obsidian";
+
+import {
+	DEFAULT_SETTINGS,
+	Settings,
+	SettingTab,
+} from "./settings";
+
+import {
+	showCurrentDateAndTime,
+	smartStrikethrough,
+} from "./actions";
+
 
 
 export default class ExperimentalPlugin extends Plugin {
@@ -23,78 +40,57 @@ export default class ExperimentalPlugin extends Plugin {
 
 	addPluginCommands() {
 
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: "open-sample-modal-simple",
-			name: "Open sample modal (simple)",
-			callback: () => {
-				new SampleModal(this.app).open();
+			id: "show-current-date-and-time",
+			name: "Show current date and time",
+			icon: "calendar-clock",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => showCurrentDateAndTime(),
+		});
+
+		this.addCommand({
+			id: "smart-strikethrough",
+			name: "Smart strikethrough",
+			icon: "strikethrough",
+			mobileOnly: false,
+			repeatable: false,
+			editorCallback: (editor: Editor) => {
+				smartStrikethrough(editor);
 			}
 		});
 
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: "sample-editor-command",
-			name: "Sample editor command",
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection("Sample Editor Command");
-			}
-		});
-
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: "open-sample-modal-complex",
-			name: "Open sample modal (complex)",
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
+		// // This adds a complex command that can check whether the current state of the app allows execution of the command
+		// this.addCommand({
+		// 	id: "open-sample-modal-complex",
+		// 	name: "Open sample modal (complex)",
+		// 	checkCallback: (checking: boolean) => {
+		// 		// Conditions to check
+		// 		const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		// 		if (markdownView) {
+		// 			// If checking is true, we're simply "checking" if the command can be run.
+		// 			// If checking is false, then we want to actually perform the operation.
+		// 			if (!checking) {
+		// 				new SampleModal(this.app).open();
+		// 			}
+		// 			// This command will only show up in Command Palette when the check function returns true
+		// 			return true;
+		// 		}
+		// 	}
+		// });
 
 	}
 
 
-	addPluginRibbonIcons() { // Find icons on: https://lucide.dev/
+  // Find icons on: https://lucide.dev/
+	addPluginRibbonIcons() {
 
-		const newMultilinePluginNotice = (
-			texts: string[], style: string, duration?: number | undefined
-		) => {
-			const fragment = document.createDocumentFragment();
-			texts.forEach((text) => {
-				const p = document.createElement("p");
-				p.textContent = text;
-				p.setAttribute("style", style);
-				fragment.appendChild(p);
-			});
-			const pluginNotice = new Notice(fragment, duration);
-			pluginNotice.noticeEl.addClass("experimental-plugin-notice");
-		}
-
-		const ribbonIconEl = this.addRibbonIcon("calendar-clock", "Timestamp Notice",
-			(event: MouseEvent) => { // Called when the user clicks the icon.
-
-				newMultilinePluginNotice([
-					window.moment().format("dddd ([UTC]Z)"),
-					window.moment().format("YYYY-MM-DD HH:mm:ss.SSS"),
-				], "font-size: 1em; font-style: italic; text-align: center;", 0);
-
-				newMultilinePluginNotice([
-					window.moment().format("ddd YYYY-MM-DD HH:mm:ss Z"),
-				], "font-size: 1em; font-style: italic; text-align: center;", 0);
-
-			}
+		const ribbonIconEl = this.addRibbonIcon(
+			"calendar-clock",
+			"Timestamp Notice",
+			() => showCurrentDateAndTime()
 		);
-		ribbonIconEl.addClass("experimental-plugin-ribbon-class");
+		ribbonIconEl.addClass("experimental-plugin-ribbon-icon");
 
 	}
 
