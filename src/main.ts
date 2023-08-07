@@ -14,13 +14,21 @@ import {
 
 import {
 	showCurrentDateAndTime,
+} from "./actions/display";
+
+import {
 	smartStrikethrough,
-} from "./actions";
+} from "./actions/markdown/syntax";
+
+import {
+	moveCursorToNextHeading,
+} from "./actions/markdown/headings";
 
 
 
 export default class ExperimentalPlugin extends Plugin {
 	settings: Settings;
+
 
 	async onload() {
 		console.log("Loading Experimental Plugin");
@@ -60,24 +68,27 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
-		// // This adds a complex command that can check whether the current state of the app allows execution of the command
-		// this.addCommand({
-		// 	id: "open-sample-modal-complex",
-		// 	name: "Open sample modal (complex)",
-		// 	checkCallback: (checking: boolean) => {
-		// 		// Conditions to check
-		// 		const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		// 		if (markdownView) {
-		// 			// If checking is true, we're simply "checking" if the command can be run.
-		// 			// If checking is false, then we want to actually perform the operation.
-		// 			if (!checking) {
-		// 				new SampleModal(this.app).open();
-		// 			}
-		// 			// This command will only show up in Command Palette when the check function returns true
-		// 			return true;
-		// 		}
-		// 	}
-		// });
+		this.addCommand({
+			id: "move-cursor-to-next-heading-down",
+			name: "Move cursor to next heading down",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: true,
+			editorCallback: async (editor: Editor) => {
+				await moveCursorToNextHeading(editor, "down");
+			}
+		});
+
+		this.addCommand({
+			id: "move-cursor-to-next-heading-up",
+			name: "Move cursor to next heading up",
+			icon: "arrow-up",
+			mobileOnly: false,
+			repeatable: true,
+			editorCallback: async (editor: Editor) => {
+				await moveCursorToNextHeading(editor, "up");
+			}
+		})
 
 	}
 
@@ -96,13 +107,16 @@ export default class ExperimentalPlugin extends Plugin {
 
 
 	addPluginStatusBarItems() {
+
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
 		statusBarItemEl.setText(window.moment().format("ddd, MMM Do (HH:mm:ss)"));
+
 	}
 
 
 	addPluginEventsAndIntervals() {
+
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
 		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
@@ -111,6 +125,7 @@ export default class ExperimentalPlugin extends Plugin {
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log("setInterval"), 5 * 60 * 1000));
+
 	}
 
 
@@ -124,26 +139,3 @@ export default class ExperimentalPlugin extends Plugin {
 	}
 
 }
-
-
-
-class SampleModal extends Modal {
-
-	constructor(app: App) {
-		super(app);
-	}
-
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText("Woah!");
-	}
-
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-
-}
-
