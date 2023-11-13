@@ -14,6 +14,7 @@ import {
 
 import {
 	showCurrentDateAndTime,
+	moveCurrentTab,
 } from "./actions/display";
 
 import {
@@ -69,6 +70,60 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
+		/* TAB MOVEMENT */
+
+		this.addCommand({
+			id: "move-current-tab-left",
+			name: "Move current tab left",
+			icon: "arrow-left",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => moveCurrentTab.call(this, "left"),
+		});
+
+		this.addCommand({
+			id: "move-current-tab-right",
+			name: "Move current tab right",
+			icon: "arrow-right",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => moveCurrentTab.call(this, "right"),
+		});
+
+
+		/* TOGGLE COMMANDS */
+
+		this.addCommand({
+			id: "toggle-line-numbers",
+			name: "Toggle line numbers",
+			icon: "numbered-list",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => {
+				const vault = this.app.vault as any;
+				const showLineNumber = vault.getConfig("showLineNumber");
+				vault.setConfig("showLineNumber", !showLineNumber);
+				console.log("Line numbers:", !showLineNumber);
+			}
+		});
+
+		this.addCommand({
+			id: "toggle-vim-mode",
+			name: "Toggle Vim mode",
+			icon: "vim",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => {
+				const vault = this.app.vault as any;
+				const vimMode = vault.getConfig("vimMode");
+				vault.setConfig("vimMode", !vimMode);
+				console.log("Vim mode:", !vimMode);
+			}
+		});
+
+
+		/* CURSOR TO HEADING MOVEMENT */
+
 		this.addCommand({
 			id: "move-cursor-to-next-heading-down",
 			name: "Move cursor to next heading down",
@@ -77,7 +132,6 @@ export default class ExperimentalPlugin extends Plugin {
 			repeatable: true,
 			editorCallback: async (editor: Editor) => {
 				await moveCursorToHeading(editor, "next", "down");
-				// await moveCursorToNextHeading(editor, "down");
 			}
 		});
 
@@ -89,7 +143,6 @@ export default class ExperimentalPlugin extends Plugin {
 			repeatable: true,
 			editorCallback: async (editor: Editor) => {
 				await moveCursorToHeading(editor, "next", "up");
-				// await moveCursorToNextHeading(editor, "up");
 			}
 		});
 
