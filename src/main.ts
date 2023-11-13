@@ -21,7 +21,8 @@ import {
 } from "./actions/markdown/syntax";
 
 import {
-	moveCursorToNextHeading,
+	moveCursorToHeading,
+	// moveCursorToNextHeading,
 } from "./actions/markdown/headings";
 
 
@@ -75,7 +76,8 @@ export default class ExperimentalPlugin extends Plugin {
 			mobileOnly: false,
 			repeatable: true,
 			editorCallback: async (editor: Editor) => {
-				await moveCursorToNextHeading(editor, "down");
+				await moveCursorToHeading(editor, "next", "down");
+				// await moveCursorToNextHeading(editor, "down");
 			}
 		});
 
@@ -86,7 +88,41 @@ export default class ExperimentalPlugin extends Plugin {
 			mobileOnly: false,
 			repeatable: true,
 			editorCallback: async (editor: Editor) => {
-				await moveCursorToNextHeading(editor, "up");
+				await moveCursorToHeading(editor, "next", "up");
+				// await moveCursorToNextHeading(editor, "up");
+			}
+		});
+
+		this.addCommand({
+			id: "move-cursor-to-next-sibling-heading-down",
+			name: "Move cursor to next sibling heading down",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: true,
+			editorCallback: async (editor: Editor) => {
+				await moveCursorToHeading(editor, "sibling", "down");
+			}
+		});
+
+		this.addCommand({
+			id: "move-cursor-to-next-sibling-heading-up",
+			name: "Move cursor to next sibling heading up",
+			icon: "arrow-up",
+			mobileOnly: false,
+			repeatable: true,
+			editorCallback: async (editor: Editor) => {
+				await moveCursorToHeading(editor, "sibling", "up");
+			}
+		});
+
+		this.addCommand({
+			id: "move-cursor-to-parent-heading",
+			name: "Move cursor to parent heading",
+			icon: "arrow-up",
+			mobileOnly: false,
+			repeatable: true,
+			editorCallback: async (editor: Editor) => {
+				await moveCursorToHeading(editor, "parent");
 			}
 		})
 

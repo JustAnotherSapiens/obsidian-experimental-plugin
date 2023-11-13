@@ -58,7 +58,9 @@ export async function getActiveFileCache(
 /* NOTICE FUNCTIONS */
 
 export function newMultilinePluginNotice (
-  texts: string[], style: string, duration?: number | undefined
+  texts: string[],
+  style: string,
+  duration?: number | undefined
 ) {
   const fragment = document.createDocumentFragment();
   texts.forEach((text) => {
