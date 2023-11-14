@@ -15,6 +15,7 @@ import {
 import {
 	showCurrentDateAndTime,
 	moveCurrentTab,
+	foldSiblingSections,
 } from "./actions/display";
 
 import {
@@ -70,6 +71,18 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
+
+		this.addCommand({
+			id: "fold-sibling-sections",
+			name: "Fold sibling sections",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: false,
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				await foldSiblingSections(editor, view);
+			}
+		});
+
 		/* TAB MOVEMENT */
 
 		this.addCommand({
@@ -103,7 +116,7 @@ export default class ExperimentalPlugin extends Plugin {
 				const vault = this.app.vault as any;
 				const showLineNumber = vault.getConfig("showLineNumber");
 				vault.setConfig("showLineNumber", !showLineNumber);
-				console.log("Line numbers:", !showLineNumber);
+				// console.log("Line numbers:", !showLineNumber);
 			}
 		});
 
@@ -117,7 +130,7 @@ export default class ExperimentalPlugin extends Plugin {
 				const vault = this.app.vault as any;
 				const vimMode = vault.getConfig("vimMode");
 				vault.setConfig("vimMode", !vimMode);
-				console.log("Vim mode:", !vimMode);
+				// console.log("Vim mode:", !vimMode);
 			}
 		});
 
