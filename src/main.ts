@@ -10,7 +10,7 @@ import {
 import {
 	DEFAULT_SETTINGS,
 	Settings,
-	SettingTab,
+	ExperimentalSettingTab,
 } from "./settings";
 
 import {
@@ -39,7 +39,7 @@ export default class ExperimentalPlugin extends Plugin {
 		this.addPluginCommands();
 		this.addPluginRibbonIcons();
 		this.addPluginStatusBarItems();
-		this.addSettingTab(new SettingTab(this.app, this));
+		this.addSettingTab(new ExperimentalSettingTab(this.app, this));
 		// this.addPluginEventsAndIntervals();
 	}
 

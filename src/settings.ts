@@ -52,7 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 
-export class SettingTab extends PluginSettingTab {
+export class ExperimentalSettingTab extends PluginSettingTab {
 	plugin: ExperimentalPlugin;
 
 	constructor(app: App, plugin: ExperimentalPlugin) {
@@ -60,32 +60,14 @@ export class SettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	display(): void {
-		const {containerEl} = this;
 
-		containerEl.empty();
+	addHeadingMovementOptions(containerEl: HTMLElement): void {
+		containerEl.createEl("h1", {text: "Heading Movement Settings"});
 
-		if (!readyForProduction) {
-			containerEl.createDiv("warning-banner", (banner) => {
-				banner.createEl("h4", {
-					text: "⚠ WARNING ⚠"
-				});
-				banner.createEl("p", {
-					cls: "warning-banner-text",
-					text: "This plugin is still in development. Use it at your own risk!"
-				});
-			});
-		}
+		/* Global Settings */
+		containerEl.createEl("h3", {text: "Global settings"});
 
-		/* Heading Movement Settings */
-
-    containerEl.createEl("h1", {text: "Heading Movement Settings"});
-
-    containerEl.createEl("h3", {text: "Global settings"});
-
-
-		// Level Zero Behavior:
-
+		// Level Zero Behavior
 		const levelZeroBehaviorDesc = document.createDocumentFragment();
 		levelZeroBehaviorDesc.append(
 			"There are three options for how to behave at any heading movement action when the cursor is not on a heading:",
@@ -99,7 +81,6 @@ export class SettingTab extends PluginSettingTab {
 			levelZeroBehaviorDesc.createEl("br"),
 			"3. Behave as if the cursor is on its parent heading (can take a bit to get used to).",
 		);
-
 		new Setting(containerEl)
 		  .setName("Level zero behavior")
 			.setDesc(levelZeroBehaviorDesc)
@@ -116,8 +97,7 @@ export class SettingTab extends PluginSettingTab {
 				});
 			});
 
-		// Sibling Mode:
-
+		// Sibling Mode
 		const siblingModeDesc = document.createDocumentFragment();
 		siblingModeDesc.append(
 			"NOTE: They both work the same way when on top level headings.",
@@ -130,7 +110,6 @@ export class SettingTab extends PluginSettingTab {
 			siblingModeDesc.createEl("b", {text: "Loose: "}),
 			"Move to any heading with the same level.",
 		);
-
 		new Setting(containerEl)
 		  .setName("Sibling mode")
 			.setDesc(siblingModeDesc)
@@ -146,9 +125,7 @@ export class SettingTab extends PluginSettingTab {
 				});
 			});
 
-		
-		// Scroll Offset:
-
+		// Scroll Offset
 		new Setting(containerEl)
 		  .setName("Scroll offset")
 			.setDesc("Number of offset lines visible from the cursor position when moving to a heading")
@@ -161,9 +138,8 @@ export class SettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
-		
-		// Wrap Around Settings
 
+		/* Wrap Around Settings */
     containerEl.createEl("h3", {text: "Wrap around..."});
 
 		new Setting(containerEl)
@@ -196,13 +172,16 @@ export class SettingTab extends PluginSettingTab {
 				})
 			);
 
+	}
 
-		/* Script Runner Settings */
 
+	addScriptRunnerOptions(containerEl: HTMLElement): void {
     containerEl.createEl("h1", {text: "Script Runner Settings"});
 
+		/* Basic Settings */
     containerEl.createEl("h3", {text: "Basic settings"});
 
+		// Scripts Path
 		new Setting(containerEl)
 			.setName("Scripts path")
 			.setDesc("Path to the folder containing your scripts")
@@ -215,6 +194,7 @@ export class SettingTab extends PluginSettingTab {
 				})
 			);
 
+		// Emergency Break
 		new Setting(containerEl)
 			.setName("Emergency break")
 			.setDesc("Break scripts if they take too long to run")
@@ -235,6 +215,10 @@ export class SettingTab extends PluginSettingTab {
 				})
 			);
 
+
+		/* Break Trigger Time (Special Behavior) */
+
+		// Helper function to set the text of the break trigger time button
 		const setBreakTriggerTimeButton = (button: ButtonComponent, millisecs: string) => {
 			button.setButtonText(`${millisecs} ms`);
 			button.onClick(async () => {
@@ -250,6 +234,7 @@ export class SettingTab extends PluginSettingTab {
 			});
 		};
 
+		// Break Trigger Time
 		new Setting(containerEl)
 			.setName("Break trigger time")
 			.setDesc("Time in milliseconds before a script is stopped")
@@ -272,6 +257,7 @@ export class SettingTab extends PluginSettingTab {
 				setBreakTriggerTimeButton(button, "+200");
       });
 
+		// Add a container for the buttons
 		containerEl.querySelector<HTMLInputElement>(
 			".break-trigger-time .setting-item-control"
 		)!.addClass("break-trigger-time-item-control");
@@ -286,15 +272,17 @@ export class SettingTab extends PluginSettingTab {
 				)!);
 			});
 
+		// Hide the break trigger time setting if emergency break is disabled
 		if (!this.plugin.settings.emergencyBreak) {
 			containerEl.querySelector<HTMLInputElement>(
 				".break-trigger-time"
 			)!.hide();
 		}
 
-
+		/* Advanced Settings */
     containerEl.createEl("h3", {text: "Advanced settings"});
 
+		// Vim Mode Scripts
 		new Setting(containerEl)
 			.setName("Vim mode scripts")
 			.setDesc("Enable scripts for vim mode")
@@ -307,6 +295,7 @@ export class SettingTab extends PluginSettingTab {
 				})
 			);
 
+		// Script Complexity
 		new Setting(containerEl)
 			.setName("Script complexity")
 			.setDesc("Filter the scripts you want to run based on their complexity")
@@ -322,6 +311,32 @@ export class SettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
+
+	}
+
+
+	addWarningBanner(containerEl: HTMLElement): void {
+		containerEl.createDiv("warning-banner", (banner) => {
+			banner.createEl("h4", {
+				text: "⚠ WARNING ⚠"
+			});
+			banner.createEl("p", {
+				cls: "warning-banner-text",
+				text: "This plugin is still in development. Use it at your own risk!"
+			});
+		});
+	
+	}
+
+
+	display(): void {
+		const {containerEl} = this;
+
+		containerEl.empty();
+
+		if (!readyForProduction) this.addWarningBanner(containerEl);
+		this.addHeadingMovementOptions(containerEl);
+		this.addScriptRunnerOptions(containerEl);
 
 	}
 }
