@@ -4,6 +4,7 @@ import {
 	MarkdownView,
 	Modal,
 	Plugin,
+	Notice,
 } from "obsidian";
 
 import {
@@ -24,7 +25,6 @@ import {
 
 import {
 	moveCursorToHeading,
-	// moveCursorToNextHeading,
 } from "./actions/markdown/headings";
 
 
@@ -40,7 +40,7 @@ export default class ExperimentalPlugin extends Plugin {
 		this.addPluginRibbonIcons();
 		this.addPluginStatusBarItems();
 		this.addSettingTab(new SettingTab(this.app, this));
-		this.addPluginEventsAndIntervals();
+		// this.addPluginEventsAndIntervals();
 	}
 
 
@@ -116,7 +116,6 @@ export default class ExperimentalPlugin extends Plugin {
 				const vault = this.app.vault as any;
 				const showLineNumber = vault.getConfig("showLineNumber");
 				vault.setConfig("showLineNumber", !showLineNumber);
-				// console.log("Line numbers:", !showLineNumber);
 			}
 		});
 
@@ -130,7 +129,6 @@ export default class ExperimentalPlugin extends Plugin {
 				const vault = this.app.vault as any;
 				const vimMode = vault.getConfig("vimMode");
 				vault.setConfig("vimMode", !vimMode);
-				// console.log("Vim mode:", !vimMode);
 			}
 		});
 
@@ -138,51 +136,72 @@ export default class ExperimentalPlugin extends Plugin {
 		/* CURSOR TO HEADING MOVEMENT */
 
 		this.addCommand({
-			id: "move-cursor-to-next-heading-down",
-			name: "Move cursor to next heading down",
+			id: "contiguous-heading-down",
+			name: "Move cursor to contiguous heading down",
 			icon: "arrow-down",
 			mobileOnly: false,
 			repeatable: true,
 			editorCallback: async (editor: Editor) => {
-				await moveCursorToHeading(editor, "next", "down");
+				await moveCursorToHeading(editor, "contiguous", "down");
 			}
 		});
 
 		this.addCommand({
-			id: "move-cursor-to-next-heading-up",
-			name: "Move cursor to next heading up",
+			id: "contiguous-heading-up",
+			name: "Move cursor to contiguous heading up",
 			icon: "arrow-up",
 			mobileOnly: false,
 			repeatable: true,
 			editorCallback: async (editor: Editor) => {
-				await moveCursorToHeading(editor, "next", "up");
+				await moveCursorToHeading(editor, "contiguous", "up");
 			}
 		});
 
 		this.addCommand({
-			id: "move-cursor-to-next-sibling-heading-down",
+			id: "toggle-sibling-mode",
+			name: "Toggle sibling mode (loose/strict)",
+			icon: "arrow-right",
+			mobileOnly: false,
+			repeatable: false,
+			callback: async () => {
+				const siblingMode = this.settings.siblingMode;
+				if (siblingMode === "strictSibling") {
+					this.settings.siblingMode = "looseSibling";
+				}
+				else if (siblingMode === "looseSibling") {
+					this.settings.siblingMode = "strictSibling";
+				}
+				new Notice(`Sibling mode: ${this.settings.siblingMode}`, 2000);
+				await this.saveSettings();
+			}
+		});
+
+		this.addCommand({
+			id: "sibling-heading-down",
 			name: "Move cursor to next sibling heading down",
 			icon: "arrow-down",
 			mobileOnly: false,
 			repeatable: true,
 			editorCallback: async (editor: Editor) => {
-				await moveCursorToHeading(editor, "sibling", "down");
+				const siblingMode = this.settings.siblingMode;
+				await moveCursorToHeading(editor, siblingMode, "down");
 			}
 		});
 
 		this.addCommand({
-			id: "move-cursor-to-next-sibling-heading-up",
+			id: "sibling-heading-up",
 			name: "Move cursor to next sibling heading up",
 			icon: "arrow-up",
 			mobileOnly: false,
 			repeatable: true,
 			editorCallback: async (editor: Editor) => {
-				await moveCursorToHeading(editor, "sibling", "up");
+				const siblingMode = this.settings.siblingMode;
+				await moveCursorToHeading(editor, siblingMode, "up");
 			}
 		});
 
 		this.addCommand({
-			id: "move-cursor-to-parent-heading",
+			id: "parent-heading",
 			name: "Move cursor to parent heading",
 			icon: "arrow-up",
 			mobileOnly: false,
@@ -190,7 +209,7 @@ export default class ExperimentalPlugin extends Plugin {
 			editorCallback: async (editor: Editor) => {
 				await moveCursorToHeading(editor, "parent");
 			}
-		})
+		});
 
 	}
 

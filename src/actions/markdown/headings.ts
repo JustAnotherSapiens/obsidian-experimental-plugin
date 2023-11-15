@@ -2,11 +2,14 @@ import { Editor, EditorRange, EditorRangeOrCaret, HeadingCache, MarkdownView } f
 
 import { getActiveFileCache } from "../generics";
 
+import { getSetting } from "../../settings";
+
 
 const movementFunctions = {
-  next: nextHeading,
+  contiguous: contiguousHeading,
   parent: parentHeading,
-  sibling: siblingHeading,
+  looseSibling: looseSiblingHeading,
+  strictSibling: strictSiblingHeading,
   // lastChild: lastChildHeading
 }
 
@@ -22,24 +25,72 @@ type HeadingMovementArgs = {
 }
 
 
-function siblingHeading(args: HeadingMovementArgs) {
-  // If cursor is not on a heading, move to next heading
-  if (args.headingIndex === -1) {
-    return nextHeading(args);
-  }
-
-  // STRICT SIBLING: Move to next heading with same level and parent
-  // TODO...
-
-  // LOOSE SIBLING: Move to next heading with same level
-
+// STRICT SIBLING: Move to next heading with same level and parent
+function strictSiblingHeading(args: HeadingMovementArgs) {
   const currentHeadingLevel = args.fileHeadings[args.headingIndex].level;
+  switch (args.direction) {
+    case "up":
+      for (let i = args.headingIndex - 1; i >= 0; i--) {
+        if (args.fileHeadings[i].level < currentHeadingLevel) break;
+        if (args.fileHeadings[i].level === currentHeadingLevel) {
+          return args.fileHeadings[i].position.start.line;
+        }
+      }
+      if (getSetting("strictSiblingWrapAround")) {
+        let lastSiblingIdx = args.headingIndex;
+        for (let i = args.headingIndex + 1; i < args.fileHeadings.length; i++) {
+          if (args.fileHeadings[i].level < currentHeadingLevel) break;
+          if (args.fileHeadings[i].level === currentHeadingLevel) {
+            lastSiblingIdx = i;
+          }
+        }
+        if (lastSiblingIdx !== args.headingIndex) {
+          return args.fileHeadings[lastSiblingIdx].position.start.line;
+        }
+      }
+      break;
+    case "down":
+      for (let i = args.headingIndex + 1; i < args.fileHeadings.length; i++) {
+        if (args.fileHeadings[i].level < currentHeadingLevel) break;
+        if (args.fileHeadings[i].level === currentHeadingLevel) {
+          return args.fileHeadings[i].position.start.line;
+        }
+      }
+      if (getSetting("strictSiblingWrapAround")) {
+        let firstSiblingIdx = args.headingIndex;
+        for (let i = args.headingIndex - 1; i >= 0; i--) {
+          if (args.fileHeadings[i].level < currentHeadingLevel) break;
+          if (args.fileHeadings[i].level === currentHeadingLevel) {
+            firstSiblingIdx = i;
+          }
+        }
+        if (firstSiblingIdx !== args.headingIndex) {
+          return args.fileHeadings[firstSiblingIdx].position.start.line;
+        }
+      }
+      break;
+    default:
+      console.log("Unhandled direction:", args.direction);
+      return undefined;
+  }
+}
 
+
+// LOOSE SIBLING: Move to next heading with same level
+function looseSiblingHeading(args: HeadingMovementArgs) {
+  const currentHeadingLevel = args.fileHeadings[args.headingIndex].level;
   switch (args.direction) {
     case "up":
       for (let i = args.headingIndex - 1; i >= 0; i--) {
         if (args.fileHeadings[i].level === currentHeadingLevel) {
           return args.fileHeadings[i].position.start.line;
+        }
+      }
+      if (getSetting("looseSiblingWrapAround")) {
+        for (let i = args.fileHeadings.length - 1; i > args.headingIndex; i--) {
+          if (args.fileHeadings[i].level === currentHeadingLevel) {
+            return args.fileHeadings[i].position.start.line;
+          }
         }
       }
       break;
@@ -49,17 +100,25 @@ function siblingHeading(args: HeadingMovementArgs) {
           return args.fileHeadings[i].position.start.line;
         }
       }
+      if (getSetting("looseSiblingWrapAround")) {
+        for (let i = 0; i < args.headingIndex; i++) {
+          if (args.fileHeadings[i].level === currentHeadingLevel) {
+            return args.fileHeadings[i].position.start.line;
+          }
+        }
+      }
       break;
     default:
+      console.log("Unhandled direction:", args.direction);
       return undefined;
   }
 }
 
 function parentHeading(args: HeadingMovementArgs) {
-  if (args.headingIndex === -1) {
-    args.direction = "up";
-    return nextHeading(args);
-  }
+  // if (args.headingIndex === -1) {
+  //   args.direction = "up";
+  //   return contiguousHeading(args);
+  // }
   const currentHeadingLevel = args.fileHeadings[args.headingIndex].level;
   for (let i = args.headingIndex; i >= 0; i--) {
     if (args.fileHeadings[i].level < currentHeadingLevel) {
@@ -69,13 +128,16 @@ function parentHeading(args: HeadingMovementArgs) {
   return undefined;
 }
 
-function nextHeading(args: HeadingMovementArgs) {
+function contiguousHeading(args: HeadingMovementArgs) {
   switch (args.direction) {
     case "up":
       for (let i = args.fileHeadings.length - 1; i >= 0; i--) {
         if (args.fileHeadings[i].position.start.line < args.cursorLine) {
           return args.fileHeadings[i].position.start.line;
         }
+      }
+      if (getSetting("contiguousWrapAround")) {
+        return args.fileHeadings[args.fileHeadings.length - 1].position.start.line;
       }
       break;
     case "down":
@@ -84,10 +146,29 @@ function nextHeading(args: HeadingMovementArgs) {
           return heading.position.start.line;
         }
       }
+      if (getSetting("contiguousWrapAround")) {
+        return args.fileHeadings[0].position.start.line;
+      }
       break;
     default:
+      console.log("Unhandled direction:", args.direction);
       return undefined;
   }
+}
+
+function getHeadingIndex(
+  fileHeadings: HeadingCache[],
+  cursorLine: number,
+  snapParent: boolean = false
+) {
+  let headingIndex = -1;
+  for (let i = fileHeadings.length - 1; i >= 0; i--) {
+    if (fileHeadings[i].position.start.line > cursorLine) continue;
+    if (fileHeadings[i].position.start.line === cursorLine) headingIndex = i;
+    else if (snapParent) headingIndex = i;
+    break;
+  }
+  return headingIndex;
 }
 
 export async function moveCursorToHeading(
@@ -96,69 +177,86 @@ export async function moveCursorToHeading(
   direction?: MovementDirection
 ) {
 
+  const label = `${mode} ${direction || ""}`.trim();
+
   const fileHeadings = await getActiveFileCache("headings") as HeadingCache[];
-  const cursorLine = editor.getCursor().line;
+  if (fileHeadings.length === 0) return;
 
-  // TODO: Make this a setting
-  // Whether to move in relation to the heading the cursor is under
-  const validateCursorUnderHeading = false;
+  let cursorLine = editor.getCursor().line;
+  let headingIndex = getHeadingIndex(fileHeadings, cursorLine);
 
-  let headingIndex = -1;
-  for (let i = fileHeadings.length - 1; i >= 0; i--) {
-    if (fileHeadings[i].position.start.line > cursorLine) continue;
-    if (fileHeadings[i].position.start.line === cursorLine) headingIndex = i;
-    else if (validateCursorUnderHeading) headingIndex = i;
-    break;
+  // If cursor is not on a heading consider levelZeroBehavior
+  if (headingIndex === -1) {
+    switch (getSetting("levelZeroBehavior")) {
+      case "snap-contiguous":
+        if (mode === "parent") direction = "up";
+        mode = "contiguous";
+        break;
+      case "snap-parent":
+        mode = "parent";
+        break;
+      case "on-parent-behavior":
+        headingIndex = getHeadingIndex(fileHeadings, cursorLine, true);
+        if (headingIndex === -1) return;
+        cursorLine = fileHeadings[headingIndex].position.start.line;
+        break;
+      default:
+        console.log("Unhandled levelZeroBehavior:", getSetting("levelZeroBehavior"));
+        return;
+
+    }
   }
 
-  // for (let i = 0; i < fileHeadings.length; i++) {
-  //   if (fileHeadings[i].position.start.line !== cursorLine) continue;
-  //   headingIndex = i;
-  // }
-
+  // console.log("mode:", mode);
+  
   const foundHeadingLine = movementFunctions[mode]({
     fileHeadings,
     cursorLine,
     headingIndex,
     direction,
   });
+  handleCursorMovement(editor, foundHeadingLine, label);
 
-  if (foundHeadingLine === undefined) return;
-  else console.log(`Found ${mode} heading at line:`, foundHeadingLine);
+  cursorScrollOffset(editor, getSetting("scrollOffset"));
+
+}
+
+
+function cursorScrollOffset(editor: Editor, offset: number = 0) {
+  const cursorPos = editor.getCursor();
+  editor.scrollIntoView({
+    from: {line: cursorPos.line - offset, ch: 0},
+    to: {line: cursorPos.line + offset, ch: 0}
+  }, false);
+}
+
+
+function handleCursorMovement(
+  editor: Editor,
+  line: number | undefined,
+  label?: string
+) {
+  if (line === undefined) return;
+  // console.log(`Found ${label}`.trim() + ':', line);
+
 
   if (!editor.somethingSelected()) {
-    editor.setCursor({line: foundHeadingLine, ch: 0});
+    editor.setCursor({line, ch: 0});
     return;
   }
 
   let selection: EditorRange = {
     from: editor.getCursor("anchor"),
-    to: {line: foundHeadingLine, ch: 0},
+    to: {line, ch: 0},
   };
 
   if (this.app.vault.config.vimMode) {
-    if (foundHeadingLine >= selection.from.line) {
+    if (line >= selection.from.line) {
       selection.to.ch = 1;
     }
   }
 
   editor.transaction({selection});
-
-  // const cursorPos = editor.getCursor();
-  // editor.scrollIntoView({from: cursorPos, to: cursorPos}, true);
-
-}
-
-
-
-export function getCurrentFileHeadingIndex(
-  fileHeadings: HeadingCache[],
-  cursorLine: number
-) {
-  for (let i = fileHeadings.length - 1; i >= 0; i--) {
-    if (fileHeadings[i].position.start.line <= cursorLine) return i;
-  }
-  return -1;
 }
 
 

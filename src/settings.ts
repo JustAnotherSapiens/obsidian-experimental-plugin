@@ -11,17 +11,37 @@ const scriptComplexityLevels = [
   "Expert",
   "God",
 ] as const;
-type scriptComplexityLevel = typeof scriptComplexityLevels[number];
+type ScriptComplexityLevel = typeof scriptComplexityLevels[number];
+
+type LevelZeroBehavior = "snap-contiguous" | "snap-parent" | "on-parent-behavior";
+type SiblingMode = "strictSibling" | "looseSibling";
 
 export interface Settings {
+	levelZeroBehavior: LevelZeroBehavior;
+	siblingMode: SiblingMode;
+	scrollOffset: number;
+	contiguousWrapAround: boolean;
+	looseSiblingWrapAround: boolean;
+	strictSiblingWrapAround: boolean;
 	scriptsPath: string;
 	vimModeScripts: boolean;
-	scriptComplexity: scriptComplexityLevel;
+	scriptComplexity: ScriptComplexityLevel;
 	emergencyBreak: boolean;
 	breakTriggerTime: number;
 }
+type SettingKey = keyof Settings;
+
+export function getSetting(setting: SettingKey) {
+  return this.app.plugins.plugins["experimental-plugin"].settings[setting];
+}
 
 export const DEFAULT_SETTINGS: Settings = {
+	levelZeroBehavior: "snap-contiguous",
+	siblingMode: "looseSibling",
+	scrollOffset: 0,
+	contiguousWrapAround: false,
+	looseSiblingWrapAround: false,
+	strictSiblingWrapAround: true,
 	scriptsPath: '',
 	vimModeScripts: false,
 	scriptComplexity: "Minimal",
@@ -55,7 +75,130 @@ export class SettingTab extends PluginSettingTab {
 			});
 		}
 
+		/* Heading Movement Settings */
+
+    containerEl.createEl("h1", {text: "Heading Movement Settings"});
+
+    containerEl.createEl("h3", {text: "Global settings"});
+
+
+		// Level Zero Behavior:
+
+		const levelZeroBehaviorDesc = document.createDocumentFragment();
+		levelZeroBehaviorDesc.append(
+			"There are three options for how to behave at any heading movement action when the cursor is not on a heading:",
+			levelZeroBehaviorDesc.createEl("br"),
+			levelZeroBehaviorDesc.createEl("br"),
+			"1. Snap to the contiguous heading in the direction of movement.",
+			levelZeroBehaviorDesc.createEl("br"),
+			levelZeroBehaviorDesc.createEl("br"),
+			"2. Always snap to the parent heading regardless the direction of movement.",
+			levelZeroBehaviorDesc.createEl("br"),
+			levelZeroBehaviorDesc.createEl("br"),
+			"3. Behave as if the cursor is on its parent heading (can take a bit to get used to).",
+		);
+
+		new Setting(containerEl)
+		  .setName("Level zero behavior")
+			.setDesc(levelZeroBehaviorDesc)
+			.addDropdown((dropdown) => {
+				dropdown.addOptions({
+					"snap-contiguous":    "Snap to contiguous",
+					"snap-parent":        "Snap to parent",
+					"on-parent-behavior": "Behave as if parent",
+				});
+				dropdown.setValue(this.plugin.settings.levelZeroBehavior);
+				dropdown.onChange(async (value: LevelZeroBehavior) => {
+					this.plugin.settings.levelZeroBehavior = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		// Sibling Mode:
+
+		const siblingModeDesc = document.createDocumentFragment();
+		siblingModeDesc.append(
+			"NOTE: They both work the same way when on top level headings.",
+			siblingModeDesc.createEl("br"),
+			siblingModeDesc.createEl("br"),
+			siblingModeDesc.createEl("b", {text: "Strict: "}),
+			"Only move to headings with the same level and parent.",
+			siblingModeDesc.createEl("br"),
+			siblingModeDesc.createEl("br"),
+			siblingModeDesc.createEl("b", {text: "Loose: "}),
+			"Move to any heading with the same level.",
+		);
+
+		new Setting(containerEl)
+		  .setName("Sibling mode")
+			.setDesc(siblingModeDesc)
+			.addDropdown((dropdown) => {
+				dropdown.addOptions({
+					"strictSibling": "Strict",
+					"looseSibling":  "Loose",
+				});
+				dropdown.setValue(this.plugin.settings.siblingMode);
+				dropdown.onChange(async (value: SiblingMode) => {
+					this.plugin.settings.siblingMode = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		
+		// Scroll Offset:
+
+		new Setting(containerEl)
+		  .setName("Scroll offset")
+			.setDesc("Number of offset lines visible from the cursor position when moving to a heading")
+			.addText((text) => {
+				text.setPlaceholder("scroll_offset");
+				text.inputEl.type = "number";
+				text.setValue(String(this.plugin.settings.scrollOffset));
+				text.onChange(async (value) => {
+					this.plugin.settings.scrollOffset = Number(value);
+					await this.plugin.saveSettings();
+				});
+			});
+		
+		// Wrap Around Settings
+
+    containerEl.createEl("h3", {text: "Wrap around..."});
+
+		new Setting(containerEl)
+		  .setName("...for contiguous headings")
+			.addToggle((toggle) => toggle
+				.setValue(this.plugin.settings.contiguousWrapAround)
+				.onChange(async (value) => {
+					this.plugin.settings.contiguousWrapAround = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+		  .setName("...for loose siblings")
+			.addToggle((toggle) => toggle
+				.setValue(this.plugin.settings.looseSiblingWrapAround)
+				.onChange(async (value) => {
+					this.plugin.settings.looseSiblingWrapAround = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+		  .setName("...for strict siblings")
+			.addToggle((toggle) => toggle
+				.setValue(this.plugin.settings.strictSiblingWrapAround)
+				.onChange(async (value) => {
+					this.plugin.settings.strictSiblingWrapAround = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+
+		/* Script Runner Settings */
+
     containerEl.createEl("h1", {text: "Script Runner Settings"});
+
     containerEl.createEl("h3", {text: "Basic settings"});
 
 		new Setting(containerEl)
@@ -172,7 +315,7 @@ export class SettingTab extends PluginSettingTab {
         });
 				// Never call setValue before adding all dropdown options
 				dropdown.setValue(this.plugin.settings.scriptComplexity);
-				dropdown.onChange(async (value: scriptComplexityLevel) => {
+				dropdown.onChange(async (value: ScriptComplexityLevel) => {
 					this.plugin.settings.scriptComplexity = value;
 					await this.plugin.saveSettings();
 				});

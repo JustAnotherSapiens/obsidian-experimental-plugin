@@ -130,23 +130,14 @@ export async function foldSiblingSections(
 
 
   // Get the active view and the current fold info.
-
-  // const view: MarkdownView = getActiveView();
-  // console.log("view.currentMode:", view.currentMode);
-
   const foldInfo = (view.currentMode as any).getFoldInfo();
-  // console.log(foldInfo);
-
-
   const foldSet = !foldInfo ? new Set() : new Set(foldInfo.folds);
-
 
   // Add the sibling fold ranges to the fold list.
   siblingFoldRanges.forEach(range => foldSet.add(range));
   const foldArray = [...foldSet];
   console.log("foldArray:", foldArray);
   
-
   // Fold the sibling fold ranges.
   (view.currentMode as any).applyFoldInfo({folds: foldArray, lines: editor.lineCount()});
   (view as any).onMarkdownFold();
