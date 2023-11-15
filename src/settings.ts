@@ -20,6 +20,7 @@ export interface Settings {
 	levelZeroBehavior: LevelZeroBehavior;
 	siblingMode: SiblingMode;
 	scrollOffset: number;
+	globalWrapAround: boolean;
 	contiguousWrapAround: boolean;
 	looseSiblingWrapAround: boolean;
 	strictSiblingWrapAround: boolean;
@@ -39,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	levelZeroBehavior: "snap-contiguous",
 	siblingMode: "looseSibling",
 	scrollOffset: 0,
+	globalWrapAround: false,
 	contiguousWrapAround: false,
 	looseSiblingWrapAround: false,
 	strictSiblingWrapAround: true,

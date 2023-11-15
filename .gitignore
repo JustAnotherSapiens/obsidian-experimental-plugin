@@ -1,5 +1,6 @@
 # custom
 guides
+*.ps1
 
 # vscode
 .vscode 

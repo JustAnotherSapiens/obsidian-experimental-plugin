@@ -133,7 +133,31 @@ export default class ExperimentalPlugin extends Plugin {
 		});
 
 
-		/* CURSOR TO HEADING MOVEMENT */
+		/* HEADING MOVEMENT COMMANDS */
+
+		this.addCommand({
+			id: "toggle-global-wrap-around",
+			name: "Toggle wrap around globally",
+			icon: "arrow-right",
+			mobileOnly: false,
+			repeatable: false,
+			callback: async () => {
+				const wrapAround = this.settings.globalWrapAround;
+				if (wrapAround) {
+					this.settings.globalWrapAround = false;
+					this.settings.contiguousWrapAround = false;
+					this.settings.looseSiblingWrapAround = false;
+					this.settings.strictSiblingWrapAround = false;
+				} else {
+					this.settings.globalWrapAround = true;
+					this.settings.contiguousWrapAround = true;
+					this.settings.looseSiblingWrapAround = true;
+					this.settings.strictSiblingWrapAround = true;
+				}
+				new Notice(`Global Wrap Around: ${String(!wrapAround).toUpperCase()}`, 3000);
+				await this.saveSettings();
+			}
+		});
 
 		this.addCommand({
 			id: "contiguous-heading-down",
@@ -171,7 +195,7 @@ export default class ExperimentalPlugin extends Plugin {
 				else if (siblingMode === "looseSibling") {
 					this.settings.siblingMode = "strictSibling";
 				}
-				new Notice(`Sibling mode: ${this.settings.siblingMode}`, 2000);
+				new Notice(`Sibling Mode: ${this.settings.siblingMode}`, 3000);
 				await this.saveSettings();
 			}
 		});
