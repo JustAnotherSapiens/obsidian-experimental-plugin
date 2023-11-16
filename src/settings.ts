@@ -1,8 +1,6 @@
 import { App, ButtonComponent, PluginSettingTab, Setting } from "obsidian";
 import ExperimentalPlugin from "./main";
 
-const readyForProduction = false;
-
 const scriptComplexityLevels = [
   "Minimal",
   "Simple",
@@ -334,9 +332,9 @@ export class ExperimentalSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		if (!readyForProduction) this.addWarningBanner(containerEl);
+		// this.addWarningBanner(containerEl);
 		this.addHeadingMovementOptions(containerEl);
-		this.addScriptRunnerOptions(containerEl);
+		// this.addScriptRunnerOptions(containerEl);
 
 	}
 }

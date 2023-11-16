@@ -16,7 +16,7 @@ import {
 import {
 	showCurrentDateAndTime,
 	moveCurrentTab,
-	foldSiblingSections,
+	toggleSiblingSectionsFold,
 } from "./actions/display";
 
 import {
@@ -73,13 +73,13 @@ export default class ExperimentalPlugin extends Plugin {
 
 
 		this.addCommand({
-			id: "fold-sibling-sections",
-			name: "Fold sibling sections",
+			id: "toggle-sibling-sections-fold",
+			name: "Toggle sibling sections fold",
 			icon: "arrow-down",
 			mobileOnly: false,
 			repeatable: false,
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
-				await foldSiblingSections(editor, view);
+				await toggleSiblingSectionsFold(editor, view);
 			}
 		});
 

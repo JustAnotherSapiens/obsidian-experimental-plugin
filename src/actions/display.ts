@@ -13,6 +13,10 @@ import {
   getActiveView,
 } from "./generics";
 
+import {
+  getHeadingIndex
+} from "./markdown/headings";
+
 
 export function showCurrentDateAndTime() {
   newMultilinePluginNotice([
@@ -99,48 +103,49 @@ async function foldChildrenHeadings(editor: Editor, view: MarkdownView) {
 }
 
 
-export async function foldSiblingSections(
+export async function toggleSiblingSectionsFold(
   editor: Editor,
   view: MarkdownView,
-  // fileHeadings: HeadingCache[],
-  // refHeadingIndex: number,
 ) {
 
   const fileHeadings = await getActiveFileCache("headings") as HeadingCache[];
   if (!fileHeadings) return;
 
-  const cursorLine = editor.getCursor().line;
-
-  let refHeadingIndex = -1;
-  for (let i = fileHeadings.length - 1; i >= 0; i--) {
-    if (fileHeadings[i].position.start.line > cursorLine) continue;
-    else if (fileHeadings[i].position.start.line === cursorLine) refHeadingIndex = i;
-    break;
-  }
+  const cursorPos = editor.getCursor();
+  const refHeadingIndex = getHeadingIndex(fileHeadings, cursorPos.line, true);
   if (refHeadingIndex === -1) return;
 
-  // Get the sibling fold ranges.
+  let folds = [];
+  let unfold = false;
+  const foldInfo = (view.currentMode as any).getFoldInfo();
+  if (foldInfo) {
+    folds = foldInfo.folds;
+    unfold = folds.some(
+      (fold: any) => fold.from === fileHeadings[refHeadingIndex].position.start.line
+    );
+  }
 
+  // Get sibling section info.
   const {headings, rangeEnd} = getSiblingsInfo(editor, fileHeadings, refHeadingIndex);
 
-  const siblingFoldRanges = headings.map((heading, idx) => ({
-    from: heading.position.start.line,
-    to: idx + 1 < headings.length ? headings[idx + 1].position.start.line - 1 : rangeEnd,
-  }));
+  if (unfold) {
+    const headingLines = new Set(headings.map(heading => heading.position.start.line));
+    folds = folds.filter((fold: any) => !headingLines.has(fold.from));
+  } else {
+    const siblingFoldRanges = headings.map((heading, idx) => ({
+      from: heading.position.start.line,
+      to: idx + 1 < headings.length ? headings[idx + 1].position.start.line - 1 : rangeEnd,
+    }));
+    siblingFoldRanges.forEach(range => folds.push(range));
+    folds = [...new Set(folds)]; // Remove duplicates.
+  }
 
-
-  // Get the active view and the current fold info.
-  const foldInfo = (view.currentMode as any).getFoldInfo();
-  const foldSet = !foldInfo ? new Set() : new Set(foldInfo.folds);
-
-  // Add the sibling fold ranges to the fold list.
-  siblingFoldRanges.forEach(range => foldSet.add(range));
-  const foldArray = [...foldSet];
-  console.log("foldArray:", foldArray);
-  
   // Fold the sibling fold ranges.
-  (view.currentMode as any).applyFoldInfo({folds: foldArray, lines: editor.lineCount()});
+  (view.currentMode as any).applyFoldInfo({folds, lines: editor.lineCount()});
   (view as any).onMarkdownFold();
+
+  // Center the cursor.
+  editor.scrollIntoView({from: cursorPos, to: cursorPos}, true);
 
 }
 

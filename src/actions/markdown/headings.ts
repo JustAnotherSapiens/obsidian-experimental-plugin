@@ -156,7 +156,7 @@ function contiguousHeading(args: HeadingMovementArgs) {
   }
 }
 
-function getHeadingIndex(
+export function getHeadingIndex(
   fileHeadings: HeadingCache[],
   cursorLine: number,
   snapParent: boolean = false
