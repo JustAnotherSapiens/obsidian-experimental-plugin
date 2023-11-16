@@ -106,6 +106,7 @@ export async function cleanToggleFoldOnChildrenHeadings(
     }
   }
   if (nextSectionHeadingIdx === parentHeadingIdx + 1) return;
+  if (nextSectionHeadingIdx === -1) nextSectionHeadingIdx = fileHeadings.length;
 
   // Get the first refChildHeadingIdx.
   let refChildHeadingIdx = -1;
