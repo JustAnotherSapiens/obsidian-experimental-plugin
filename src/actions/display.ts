@@ -3,8 +3,6 @@ import {
   MarkdownView,
   WorkspaceLeaf,
   HeadingCache,
-  Pos,
-  Loc,
 } from "obsidian";
 
 import {
@@ -39,7 +37,6 @@ export function moveCurrentTab(
 
   const forward = direction === "right";
   const newCurrentTabIdx = moveArrayElement(tabsArray, currentTabIdx, forward);
-  // console.log("New Index:", newCurrentTabIdx);
 
   activeTabGroup.currentTab = newCurrentTabIdx;
   activeTabGroup.updateTabDisplay();
@@ -82,28 +79,49 @@ function moveArrayElement(
 
 /* FOLD FUNCTIONS */
 
-async function foldChildrenHeadings(editor: Editor, view: MarkdownView) {
-  // const view = this.app.workspace.activeLeaf.view as MarkdownView;
-  const foldInfo = (view.currentMode as any).getFoldInfo();
 
-  const folds = new Set(foldInfo.folds);
-  const lines = editor.lineCount();
+export async function cleanToggleFoldOnChildrenHeadings(
+  editor: Editor,
+  view: MarkdownView,
+) {
 
   const fileHeadings = await getActiveFileCache("headings") as HeadingCache[];
-  const cursorLine = editor.getCursor().line;
+  if (!fileHeadings) return;
 
-  let parentHeadingIndex = -1;
-  for (let i = fileHeadings.length - 1; i >= 0; i--) {
-    if (fileHeadings[i].position.start.line <= cursorLine) {
-      parentHeadingIndex = i;
+  const cursorPos = editor.getCursor();
+  const parentHeadingIdx = getHeadingIndex(fileHeadings, cursorPos.line, true);
+  if (parentHeadingIdx === -1) return;
+  if (parentHeadingIdx === fileHeadings.length - 1) return;
+
+  // Ensure that the parent heading section has children.
+  let nextSectionHeadingIdx = -1;
+  let highestChildLevel = 6;
+  for (let i = parentHeadingIdx + 1; i < fileHeadings.length; i++) {
+    if (fileHeadings[i].level <= fileHeadings[parentHeadingIdx].level) {
+      nextSectionHeadingIdx = i;
+      break;
+    }
+    if (fileHeadings[i].level < highestChildLevel) {
+      highestChildLevel = fileHeadings[i].level;
+    }
+  }
+  if (nextSectionHeadingIdx === parentHeadingIdx + 1) return;
+
+  // Get the first refChildHeadingIdx.
+  let refChildHeadingIdx = -1;
+  for (let i = parentHeadingIdx + 1; i < nextSectionHeadingIdx; i++) {
+    if (fileHeadings[i].level === highestChildLevel) {
+      refChildHeadingIdx = i;
       break;
     }
   }
 
+  rawToggleFoldOnSiblingHeadings(editor, view, fileHeadings, refChildHeadingIdx);
+
 }
 
 
-export async function toggleSiblingSectionsFold(
+export async function cleanToggleFoldOnSiblingHeadings(
   editor: Editor,
   view: MarkdownView,
 ) {
@@ -114,6 +132,21 @@ export async function toggleSiblingSectionsFold(
   const cursorPos = editor.getCursor();
   const refHeadingIndex = getHeadingIndex(fileHeadings, cursorPos.line, true);
   if (refHeadingIndex === -1) return;
+
+  rawToggleFoldOnSiblingHeadings(editor, view, fileHeadings, refHeadingIndex);
+
+  // Center the cursor.
+  editor.scrollIntoView({from: cursorPos, to: cursorPos}, true);
+
+}
+
+
+function rawToggleFoldOnSiblingHeadings(
+  editor: Editor,
+  view: MarkdownView,
+  fileHeadings: HeadingCache[],
+  refHeadingIndex: number,
+) {
 
   let folds = [];
   let unfold = false;
@@ -143,9 +176,6 @@ export async function toggleSiblingSectionsFold(
   // Fold the sibling fold ranges.
   (view.currentMode as any).applyFoldInfo({folds, lines: editor.lineCount()});
   (view as any).onMarkdownFold();
-
-  // Center the cursor.
-  editor.scrollIntoView({from: cursorPos, to: cursorPos}, true);
 
 }
 

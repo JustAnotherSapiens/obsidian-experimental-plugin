@@ -16,7 +16,8 @@ import {
 import {
 	showCurrentDateAndTime,
 	moveCurrentTab,
-	toggleSiblingSectionsFold,
+	cleanToggleFoldOnSiblingHeadings,
+	cleanToggleFoldOnChildrenHeadings,
 } from "./actions/display";
 
 import {
@@ -71,15 +72,38 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
+		/* FOLD COMMANDS */
 
 		this.addCommand({
-			id: "toggle-sibling-sections-fold",
-			name: "Toggle sibling sections fold",
+			id: "toggle-fold",
+			name: "Toggle fold",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: false,
+			editorCallback: (editor: Editor) => {
+				editor.exec("toggleFold");
+			}
+		});
+
+		this.addCommand({
+			id: "toggle-fold-sibling-headings",
+			name: "Toggle fold on sibling headings",
 			icon: "arrow-down",
 			mobileOnly: false,
 			repeatable: false,
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
-				await toggleSiblingSectionsFold(editor, view);
+				await cleanToggleFoldOnSiblingHeadings(editor, view);
+			}
+		});
+
+		this.addCommand({
+			id: "toggle-fold-children-headings",
+			name: "Toggle fold on children headings",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: false,
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				await cleanToggleFoldOnChildrenHeadings(editor, view);
 			}
 		});
 
