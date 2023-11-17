@@ -9,15 +9,18 @@ import {
 
 import {
 	DEFAULT_SETTINGS,
-	Settings,
+	ExperimentalSettings,
 	ExperimentalSettingTab,
 } from "./settings";
 
 import {
-	showCurrentDateAndTime,
-	moveCurrentTab,
 	cleanToggleFoldOnSiblingHeadings,
 	cleanToggleFoldOnChildrenHeadings,
+} from "./actions/folds";
+
+import {
+	showCurrentDateAndTime,
+	moveCurrentTab,
 } from "./actions/display";
 
 import {
@@ -31,7 +34,7 @@ import {
 
 
 export default class ExperimentalPlugin extends Plugin {
-	settings: Settings;
+	settings: ExperimentalSettings;
 
 
 	async onload() {
@@ -50,115 +53,11 @@ export default class ExperimentalPlugin extends Plugin {
 	}
 
 
-	addPluginCommands() {
+	addHeadingMovementCommands() {
 
-		this.addCommand({
-			id: "show-current-date-and-time",
-			name: "Show current date and time",
-			icon: "calendar-clock",
-			mobileOnly: false,
-			repeatable: false,
-			callback: () => showCurrentDateAndTime(),
-		});
+		/* TOGGLE SETTINGS */
 
-		this.addCommand({
-			id: "smart-strikethrough",
-			name: "Smart strikethrough",
-			icon: "strikethrough",
-			mobileOnly: false,
-			repeatable: false,
-			editorCallback: (editor: Editor) => {
-				smartStrikethrough(editor);
-			}
-		});
-
-		/* FOLD COMMANDS */
-
-		this.addCommand({
-			id: "toggle-fold",
-			name: "Toggle fold",
-			icon: "arrow-down",
-			mobileOnly: false,
-			repeatable: false,
-			editorCallback: (editor: Editor) => {
-				editor.exec("toggleFold");
-			}
-		});
-
-		this.addCommand({
-			id: "toggle-fold-sibling-headings",
-			name: "Toggle fold on sibling headings",
-			icon: "arrow-down",
-			mobileOnly: false,
-			repeatable: false,
-			editorCallback: async (editor: Editor, view: MarkdownView) => {
-				await cleanToggleFoldOnSiblingHeadings(editor, view);
-			}
-		});
-
-		this.addCommand({
-			id: "toggle-fold-children-headings",
-			name: "Toggle fold on children headings",
-			icon: "arrow-down",
-			mobileOnly: false,
-			repeatable: false,
-			editorCallback: async (editor: Editor, view: MarkdownView) => {
-				await cleanToggleFoldOnChildrenHeadings(editor, view);
-			}
-		});
-
-		/* TAB MOVEMENT */
-
-		this.addCommand({
-			id: "move-current-tab-left",
-			name: "Move current tab left",
-			icon: "arrow-left",
-			mobileOnly: false,
-			repeatable: false,
-			callback: () => moveCurrentTab.call(this, "left"),
-		});
-
-		this.addCommand({
-			id: "move-current-tab-right",
-			name: "Move current tab right",
-			icon: "arrow-right",
-			mobileOnly: false,
-			repeatable: false,
-			callback: () => moveCurrentTab.call(this, "right"),
-		});
-
-
-		/* TOGGLE COMMANDS */
-
-		this.addCommand({
-			id: "toggle-line-numbers",
-			name: "Toggle line numbers",
-			icon: "numbered-list",
-			mobileOnly: false,
-			repeatable: false,
-			callback: () => {
-				const vault = this.app.vault as any;
-				const showLineNumber = vault.getConfig("showLineNumber");
-				vault.setConfig("showLineNumber", !showLineNumber);
-			}
-		});
-
-		this.addCommand({
-			id: "toggle-vim-mode",
-			name: "Toggle Vim mode",
-			icon: "vim",
-			mobileOnly: false,
-			repeatable: false,
-			callback: () => {
-				const vault = this.app.vault as any;
-				const vimMode = vault.getConfig("vimMode");
-				vault.setConfig("vimMode", !vimMode);
-			}
-		});
-
-
-		/* HEADING MOVEMENT COMMANDS */
-
+		// Toggle Wrap Around
 		this.addCommand({
 			id: "toggle-global-wrap-around",
 			name: "Toggle wrap around globally",
@@ -183,28 +82,7 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
-		this.addCommand({
-			id: "contiguous-heading-down",
-			name: "Move cursor to contiguous heading down",
-			icon: "arrow-down",
-			mobileOnly: false,
-			repeatable: true,
-			editorCallback: async (editor: Editor) => {
-				await moveCursorToHeading(editor, "contiguous", "down");
-			}
-		});
-
-		this.addCommand({
-			id: "contiguous-heading-up",
-			name: "Move cursor to contiguous heading up",
-			icon: "arrow-up",
-			mobileOnly: false,
-			repeatable: true,
-			editorCallback: async (editor: Editor) => {
-				await moveCursorToHeading(editor, "contiguous", "up");
-			}
-		});
-
+		// Toggle Sibling Mode
 		this.addCommand({
 			id: "toggle-sibling-mode",
 			name: "Toggle sibling mode (loose/strict)",
@@ -224,6 +102,9 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
+		/* MOVE CURSOR TO HEADING */
+
+		// Move cursor to next sibling heading down
 		this.addCommand({
 			id: "sibling-heading-down",
 			name: "Move cursor to next sibling heading down",
@@ -236,6 +117,7 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
+		// Move cursor to next sibling heading up
 		this.addCommand({
 			id: "sibling-heading-up",
 			name: "Move cursor to next sibling heading up",
@@ -248,6 +130,7 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
+		// Move cursor to parent heading
 		this.addCommand({
 			id: "parent-heading",
 			name: "Move cursor to parent heading",
@@ -259,6 +142,162 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
+		// Move cursor to next contiguous heading down
+		this.addCommand({
+			id: "contiguous-heading-down",
+			name: "Move cursor to contiguous heading down",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: true,
+			editorCallback: async (editor: Editor) => {
+				await moveCursorToHeading(editor, "contiguous", "down");
+			}
+		});
+
+		// Move cursor to next contiguous heading up
+		this.addCommand({
+			id: "contiguous-heading-up",
+			name: "Move cursor to contiguous heading up",
+			icon: "arrow-up",
+			mobileOnly: false,
+			repeatable: true,
+			editorCallback: async (editor: Editor) => {
+				await moveCursorToHeading(editor, "contiguous", "up");
+			}
+		});
+
+	}
+
+
+	addSmallFeatureCommands() {
+
+		/* TOGGLE CONFIG OPTIONS */
+
+		// Toggle Line Numbers
+		this.addCommand({
+			id: "toggle-line-numbers",
+			name: "Toggle line numbers",
+			icon: "numbered-list",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => {
+				const vault = this.app.vault as any;
+				const showLineNumber = vault.getConfig("showLineNumber");
+				vault.setConfig("showLineNumber", !showLineNumber);
+			}
+		});
+
+		// Toggle Vim Mode
+		this.addCommand({
+			id: "toggle-vim-mode",
+			name: "Toggle Vim mode",
+			icon: "vim",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => {
+				const vault = this.app.vault as any;
+				const vimMode = vault.getConfig("vimMode");
+				vault.setConfig("vimMode", !vimMode);
+			}
+		});
+
+		/* MOVE CURRENT TAB */
+
+		// Move current tab left
+		this.addCommand({
+			id: "move-current-tab-left",
+			name: "Move current tab left",
+			icon: "arrow-left",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => moveCurrentTab.call(this, "left"),
+		});
+
+		// Move current tab right
+		this.addCommand({
+			id: "move-current-tab-right",
+			name: "Move current tab right",
+			icon: "arrow-right",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => moveCurrentTab.call(this, "right"),
+		});
+
+	}
+
+
+	addFoldCommands() {
+
+		/* HEADING FOLDS */
+
+		this.addCommand({
+			id: "toggle-fold-sibling-headings",
+			name: "Toggle fold on sibling headings",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: false,
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				await cleanToggleFoldOnSiblingHeadings(editor, view);
+			}
+		});
+
+		this.addCommand({
+			id: "toggle-fold-children-headings",
+			name: "Toggle fold on children headings",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: false,
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				await cleanToggleFoldOnChildrenHeadings(editor, view);
+			}
+		});
+
+		// this.addCommand({
+		// 	id: "toggle-fold",
+		// 	name: "Toggle fold",
+		// 	icon: "arrow-down",
+		// 	mobileOnly: false,
+		// 	repeatable: false,
+		// 	editorCallback: (editor: Editor) => {
+		// 		editor.exec("toggleFold");
+		// 	}
+		// });
+
+	}
+
+
+	addTestingCommands() {
+
+		// Display Notice with current date and time
+		this.addCommand({
+			id: "show-current-date-and-time",
+			name: "Show current date and time",
+			icon: "calendar-clock",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => showCurrentDateAndTime(),
+		});
+
+		// Behavior-tailored strikethrough
+		this.addCommand({
+			id: "smart-strikethrough",
+			name: "Smart strikethrough",
+			icon: "strikethrough",
+			mobileOnly: false,
+			repeatable: false,
+			editorCallback: (editor: Editor) => {
+				smartStrikethrough(editor);
+			}
+		});
+
+	}
+
+
+	addPluginCommands() {
+		this.addHeadingMovementCommands();
+		this.addFoldCommands();
+		this.addSmallFeatureCommands();
+		this.addTestingCommands();
 	}
 
 

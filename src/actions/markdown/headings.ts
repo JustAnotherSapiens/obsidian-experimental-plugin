@@ -5,16 +5,6 @@ import { getActiveFileCache } from "../generics";
 import { getSetting } from "../../settings";
 
 
-const movementFunctions = {
-  contiguous: contiguousHeading,
-  parent: parentHeading,
-  looseSibling: looseSiblingHeading,
-  strictSibling: strictSiblingHeading,
-  // lastChild: lastChildHeading
-}
-
-type MovementMode = keyof typeof movementFunctions;
-
 type MovementDirection = "up" | "down";
 
 type HeadingMovementArgs = {
@@ -23,6 +13,15 @@ type HeadingMovementArgs = {
   headingIndex: number,
   direction: MovementDirection | undefined,
 }
+
+const movementFunctions = {
+  strictSibling: strictSiblingHeading,
+  looseSibling: looseSiblingHeading,
+  parent: parentHeading,
+  contiguous: contiguousHeading,
+  // lastChild: lastChildHeading
+}
+type MovementMode = keyof typeof movementFunctions;
 
 
 // STRICT SIBLING: Move to next heading with same level and parent
@@ -114,6 +113,7 @@ function looseSiblingHeading(args: HeadingMovementArgs) {
   }
 }
 
+
 function parentHeading(args: HeadingMovementArgs) {
   // if (args.headingIndex === -1) {
   //   args.direction = "up";
@@ -127,6 +127,7 @@ function parentHeading(args: HeadingMovementArgs) {
   }
   return undefined;
 }
+
 
 function contiguousHeading(args: HeadingMovementArgs) {
   switch (args.direction) {
@@ -156,6 +157,7 @@ function contiguousHeading(args: HeadingMovementArgs) {
   }
 }
 
+
 export function getHeadingIndex(
   fileHeadings: HeadingCache[],
   cursorLine: number,
@@ -171,13 +173,12 @@ export function getHeadingIndex(
   return headingIndex;
 }
 
+
 export async function moveCursorToHeading(
   editor: Editor,
   mode: MovementMode,
   direction?: MovementDirection
 ) {
-
-  const label = `${mode} ${direction || ""}`.trim();
 
   const fileHeadings = await getActiveFileCache("headings") as HeadingCache[];
   if (fileHeadings.length === 0) return;
@@ -203,22 +204,18 @@ export async function moveCursorToHeading(
       default:
         console.log("Unhandled levelZeroBehavior:", getSetting("levelZeroBehavior"));
         return;
-
     }
   }
 
-  // console.log("mode:", mode);
-  
   const foundHeadingLine = movementFunctions[mode]({
     fileHeadings,
     cursorLine,
     headingIndex,
     direction,
   });
-  handleCursorMovement(editor, foundHeadingLine, label);
+  handleCursorMovement(editor, foundHeadingLine);
 
   cursorScrollOffset(editor, getSetting("scrollOffset"));
-
 }
 
 
@@ -234,11 +231,8 @@ function cursorScrollOffset(editor: Editor, offset: number = 0) {
 function handleCursorMovement(
   editor: Editor,
   line: number | undefined,
-  label?: string
 ) {
   if (line === undefined) return;
-  // console.log(`Found ${label}`.trim() + ':', line);
-
 
   if (!editor.somethingSelected()) {
     editor.setCursor({line, ch: 0});
@@ -260,31 +254,31 @@ function handleCursorMovement(
 }
 
 
-export function getHeadingSection(
-  editor: Editor,
-  fileHeadings: HeadingCache[],
-  headingIndex: number
-) {
-  const numberOfHeadings = fileHeadings.length;
-  const currentHeading = fileHeadings[headingIndex];
-  const headingLevel = currentHeading.level;
+// export function getHeadingSection(
+//   editor: Editor,
+//   fileHeadings: HeadingCache[],
+//   headingIndex: number
+// ) {
+//   const numberOfHeadings = fileHeadings.length;
+//   const currentHeading = fileHeadings[headingIndex];
+//   const headingLevel = currentHeading.level;
 
-  const sectionStart = {line: currentHeading.position.start.line, ch: 0};
-  let sectionEnd = {line: editor.lastLine() + 1, ch: 0}; // Default to EOF
+//   const sectionStart = {line: currentHeading.position.start.line, ch: 0};
+//   let sectionEnd = {line: editor.lastLine() + 1, ch: 0}; // Default to EOF
 
-  for (let i = headingIndex + 1; i < numberOfHeadings; i++) {
-    if (fileHeadings[i].level <= headingLevel) {
-      sectionEnd.line = fileHeadings[i].position.start.line;
-      break;
-    }
-  }
+//   for (let i = headingIndex + 1; i < numberOfHeadings; i++) {
+//     if (fileHeadings[i].level <= headingLevel) {
+//       sectionEnd.line = fileHeadings[i].position.start.line;
+//       break;
+//     }
+//   }
 
-  return {
-    range: {from: sectionStart, to: sectionEnd},
-    title: currentHeading.heading,
-    text: editor.getRange(sectionStart, sectionEnd),
-    numberOfLines: sectionEnd.line - sectionStart.line,
-    hasLastLine: sectionEnd.line > editor.lastLine()
-  };
-}
+//   return {
+//     range: {from: sectionStart, to: sectionEnd},
+//     title: currentHeading.heading,
+//     text: editor.getRange(sectionStart, sectionEnd),
+//     numberOfLines: sectionEnd.line - sectionStart.line,
+//     hasLastLine: sectionEnd.line > editor.lastLine()
+//   };
+// }
 

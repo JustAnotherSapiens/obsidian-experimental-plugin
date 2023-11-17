@@ -14,7 +14,7 @@ type ScriptComplexityLevel = typeof scriptComplexityLevels[number];
 type LevelZeroBehavior = "snap-contiguous" | "snap-parent" | "on-parent-behavior";
 type SiblingMode = "strictSibling" | "looseSibling";
 
-export interface Settings {
+export interface ExperimentalSettings {
 	levelZeroBehavior: LevelZeroBehavior;
 	siblingMode: SiblingMode;
 	scrollOffset: number;
@@ -28,13 +28,13 @@ export interface Settings {
 	emergencyBreak: boolean;
 	breakTriggerTime: number;
 }
-type SettingKey = keyof Settings;
+type SettingKey = keyof ExperimentalSettings;
 
 export function getSetting(setting: SettingKey) {
   return this.app.plugins.plugins["experimental-plugin"].settings[setting];
 }
 
-export const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS: ExperimentalSettings = {
 	levelZeroBehavior: "snap-contiguous",
 	siblingMode: "looseSibling",
 	scrollOffset: 0,
