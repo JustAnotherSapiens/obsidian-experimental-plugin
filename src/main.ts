@@ -24,6 +24,11 @@ import {
 } from "./actions/display";
 
 import {
+	ExperimentalModal,
+	ExperimentalSuggestModal,
+} from "./actions/suggest";
+
+import {
 	smartStrikethrough,
 } from "./actions/markdown/syntax";
 
@@ -42,7 +47,7 @@ export default class ExperimentalPlugin extends Plugin {
 		await this.loadSettings();
 		this.addPluginCommands();
 		this.addPluginRibbonIcons();
-		this.addPluginStatusBarItems();
+		// this.addPluginStatusBarItems();
 		this.addSettingTab(new ExperimentalSettingTab(this.app, this));
 		// this.addPluginEventsAndIntervals();
 	}
@@ -268,6 +273,19 @@ export default class ExperimentalPlugin extends Plugin {
 
 	addTestingCommands() {
 
+		// Test ExperimentalModal
+		this.addCommand({
+			id: "test-modal",
+			name: "Test Modal",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: false,
+			callback: () => {
+				new Notice("Testing ExperimentalModal");
+				new ExperimentalModal(this.app).open();
+			}
+		});
+
 		// Display Notice with current date and time
 		this.addCommand({
 			id: "show-current-date-and-time",
@@ -318,7 +336,8 @@ export default class ExperimentalPlugin extends Plugin {
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText(window.moment().format("ddd, MMM Do (HH:mm:ss)"));
+		// E YYYY-MM-DD HH:mm:ss
+		statusBarItemEl.setText(window.moment().format("d MMM Do (HH:mm:ss)"));
 
 	}
 

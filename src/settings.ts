@@ -1,5 +1,10 @@
-import { App, ButtonComponent, PluginSettingTab, Setting } from "obsidian";
+import {
+	PluginSettingTab, Setting,
+	App, ButtonComponent,
+} from "obsidian";
+
 import ExperimentalPlugin from "./main";
+
 
 const scriptComplexityLevels = [
   "Minimal",
@@ -314,7 +319,7 @@ export class ExperimentalSettingTab extends PluginSettingTab {
 
 
 	addWarningBanner(containerEl: HTMLElement): void {
-		containerEl.createDiv("warning-banner", (banner) => {
+		containerEl.createDiv("warning-banner", (banner: HTMLDivElement) => {
 			banner.createEl("h4", {
 				text: "⚠ WARNING ⚠"
 			});

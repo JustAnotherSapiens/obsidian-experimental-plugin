@@ -1,6 +1,14 @@
-import { Editor, EditorRange, EditorRangeOrCaret, HeadingCache, MarkdownView } from "obsidian";
+import {
+  Editor, MarkdownView, HeadingCache,
+  EditorRange, EditorRangeOrCaret,
+} from "obsidian";
 
-import { getActiveFileCache } from "../generics";
+import {
+  getActiveFileCache,
+  getHeadingIndex,
+  handleCursorMovement,
+  cursorScrollOffset,
+} from "../generics";
 
 import { getSetting } from "../../settings";
 
@@ -158,22 +166,6 @@ function contiguousHeading(args: HeadingMovementArgs) {
 }
 
 
-export function getHeadingIndex(
-  fileHeadings: HeadingCache[],
-  cursorLine: number,
-  snapParent: boolean = false
-) {
-  let headingIndex = -1;
-  for (let i = fileHeadings.length - 1; i >= 0; i--) {
-    if (fileHeadings[i].position.start.line > cursorLine) continue;
-    if (fileHeadings[i].position.start.line === cursorLine) headingIndex = i;
-    else if (snapParent) headingIndex = i;
-    break;
-  }
-  return headingIndex;
-}
-
-
 export async function moveCursorToHeading(
   editor: Editor,
   mode: MovementMode,
@@ -216,41 +208,6 @@ export async function moveCursorToHeading(
   handleCursorMovement(editor, foundHeadingLine);
 
   cursorScrollOffset(editor, getSetting("scrollOffset"));
-}
-
-
-function cursorScrollOffset(editor: Editor, offset: number = 0) {
-  const cursorPos = editor.getCursor();
-  editor.scrollIntoView({
-    from: {line: cursorPos.line - offset, ch: 0},
-    to: {line: cursorPos.line + offset, ch: 0}
-  }, false);
-}
-
-
-function handleCursorMovement(
-  editor: Editor,
-  line: number | undefined,
-) {
-  if (line === undefined) return;
-
-  if (!editor.somethingSelected()) {
-    editor.setCursor({line, ch: 0});
-    return;
-  }
-
-  let selection: EditorRange = {
-    from: editor.getCursor("anchor"),
-    to: {line, ch: 0},
-  };
-
-  if (this.app.vault.config.vimMode) {
-    if (line >= selection.from.line) {
-      selection.to.ch = 1;
-    }
-  }
-
-  editor.transaction({selection});
 }
 
 

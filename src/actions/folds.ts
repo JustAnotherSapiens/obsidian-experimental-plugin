@@ -1,16 +1,12 @@
 import {
-  Editor,
-  MarkdownView,
-  HeadingCache,
+  Editor, MarkdownView, HeadingCache,
 } from "obsidian";
 
 import {
   getActiveFileCache,
-} from "./generics";
-
-import {
   getHeadingIndex,
-} from "./markdown/headings";
+  cursorScrollOffset,
+} from "./generics";
 
 
 
@@ -52,6 +48,7 @@ export async function cleanToggleFoldOnChildrenHeadings(
   }
 
   rawToggleFoldOnSiblingHeadings(editor, view, fileHeadings, refChildHeadingIdx);
+  cursorScrollOffset(editor, 1);
 
 }
 

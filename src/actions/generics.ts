@@ -1,4 +1,10 @@
-import { App, CachedMetadata, MarkdownView, Notice, TFile } from "obsidian";
+import {
+  Notice, TFile,
+  Editor, MarkdownView,
+  CachedMetadata, HeadingCache,
+  EditorRange, EditorRangeOrCaret,
+} from "obsidian";
+
 
 
 const metadataProperties = [
@@ -14,6 +20,7 @@ const metadataProperties = [
   "blocks",
 ] as const;
 type MetadataProperty = typeof metadataProperties[number];
+
 
 
 export function getActiveView(): MarkdownView {
@@ -53,6 +60,60 @@ export async function getActiveFileCache(
     console.error(window.moment().format("HH:mm:ss.SSS"), error);
   }
 }
+
+
+export function getHeadingIndex(
+  fileHeadings: HeadingCache[],
+  cursorLine: number,
+  snapParent: boolean = false
+) {
+  let headingIndex = -1;
+  for (let i = fileHeadings.length - 1; i >= 0; i--) {
+    if (fileHeadings[i].position.start.line > cursorLine) continue;
+    if (fileHeadings[i].position.start.line === cursorLine) headingIndex = i;
+    else if (snapParent) headingIndex = i;
+    break;
+  }
+  return headingIndex;
+}
+
+
+export function cursorScrollOffset(editor: Editor, offset: number = 0) {
+  const cursorPos = editor.getCursor();
+  editor.scrollIntoView({
+    from: {line: cursorPos.line - offset, ch: 0},
+    to: {line: cursorPos.line + offset, ch: 0}
+  }, false);
+}
+
+
+export function handleCursorMovement(
+  editor: Editor,
+  line: number | undefined,
+) {
+  if (line === undefined) return;
+
+  if (!editor.somethingSelected()) {
+    editor.setCursor({line, ch: 0});
+    return;
+  }
+
+  let selection: EditorRange = {
+    from: editor.getCursor("anchor"),
+    to: {line, ch: 0},
+  };
+
+  if (this.app.vault.config.vimMode) {
+    if (line >= selection.from.line) {
+      selection.to.ch = 1;
+    }
+  }
+
+  editor.transaction({selection});
+}
+
+
+
 
 
 /* NOTICE FUNCTIONS */
