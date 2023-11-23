@@ -1,10 +1,7 @@
 import {
-	App,
-	Editor,
-	MarkdownView,
-	Modal,
+	App, Editor, MarkdownView,
+	Notice, Modal,
 	Plugin,
-	Notice,
 } from "obsidian";
 
 import {
@@ -14,6 +11,7 @@ import {
 } from "./settings";
 
 import {
+	cleanToggleFold,
 	cleanToggleFoldOnSiblingHeadings,
 	cleanToggleFoldOnChildrenHeadings,
 } from "./actions/folds";
@@ -257,16 +255,16 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
-		// this.addCommand({
-		// 	id: "toggle-fold",
-		// 	name: "Toggle fold",
-		// 	icon: "arrow-down",
-		// 	mobileOnly: false,
-		// 	repeatable: false,
-		// 	editorCallback: (editor: Editor) => {
-		// 		editor.exec("toggleFold");
-		// 	}
-		// });
+		this.addCommand({
+			id: "toggle-fold",
+			name: "Toggle fold",
+			icon: "arrow-down",
+			mobileOnly: false,
+			repeatable: false,
+			editorCallback: (editor: Editor) => {
+				cleanToggleFold(editor);
+			}
+		});
 
 	}
 

@@ -1,16 +1,15 @@
 import {
   Editor, MarkdownView, HeadingCache,
-  EditorRange, EditorRangeOrCaret,
 } from "obsidian";
 
 import {
+  getSetting,
   getActiveFileCache,
   getHeadingIndex,
   handleCursorMovement,
-  cursorScrollOffset,
+  scrollToCursor,
 } from "../generics";
 
-import { getSetting } from "../../settings";
 
 
 type MovementDirection = "up" | "down";
@@ -207,7 +206,7 @@ export async function moveCursorToHeading(
   });
   handleCursorMovement(editor, foundHeadingLine);
 
-  cursorScrollOffset(editor, getSetting("scrollOffset"));
+  scrollToCursor(editor, getSetting("scrollOffset"));
 }
 
 

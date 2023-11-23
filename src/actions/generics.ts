@@ -5,6 +5,45 @@ import {
   EditorRange, EditorRangeOrCaret,
 } from "obsidian";
 
+import { ExperimentalSettings } from "./../settings";
+
+
+// This must match the ID at manifest.json
+export const PLUGIN_ID = "experimental-plugin";
+
+
+type SettingKey = keyof ExperimentalSettings;
+
+export function getSetting(setting: SettingKey): any {
+  return this.app.plugins.plugins[PLUGIN_ID].settings[setting];
+}
+
+
+export function getActiveView(): MarkdownView {
+  return this.app.workspace.getActiveViewOfType(MarkdownView);
+}
+
+
+export function getCodeMirrorEditor(view: MarkdownView): CodeMirror.Editor {
+  return (view.editor as any).editMode?.editor?.cm?.cm;
+}
+
+
+export type Fold = {from: number, to: number};
+
+export function getFolds(view: MarkdownView): Array<Fold> {
+  const foldInfo = (view.currentMode as any).getFoldInfo();
+  if (foldInfo) return foldInfo.folds;
+  return [];
+}
+
+export function applyFolds( view: MarkdownView, folds: Array<Fold>): void {
+  (view.currentMode as any).applyFoldInfo({
+    folds, lines: view.editor.lineCount()
+  });
+  (view as any).onMarkdownFold();
+}
+
 
 
 const metadataProperties = [
@@ -21,21 +60,8 @@ const metadataProperties = [
 ] as const;
 type MetadataProperty = typeof metadataProperties[number];
 
-
-
-export function getActiveView(): MarkdownView {
-  return this.app.workspace.getActiveViewOfType(MarkdownView);
-}
-
-export function getCodeMirrorEditor(view: MarkdownView): CodeMirror.Editor {
-  return (view.editor as any).editMode?.editor?.cm?.cm;
-}
-
-
-export async function getActiveFileCache(
-  property?: MetadataProperty,
+export async function getActiveFileCache(property?: MetadataProperty) {
   // msDelay: number = 0
-) {
   const startTime = window.moment().format("YYYY-MM-DD[T]HH:mm:ss.SSS");
 
   this.app.commands.executeCommandById('editor:save-file');
@@ -62,11 +88,12 @@ export async function getActiveFileCache(
 }
 
 
+
 export function getHeadingIndex(
   fileHeadings: HeadingCache[],
   cursorLine: number,
   snapParent: boolean = false
-) {
+): number {
   let headingIndex = -1;
   for (let i = fileHeadings.length - 1; i >= 0; i--) {
     if (fileHeadings[i].position.start.line > cursorLine) continue;
@@ -78,7 +105,7 @@ export function getHeadingIndex(
 }
 
 
-export function cursorScrollOffset(editor: Editor, offset: number = 0) {
+export function scrollToCursor(editor: Editor, offset: number = 0): void {
   const cursorPos = editor.getCursor();
   editor.scrollIntoView({
     from: {line: cursorPos.line - offset, ch: 0},
@@ -90,7 +117,7 @@ export function cursorScrollOffset(editor: Editor, offset: number = 0) {
 export function handleCursorMovement(
   editor: Editor,
   line: number | undefined,
-) {
+): void {
   if (line === undefined) return;
 
   if (!editor.somethingSelected()) {
@@ -122,7 +149,7 @@ export function newMultilinePluginNotice (
   texts: string[],
   style: string,
   duration?: number | undefined
-) {
+): void {
   const fragment = document.createDocumentFragment();
   texts.forEach((text) => {
     const p = document.createElement("p");

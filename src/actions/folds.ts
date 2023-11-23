@@ -3,9 +3,11 @@ import {
 } from "obsidian";
 
 import {
+  getSetting,
   getActiveFileCache,
   getHeadingIndex,
-  cursorScrollOffset,
+  scrollToCursor,
+  Fold, getFolds, applyFolds,
 } from "./generics";
 
 
@@ -47,9 +49,18 @@ export async function cleanToggleFoldOnChildrenHeadings(
     }
   }
 
-  rawToggleFoldOnSiblingHeadings(editor, view, fileHeadings, refChildHeadingIdx);
-  cursorScrollOffset(editor, 1);
+  let folds = getToggledSiblingHeadingFolds(view, fileHeadings, refChildHeadingIdx);
 
+  if (getSetting("alwaysUnfoldParent")) {
+    const parentLine = fileHeadings[parentHeadingIdx].position.start.line;
+    const parentFoldIdx = folds.findIndex((fold) => fold.from === parentLine);
+    if (parentFoldIdx !== -1) {
+      folds.splice(parentFoldIdx, 1);
+    }
+  }
+
+  applyFolds(view, folds);
+  scrollToCursor(editor, 1);
 }
 
 
@@ -65,37 +76,31 @@ export async function cleanToggleFoldOnSiblingHeadings(
   const refHeadingIndex = getHeadingIndex(fileHeadings, cursorPos.line, true);
   if (refHeadingIndex === -1) return;
 
-  rawToggleFoldOnSiblingHeadings(editor, view, fileHeadings, refHeadingIndex);
+  const folds = getToggledSiblingHeadingFolds(view, fileHeadings, refHeadingIndex);
 
-  // Center the cursor.
-  editor.scrollIntoView({from: cursorPos, to: cursorPos}, true);
-
+  applyFolds(view, folds);
+  // scrollToCursor(editor, 2);
+  editor.scrollIntoView({from: cursorPos, to: cursorPos}, true /* center */);
 }
 
 
-function rawToggleFoldOnSiblingHeadings(
-  editor: Editor,
+function getToggledSiblingHeadingFolds(
   view: MarkdownView,
   fileHeadings: HeadingCache[],
   refHeadingIndex: number,
-) {
+): Array<Fold> {
 
-  let folds = [];
-  let unfold = false;
-  const foldInfo = (view.currentMode as any).getFoldInfo();
-  if (foldInfo) {
-    folds = foldInfo.folds;
-    unfold = folds.some(
-      (fold: any) => fold.from === fileHeadings[refHeadingIndex].position.start.line
-    );
-  }
+  let folds = getFolds(view);
+  const unfold = folds.some(
+    (fold: any) => fold.from === fileHeadings[refHeadingIndex].position.start.line
+  );
 
   // Get sibling section info.
-  const {headings, rangeEnd} = getSiblingsInfo(editor, fileHeadings, refHeadingIndex);
+  const {headings, rangeEnd} = getSiblingsInfo(view.editor, fileHeadings, refHeadingIndex);
 
   if (unfold) {
     const headingLines = new Set(headings.map(heading => heading.position.start.line));
-    folds = folds.filter((fold: any) => !headingLines.has(fold.from));
+    folds = folds.filter((fold) => !headingLines.has(fold.from));
   } else {
     const siblingFoldRanges = headings.map((heading, idx) => ({
       from: heading.position.start.line,
@@ -105,10 +110,8 @@ function rawToggleFoldOnSiblingHeadings(
     folds = [...new Set(folds)]; // Remove duplicates.
   }
 
-  // Fold the sibling fold ranges.
-  (view.currentMode as any).applyFoldInfo({folds, lines: editor.lineCount()});
-  (view as any).onMarkdownFold();
-
+  return folds;
+  // applyFolds(view, folds);
 }
 
 
@@ -151,6 +154,12 @@ function getSiblingsInfo(
     headings: siblingHeadings,
     rangeEnd: siblingRangeEnd,
   };
+}
+
+
+export function cleanToggleFold(editor: Editor) {
+  editor.exec("toggleFold");
+  scrollToCursor(editor);
 }
 
 

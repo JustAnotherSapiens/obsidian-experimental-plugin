@@ -20,6 +20,7 @@ type LevelZeroBehavior = "snap-contiguous" | "snap-parent" | "on-parent-behavior
 type SiblingMode = "strictSibling" | "looseSibling";
 
 export interface ExperimentalSettings {
+	// Heading Movements
 	levelZeroBehavior: LevelZeroBehavior;
 	siblingMode: SiblingMode;
 	scrollOffset: number;
@@ -27,19 +28,18 @@ export interface ExperimentalSettings {
 	contiguousWrapAround: boolean;
 	looseSiblingWrapAround: boolean;
 	strictSiblingWrapAround: boolean;
+	// Fold Settings
+	alwaysUnfoldParent: boolean;
+	// Script Runner
 	scriptsPath: string;
 	vimModeScripts: boolean;
 	scriptComplexity: ScriptComplexityLevel;
 	emergencyBreak: boolean;
 	breakTriggerTime: number;
 }
-type SettingKey = keyof ExperimentalSettings;
-
-export function getSetting(setting: SettingKey) {
-  return this.app.plugins.plugins["experimental-plugin"].settings[setting];
-}
 
 export const DEFAULT_SETTINGS: ExperimentalSettings = {
+	// Heading Movements
 	levelZeroBehavior: "snap-contiguous",
 	siblingMode: "looseSibling",
 	scrollOffset: 0,
@@ -47,6 +47,9 @@ export const DEFAULT_SETTINGS: ExperimentalSettings = {
 	contiguousWrapAround: false,
 	looseSiblingWrapAround: false,
 	strictSiblingWrapAround: true,
+	// Fold Settings
+	alwaysUnfoldParent: false,
+	// Script Runner
 	scriptsPath: '',
 	vimModeScripts: false,
 	scriptComplexity: "Minimal",
@@ -64,11 +67,11 @@ export class ExperimentalSettingTab extends PluginSettingTab {
 	}
 
 
-	addHeadingMovementOptions(containerEl: HTMLElement): void {
+	addHeadingMovementSettings(containerEl: HTMLElement): void {
 		containerEl.createEl("h1", {text: "Heading Movement Settings"});
 
 		/* Global Settings */
-		containerEl.createEl("h3", {text: "Global settings"});
+		// containerEl.createEl("h3", {text: "Global settings"});
 
 		// Level Zero Behavior
 		const levelZeroBehaviorDesc = document.createDocumentFragment();
@@ -178,7 +181,22 @@ export class ExperimentalSettingTab extends PluginSettingTab {
 	}
 
 
-	addScriptRunnerOptions(containerEl: HTMLElement): void {
+	addFoldSettings(containerEl: HTMLElement): void {
+		containerEl.createEl("h1", {text: "Fold Settings"});
+
+		new Setting(containerEl)
+		  .setName("Always unfold parent when folding/unfolding children")
+			.addToggle((toggle) => toggle
+				.setValue(this.plugin.settings.alwaysUnfoldParent)
+				.onChange(async (value) => {
+					this.plugin.settings.alwaysUnfoldParent = value;
+					await this.plugin.saveSettings();
+				})
+			);
+	}
+
+
+	addScriptRunnerSettings(containerEl: HTMLElement): void {
     containerEl.createEl("h1", {text: "Script Runner Settings"});
 
 		/* Basic Settings */
@@ -338,8 +356,9 @@ export class ExperimentalSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// this.addWarningBanner(containerEl);
-		this.addHeadingMovementOptions(containerEl);
-		// this.addScriptRunnerOptions(containerEl);
+		this.addHeadingMovementSettings(containerEl);
+		this.addFoldSettings(containerEl);
+		// this.addScriptRunnerSettings(containerEl);
 
 	}
 }
