@@ -37,7 +37,7 @@ export function getFolds(view: MarkdownView): Array<Fold> {
   return [];
 }
 
-export function applyFolds( view: MarkdownView, folds: Array<Fold>): void {
+export function applyFolds(view: MarkdownView, folds: Array<Fold>): void {
   (view.currentMode as any).applyFoldInfo({
     folds, lines: view.editor.lineCount()
   });
@@ -64,7 +64,12 @@ export async function getActiveFileCache(property?: MetadataProperty) {
   // msDelay: number = 0
   const startTime = window.moment().format("YYYY-MM-DD[T]HH:mm:ss.SSS");
 
+  // Ensure that the file is saved before getting the cache.
   this.app.commands.executeCommandById('editor:save-file');
+
+  // Ensure that the file is indexed before getting the cache.
+  await this.app.vault.adapter.read(this.app.workspace.getActiveFile().path);
+
   // await new Promise(resolve => setTimeout(resolve, msDelay));
 
   try {
@@ -77,13 +82,12 @@ export async function getActiveFileCache(property?: MetadataProperty) {
     if (!property) return fileCache;
 
     const fileProperty = structuredClone(fileCache[property]);
-    if (!fileProperty) throw new Error(`Couldn't get file ${property}`);
+    if (!fileProperty) throw new Error(`Couldn't get file ${property} from cache`);
 
     return fileProperty;
 
   } catch (error) {
-    console.warn(startTime, "getActiveFileHeadings() failed");
-    console.error(window.moment().format("HH:mm:ss.SSS"), error);
+    console.debug(startTime, "getActiveFileHeadings() failed:", error.message);
   }
 }
 

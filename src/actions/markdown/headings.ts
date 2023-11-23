@@ -172,7 +172,7 @@ export async function moveCursorToHeading(
 ) {
 
   const fileHeadings = await getActiveFileCache("headings") as HeadingCache[];
-  if (fileHeadings.length === 0) return;
+  if (!fileHeadings) return;
 
   let cursorLine = editor.getCursor().line;
   let headingIndex = getHeadingIndex(fileHeadings, cursorLine);

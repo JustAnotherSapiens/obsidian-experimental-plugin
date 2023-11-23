@@ -1,9 +1,9 @@
 import {
   App, Notice,
   Editor, MarkdownView,
-  ISuggestOwner, Modal,
+  ISuggestOwner, Modal, FuzzyMatch,
+  PopoverSuggest, AbstractInputSuggest,
   SuggestModal, FuzzySuggestModal,
-  FuzzyMatch,
  } from "obsidian";
 
 
