@@ -61,20 +61,25 @@ const metadataProperties = [
 type MetadataProperty = typeof metadataProperties[number];
 
 export async function getActiveFileCache(property?: MetadataProperty) {
-  // msDelay: number = 0
-  const startTime = window.moment().format("YYYY-MM-DD[T]HH:mm:ss.SSS");
+  // TODO: Find a reliable way to ensure that the file is properly indexed 
+  //       up to the latest changes before reading the cache.
+  // Current workaround:
+  //   - Calling the 'editor:save-file' command before reading the cache.
+  //   - Calling the 'adapter.read()' method before reading the cache.
 
-  // Ensure that the file is saved before getting the cache.
+  const startTime = this.moment().format("YYYY-MM-DD[T]HH:mm:ss.SSS");
+
+  // Not sure if this has any effect on the cache, but I believe
+  // it's a good practice to save the file before reading it.
   this.app.commands.executeCommandById('editor:save-file');
-
-  // Ensure that the file is indexed before getting the cache.
-  await this.app.vault.adapter.read(this.app.workspace.getActiveFile().path);
-
-  // await new Promise(resolve => setTimeout(resolve, msDelay));
 
   try {
     const currentFile = this.app.workspace.getActiveFile() as TFile;
     if (!currentFile) throw new Error("Couldn't get currentFile");
+
+    // The execution of this function is recommended on the API docs
+    // whenever we are planning to modify the file contents.
+    void await this.app.vault.adapter.read(currentFile.path);
 
     const fileCache = this.app.metadataCache.getFileCache(currentFile) as CachedMetadata;
     if (!fileCache) throw new Error("Couldn't get fileCache");
