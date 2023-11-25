@@ -151,7 +151,6 @@ export function handleCursorMovement(
 
 
 
-
 /* NOTICE FUNCTIONS */
 
 export function newMultilinePluginNotice (

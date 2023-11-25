@@ -190,7 +190,7 @@ export default class ExperimentalPlugin extends Plugin {
 			}
 		});
 
-		// Toggle Vim Mode
+		// Toggle Vim Mode (and Vim-related plugins)
 		this.addCommand({
 			id: "toggle-vim-mode",
 			name: "Toggle Vim mode",
@@ -198,9 +198,21 @@ export default class ExperimentalPlugin extends Plugin {
 			mobileOnly: false,
 			repeatable: false,
 			callback: () => {
-				const vault = this.app.vault as any;
-				const vimMode = vault.getConfig("vimMode");
-				vault.setConfig("vimMode", !vimMode);
+				const vimPlugins = ["obsidian-vimrc-support"];
+				const app = this.app as any;
+				const vimMode = app.vault.getConfig("vimMode");
+				if (vimMode) {
+					vimPlugins.forEach((pluginId: string) => {
+						if (app.plugins.enabledPlugins.has(pluginId))
+							app.plugins.disablePluginAndSave(pluginId);
+					});
+				} else {
+					vimPlugins.forEach((pluginId: string) => {
+						if (app.plugins.manifests.hasOwnProperty(pluginId))
+							app.plugins.enablePluginAndSave(pluginId);
+					});
+				}
+				app.vault.setConfig("vimMode", !vimMode);
 			}
 		});
 
