@@ -43,18 +43,24 @@
 /* break-trigger-time Setting */
 
 .break-trigger-time-item-control {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
 
-.break-trigger-time-button-container {
-  display: flex;
-  flex-direction: row;
-  justify-content: left;
-  width: 100%;
+.break-trigger-time-item-control > input {
+  grid-column: span 2;
 }
-.break-trigger-time-button-container > * {
-  margin-right: 4%;
-  padding: 0 4%;
-}
+
+/* About 'flex'
+ * - Always use 'flex' for the parent element (i.e. the container)
+  * - Use 'flex-direction' to set the direction of the flex items
+  * - Use 'justify-content' to set the alignment of the flex items along the main axis
+  * - Use 'align-items' to set the alignment of the flex items along the cross axis
+  * - Use 'flex-wrap' to set whether the flex items should wrap or not
+ * - For the child elements:
+  * - Use 'width' with a percentage value to set the width of the flex items
+  *   (it should be less than (100%/#-of-elems))
+  * - Use 'flex' with a number value to set the flex-grow property of the flex items
+  *   (e.g. with 3 items, use 'flex: 2' in one of them to make it twice as wide as the others,
+  *    i.e. it is treated as if it had 2 flex items)
+*/

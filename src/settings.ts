@@ -1,6 +1,6 @@
 import {
-	PluginSettingTab, Setting,
-	App, ButtonComponent,
+	App, Setting, PluginSettingTab,
+	BaseComponent, ButtonComponent, ToggleComponent, TextComponent, DropdownComponent,
 } from "obsidian";
 
 import ExperimentalPlugin from "./main";
@@ -67,30 +67,31 @@ export class ExperimentalSettingTab extends PluginSettingTab {
 	}
 
 
+	addFoldSettings(containerEl: HTMLElement): void {
+		containerEl.createEl("h3", {text: "Fold Settings"});
+
+		new Setting(containerEl)
+		  .setName("Always unfold parent when folding/unfolding children")
+			.addToggle((toggle: ToggleComponent) => {
+				toggle.setValue(this.plugin.settings.alwaysUnfoldParent);
+				toggle.onChange(async (value: boolean) => {
+					this.plugin.settings.alwaysUnfoldParent = value;
+					await this.plugin.saveSettings();
+				});
+			});
+	}
+
+
 	addHeadingMovementSettings(containerEl: HTMLElement): void {
-		containerEl.createEl("h1", {text: "Heading Movement Settings"});
+		containerEl.createEl("h3", {text: "Heading Movement Settings"});
 
 		/* Global Settings */
-		// containerEl.createEl("h3", {text: "Global settings"});
 
 		// Level Zero Behavior
-		const levelZeroBehaviorDesc = document.createDocumentFragment();
-		levelZeroBehaviorDesc.append(
-			"There are three options for how to behave at any heading movement action when the cursor is not on a heading:",
-			levelZeroBehaviorDesc.createEl("br"),
-			levelZeroBehaviorDesc.createEl("br"),
-			"1. Snap to the contiguous heading in the direction of movement.",
-			levelZeroBehaviorDesc.createEl("br"),
-			levelZeroBehaviorDesc.createEl("br"),
-			"2. Always snap to the parent heading regardless the direction of movement.",
-			levelZeroBehaviorDesc.createEl("br"),
-			levelZeroBehaviorDesc.createEl("br"),
-			"3. Behave as if the cursor is on its parent heading (can take a bit to get used to).",
-		);
 		new Setting(containerEl)
-		  .setName("Level zero behavior")
-			.setDesc(levelZeroBehaviorDesc)
-			.addDropdown((dropdown) => {
+		  .setName("Movement at no heading line")
+			.setDesc("How to behave on any heading movement action when the cursor is not on a heading line.")
+			.addDropdown((dropdown: DropdownComponent) => {
 				dropdown.addOptions({
 					"snap-contiguous":    "Snap to contiguous",
 					"snap-parent":        "Snap to parent",
@@ -104,22 +105,20 @@ export class ExperimentalSettingTab extends PluginSettingTab {
 			});
 
 		// Sibling Mode
-		const siblingModeDesc = document.createDocumentFragment();
-		siblingModeDesc.append(
-			"NOTE: They both work the same way when on top level headings.",
-			siblingModeDesc.createEl("br"),
-			siblingModeDesc.createEl("br"),
-			siblingModeDesc.createEl("b", {text: "Strict: "}),
-			"Only move to headings with the same level and parent.",
-			siblingModeDesc.createEl("br"),
-			siblingModeDesc.createEl("br"),
-			siblingModeDesc.createEl("b", {text: "Loose: "}),
-			"Move to any heading with the same level.",
-		);
 		new Setting(containerEl)
 		  .setName("Sibling mode")
-			.setDesc(siblingModeDesc)
-			.addDropdown((dropdown) => {
+			.then((setting: Setting) => {
+				const fragment = document.createDocumentFragment();
+				fragment.append(
+					fragment.createEl("b", {text: "Strict: "}),
+					"Same heading level and parent required.",
+					fragment.createEl("br"),
+					fragment.createEl("b", {text: "Loose: "}),
+					"Only same heading level required.",
+				);
+				setting.setDesc(fragment);
+			})
+			.addDropdown((dropdown: DropdownComponent) => {
 				dropdown.addOptions({
 					"strictSibling": "Strict",
 					"looseSibling":  "Loose",
@@ -134,194 +133,156 @@ export class ExperimentalSettingTab extends PluginSettingTab {
 		// Scroll Offset
 		new Setting(containerEl)
 		  .setName("Scroll offset")
-			.setDesc("Number of offset lines visible from the cursor position when moving to a heading")
-			.addText((text) => {
-				text.setPlaceholder("scroll_offset");
-				text.inputEl.type = "number";
-				text.setValue(String(this.plugin.settings.scrollOffset));
-				text.onChange(async (value) => {
+			.setDesc("Minimum number of offset lines visible from the cursor position when moving to a heading.")
+			.addText((textField: TextComponent) => {
+				textField.inputEl.type = "number";
+				textField.setPlaceholder("scroll_offset");
+				textField.setValue(String(this.plugin.settings.scrollOffset));
+				textField.onChange(async (value: string) => {
 					this.plugin.settings.scrollOffset = Number(value);
 					await this.plugin.saveSettings();
 				});
 			});
 
 		/* Wrap Around Settings */
-    containerEl.createEl("h3", {text: "Wrap around..."});
+    containerEl.createEl("h5", {text: "Wrap around..."});
 
 		new Setting(containerEl)
 		  .setName("...for contiguous headings")
-			.addToggle((toggle) => toggle
-				.setValue(this.plugin.settings.contiguousWrapAround)
-				.onChange(async (value) => {
+			.addToggle((toggle: ToggleComponent) => {
+				toggle.setValue(this.plugin.settings.contiguousWrapAround);
+				toggle.onChange(async (value: boolean) => {
 					this.plugin.settings.contiguousWrapAround = value;
 					await this.plugin.saveSettings();
-				})
-			);
+				});
+			});
 
 		new Setting(containerEl)
 		  .setName("...for loose siblings")
-			.addToggle((toggle) => toggle
-				.setValue(this.plugin.settings.looseSiblingWrapAround)
-				.onChange(async (value) => {
+			.addToggle((toggle: ToggleComponent) => {
+				toggle.setValue(this.plugin.settings.looseSiblingWrapAround);
+				toggle.onChange(async (value: boolean) => {
 					this.plugin.settings.looseSiblingWrapAround = value;
 					await this.plugin.saveSettings();
-				})
-			);
+				});
+			});
 
 		new Setting(containerEl)
 		  .setName("...for strict siblings")
-			.addToggle((toggle) => toggle
-				.setValue(this.plugin.settings.strictSiblingWrapAround)
-				.onChange(async (value) => {
+			.addToggle((toggle: ToggleComponent) => {
+				toggle.setValue(this.plugin.settings.strictSiblingWrapAround);
+				toggle.onChange(async (value: boolean) => {
 					this.plugin.settings.strictSiblingWrapAround = value;
 					await this.plugin.saveSettings();
-				})
-			);
+				});
+			});
 
-	}
-
-
-	addFoldSettings(containerEl: HTMLElement): void {
-		containerEl.createEl("h1", {text: "Fold Settings"});
-
-		new Setting(containerEl)
-		  .setName("Always unfold parent when folding/unfolding children")
-			.addToggle((toggle) => toggle
-				.setValue(this.plugin.settings.alwaysUnfoldParent)
-				.onChange(async (value) => {
-					this.plugin.settings.alwaysUnfoldParent = value;
-					await this.plugin.saveSettings();
-				})
-			);
 	}
 
 
 	addScriptRunnerSettings(containerEl: HTMLElement): void {
-    containerEl.createEl("h1", {text: "Script Runner Settings"});
+    containerEl.createEl("h3", {text: "Script Runner Settings"});
 
 		/* Basic Settings */
-    containerEl.createEl("h3", {text: "Basic settings"});
 
 		// Scripts Path
 		new Setting(containerEl)
 			.setName("Scripts path")
 			.setDesc("Path to the folder containing your scripts")
-			.addText((text) => text
-				.setPlaceholder("scripts_path")
-				.setValue(this.plugin.settings.scriptsPath)
-				.onChange(async (value) => {
+			.addText((textField: TextComponent) => {
+				textField.setPlaceholder("scripts_path");
+				textField.setValue(this.plugin.settings.scriptsPath);
+				textField.onChange(async (value: string) => {
 					this.plugin.settings.scriptsPath = value;
 					await this.plugin.saveSettings();
-				})
-			);
+				});
+			});
+
+		// Break Trigger Time
+
+		// This setting is returned in a function because it needs
+		// to be referenced by the Emergency Break toggle.
+		const setBreakTriggerTime = () => new Setting(containerEl)
+			.setName("Break trigger time")
+			.setDesc("Time in milliseconds before a script is stopped")
+			.addText((textField: TextComponent) => {
+				textField.inputEl.type = "number";
+				textField.setPlaceholder("time_in_milliseconds");
+				textField.setValue(String(this.plugin.settings.breakTriggerTime));
+				textField.onChange(async (value: string) => {
+					this.plugin.settings.breakTriggerTime = Number(value);
+					await this.plugin.saveSettings();
+				});
+			})
+			.then((setting: Setting) => {
+				// Add class for CSS styling on the setting components
+				setting.controlEl.addClass("break-trigger-time-item-control");
+				// The textField is the first and only component of the setting at this point
+				const textField = setting.components[0] as TextComponent;
+				// Button generator function
+				const addTimeOffsetButton = (millisecs: string) => {
+					setting.addButton((button: ButtonComponent) => {
+						button.setButtonText(`${millisecs} ms`);
+						button.onClick(async () => {
+							const newTime = this.plugin.settings.breakTriggerTime + Number(millisecs);
+							if (newTime < 0) return;
+							textField.setValue(String(newTime));
+							this.plugin.settings.breakTriggerTime = newTime;
+							await this.plugin.saveSettings();
+						});
+					});
+				}
+				addTimeOffsetButton("-100");
+				addTimeOffsetButton("+100");
+				addTimeOffsetButton("-250");
+				addTimeOffsetButton("+250");
+				addTimeOffsetButton("-700");
+				addTimeOffsetButton("+700");
+			});
 
 		// Emergency Break
 		new Setting(containerEl)
 			.setName("Emergency break")
 			.setDesc("Break scripts if they take too long to run")
-			.addToggle((toggle) => toggle
-				.setValue(this.plugin.settings.emergencyBreak)
-				.onChange(async (value) => {
-					if (value === false) {
-						this.containerEl.querySelector<HTMLInputElement>(
-							".break-trigger-time"
-						)!.hide();
-					} else {
-						this.containerEl.querySelector<HTMLInputElement>(
-							".break-trigger-time"
-						)!.show();
-					}
-					this.plugin.settings.emergencyBreak = value;
-					await this.plugin.saveSettings();
-				})
-			);
-
-
-		/* Break Trigger Time (Special Behavior) */
-
-		// Helper function to set the text of the break trigger time button
-		const setBreakTriggerTimeButton = (button: ButtonComponent, millisecs: string) => {
-			button.setButtonText(`${millisecs} ms`);
-			button.onClick(async () => {
-				const newBreakTriggerTime = this.plugin.settings.breakTriggerTime + Number(millisecs);
-				if (newBreakTriggerTime < 0) return;
-				// Update the UI text field
-				this.containerEl.querySelector<HTMLInputElement>(
-					".break-trigger-time input"
-				)!.value = String(newBreakTriggerTime);
-				// Set the new value of the setting
-				this.plugin.settings.breakTriggerTime = newBreakTriggerTime;
-				await this.plugin.saveSettings();
-			});
-		};
-
-		// Break Trigger Time
-		new Setting(containerEl)
-			.setName("Break trigger time")
-			.setDesc("Time in milliseconds before a script is stopped")
-      .setClass("break-trigger-time")
-			.addText((textField) => {
-				textField.setPlaceholder("time_in_milliseconds");
-				textField.inputEl.type = "number";
-				textField.setValue(String(this.plugin.settings.breakTriggerTime));
-				textField.onChange(async (value) => {
-					this.plugin.settings.breakTriggerTime = Number(value);
-					await this.plugin.saveSettings();
+			.then((setting: Setting) => {
+				// Get the breakTriggerTime setting by creating it
+				const breakTriggerTime = setBreakTriggerTime();
+				// Add the toggle with hide/show functionality for the breakTriggerTime setting
+				setting.addToggle((toggle: ToggleComponent) => {
+					toggle.setValue(this.plugin.settings.emergencyBreak);
+					toggle.onChange(async (value: boolean) => {
+						if (value) breakTriggerTime.settingEl.show();
+						else breakTriggerTime.settingEl.hide();
+						this.plugin.settings.emergencyBreak = value;
+						await this.plugin.saveSettings();
+					});
+					if (!toggle.getValue()) breakTriggerTime.settingEl.hide();
 				});
-			})
-      .addButton(async (button) => {
-				button.buttonEl.addClass("break-trigger-time-decrease-button");
-				setBreakTriggerTimeButton(button, "-200");
-      })
-      .addButton(async (button) => {
-				button.buttonEl.addClass("break-trigger-time-increase-button");
-				setBreakTriggerTimeButton(button, "+200");
-      });
-
-		// Add a container for the buttons
-		containerEl.querySelector<HTMLInputElement>(
-			".break-trigger-time .setting-item-control"
-		)!.addClass("break-trigger-time-item-control");
-
-		containerEl.querySelector<HTMLInputElement>(".break-trigger-time-item-control")!
-			.createDiv("break-trigger-time-button-container", (div) => {
-				div.appendChild(containerEl.querySelector<HTMLButtonElement>(
-					".break-trigger-time-decrease-button"
-				)!);
-				div.appendChild(containerEl.querySelector<HTMLButtonElement>(
-					".break-trigger-time-increase-button"
-				)!);
 			});
 
-		// Hide the break trigger time setting if emergency break is disabled
-		if (!this.plugin.settings.emergencyBreak) {
-			containerEl.querySelector<HTMLInputElement>(
-				".break-trigger-time"
-			)!.hide();
-		}
 
 		/* Advanced Settings */
-    containerEl.createEl("h3", {text: "Advanced settings"});
+    containerEl.createEl("h5", {text: "Advanced settings"});
 
 		// Vim Mode Scripts
 		new Setting(containerEl)
 			.setName("Vim mode scripts")
 			.setDesc("Enable scripts for vim mode")
-			.addToggle((toggle) => toggle
-				.setTooltip("Only activate this if you have vim mode enabled")
-				.setValue(this.plugin.settings.vimModeScripts)
-				.onChange(async (value) => {
+			.addToggle((toggle: ToggleComponent) => {
+				toggle.setTooltip("Only activate this if you have vim mode enabled");
+				toggle.setValue(this.plugin.settings.vimModeScripts);
+				toggle.onChange(async (value: boolean) => {
 					this.plugin.settings.vimModeScripts = value;
 					await this.plugin.saveSettings();
-				})
-			);
+				});
+			});
 
 		// Script Complexity
 		new Setting(containerEl)
 			.setName("Script complexity")
 			.setDesc("Filter the scripts you want to run based on their complexity")
       .setClass("script-complexity")
-			.addDropdown((dropdown) => {
+			.addDropdown((dropdown: DropdownComponent) => {
         scriptComplexityLevels.forEach((compexityLevel) => {
           dropdown.addOption(compexityLevel, compexityLevel);
         });
@@ -352,13 +313,16 @@ export class ExperimentalSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const {containerEl} = this;
-
 		containerEl.empty();
 
-		// this.addWarningBanner(containerEl);
-		this.addHeadingMovementSettings(containerEl);
 		this.addFoldSettings(containerEl);
-		// this.addScriptRunnerSettings(containerEl);
+		containerEl.createEl("br");
+		this.addHeadingMovementSettings(containerEl);
+		containerEl.createEl("br");
+		this.addScriptRunnerSettings(containerEl);
+		containerEl.createEl("br");
+		containerEl.createEl("br");
+		this.addWarningBanner(containerEl);
 
 	}
 }
