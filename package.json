@@ -1,7 +1,7 @@
 {
 	"name": "experimental-plugin",
-	"version": "0.1.0",
-	"description": "This is an experimental plugin for Obsidian focused in exploring the capabilities of the Obsidian API.",
+	"version": "1.0.0",
+	"description": "An experimental bundle plugin for Obsidian focused on exploring the capabilities of the Obsidian API.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

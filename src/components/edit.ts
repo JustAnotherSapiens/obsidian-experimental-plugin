@@ -1,4 +1,68 @@
-import { Editor } from "obsidian";
+import {
+  Setting, Notice,
+  Editor, MarkdownView, HeadingCache,
+  ToggleComponent, DropdownComponent, TextComponent,
+} from "obsidian";
+
+import BundlePlugin from "main";
+import BundleComponent from "types";
+
+import {
+  getSetting,
+  getActiveFileCache,
+  getHeadingIndex,
+  scrollToCursor,
+} from "utils";
+
+
+
+
+export default class EditComponent implements BundleComponent {
+
+  parent: BundlePlugin;
+  settings: {
+  };
+
+
+  constructor(plugin: BundlePlugin) {
+    this.parent = plugin;
+    this.settings = {
+    };
+  }
+
+  onload() {
+    this.addCommands();
+  }
+
+  onunload(): void {
+    this.parent.app.workspace.iterateCodeMirrors(cm => {
+      cm.removeKeyMap("smart-strikethrough");
+    });
+  }
+
+  addCommands(): void {
+    const plugin = this.parent;
+
+		// Behavior-tailored strikethrough
+		plugin.addCommand({
+			id: "smart-strikethrough",
+			name: "Smart strikethrough",
+			icon: "strikethrough",
+			mobileOnly: false,
+			repeatable: false,
+			editorCallback: (editor: Editor) => {
+				smartStrikethrough(editor);
+			}
+		});
+
+  }
+
+  addSettings(containerEl: HTMLElement): void {
+    const plugin = this.parent;
+  }
+
+}
+
 
 
 export function smartStrikethrough(editor: Editor, linewise: boolean = true) {
@@ -55,3 +119,4 @@ export function smartStrikethrough(editor: Editor, linewise: boolean = true) {
   editor.transaction({changes, selection: {from: endCursorPos}});
 
 }
+

@@ -5,14 +5,12 @@ import {
   EditorRange, EditorRangeOrCaret,
 } from "obsidian";
 
-import { ExperimentalSettings } from "./../settings";
-
 
 // This must match the ID at manifest.json
 export const PLUGIN_ID = "experimental-plugin";
 
 
-type SettingKey = keyof ExperimentalSettings;
+type SettingKey = string;
 
 export function getSetting(setting: SettingKey): any {
   return this.app.plugins.plugins[PLUGIN_ID].settings[setting];
@@ -26,22 +24,6 @@ export function getActiveView(): MarkdownView {
 
 export function getCodeMirrorEditor(view: MarkdownView): CodeMirror.Editor {
   return (view.editor as any).editMode?.editor?.cm?.cm;
-}
-
-
-export type Fold = {from: number, to: number};
-
-export function getFolds(view: MarkdownView): Array<Fold> {
-  const foldInfo = (view.currentMode as any).getFoldInfo();
-  if (foldInfo) return foldInfo.folds;
-  return [];
-}
-
-export function applyFolds(view: MarkdownView, folds: Array<Fold>): void {
-  (view.currentMode as any).applyFoldInfo({
-    folds, lines: view.editor.lineCount()
-  });
-  (view as any).onMarkdownFold();
 }
 
 
@@ -60,20 +42,14 @@ const metadataProperties = [
 ] as const;
 type MetadataProperty = typeof metadataProperties[number];
 
+// TODO: Find a reliable way to ensure that the file is properly indexed 
+//       up to the latest changes before reading the cache.
 export async function getActiveFileCache(property?: MetadataProperty) {
-  // TODO: Find a reliable way to ensure that the file is properly indexed 
-  //       up to the latest changes before reading the cache.
-  // Current workaround:
-  //   - Calling the 'editor:save-file' command before reading the cache.
-  //   - Calling the 'adapter.read()' method before reading the cache.
-
-  const startTime = this.moment().format("YYYY-MM-DD[T]HH:mm:ss.SSS");
-
-  // Not sure if this has any effect on the cache, but I believe
-  // it's a good practice to save the file before reading it.
-  this.app.commands.executeCommandById('editor:save-file');
-
   try {
+    // Not sure if this has any effect on the cache, but I believe
+    // it's a good practice to save the file before reading it.
+    this.app.commands.executeCommandById('editor:save-file');
+
     const currentFile = this.app.workspace.getActiveFile() as TFile;
     if (!currentFile) throw new Error("Couldn't get currentFile");
 
@@ -92,7 +68,8 @@ export async function getActiveFileCache(property?: MetadataProperty) {
     return fileProperty;
 
   } catch (error) {
-    console.debug(startTime, "getActiveFileHeadings() failed:", error.message);
+    const timestamp = this.moment().format("YYYY-MM-DD[T]HH:mm:ss.SSS");
+    console.debug(timestamp, "getActiveFileCache() failed:", error.message);
   }
 }
 
@@ -148,23 +125,3 @@ export function handleCursorMovement(
   editor.transaction({selection});
 }
 
-
-
-
-/* NOTICE FUNCTIONS */
-
-export function newMultilinePluginNotice (
-  texts: string[],
-  style: string,
-  duration?: number | undefined
-): void {
-  const fragment = document.createDocumentFragment();
-  texts.forEach((text) => {
-    const p = document.createElement("p");
-    p.textContent = text;
-    p.setAttribute("style", style);
-    fragment.appendChild(p);
-  });
-  const pluginNotice = new Notice(fragment, duration);
-  pluginNotice.noticeEl.addClass("experimental-plugin-notice");
-}

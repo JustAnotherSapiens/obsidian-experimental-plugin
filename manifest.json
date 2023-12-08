@@ -1,9 +1,9 @@
 {
 	"id": "experimental-plugin",
 	"name": "Experimental plugin",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"minAppVersion": "1.3.5",
-	"description": "This is an experimental plugin for Obsidian focused in exploring the capabilities of the Obsidian API.",
+	"description": "An experimental bundle plugin for Obsidian focused on exploring the capabilities of the Obsidian API.",
 	"author": "JustAnotherSapiens",
 	"authorUrl": "https://github.com/JustAnotherSapiens",
 	"isDesktopOnly": false

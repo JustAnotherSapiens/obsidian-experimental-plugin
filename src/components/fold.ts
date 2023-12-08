@@ -1,18 +1,117 @@
 import {
+  Setting,
+  ToggleComponent,
   Editor, MarkdownView, HeadingCache,
 } from "obsidian";
+
+import BundlePlugin from "main";
+import BundleComponent from 'types';
 
 import {
   getSetting,
   getActiveFileCache,
   getHeadingIndex,
   scrollToCursor,
-  Fold, getFolds, applyFolds,
-} from "./generics";
+} from "utils";
 
 
 
-export async function cleanToggleFoldOnChildrenHeadings(
+export type Fold = {from: number, to: number};
+
+
+
+export default class FoldComponent implements BundleComponent {
+
+  parent: BundlePlugin;
+  settings: {
+    alwaysUnfoldParent: boolean,
+  };
+
+
+  constructor(plugin: BundlePlugin) {
+    this.parent = plugin;
+    this.settings = {
+      alwaysUnfoldParent: false,
+    };
+  }
+
+
+  onload() {
+    this.addCommands();
+  }
+
+  onunload(): void {}
+
+
+  addCommands(): void {
+    const plugin = this.parent;
+
+		plugin.addCommand({
+			id: "toggle-fold-sibling-headings",
+			name: "Toggle fold on sibling headings",
+			icon: "fold-vertical",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				await cleanToggleFoldOnSiblingHeadings(editor, view);
+			}
+		});
+
+		plugin.addCommand({
+			id: "toggle-fold-children-headings",
+			name: "Toggle fold on children headings",
+			icon: "fold-vertical",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				await cleanToggleFoldOnChildrenHeadings(editor, view);
+			}
+		});
+
+		plugin.addCommand({
+			id: "toggle-fold",
+			name: "Toggle fold",
+			icon: "fold-vertical",
+			editorCallback: (editor: Editor) => {
+				cleanToggleFold(editor);
+			}
+		});
+
+  }
+
+
+  addSettings(containerEl: HTMLElement): void {
+    const plugin = this.parent;
+		containerEl.createEl("h3", {text: "Fold Settings"});
+
+		new Setting(containerEl)
+		  .setName("Always unfold parent when folding/unfolding children")
+			.addToggle((toggle: ToggleComponent) => {
+				toggle.setValue(plugin.settings.alwaysUnfoldParent);
+				toggle.onChange(async (value: boolean) => {
+					plugin.settings.alwaysUnfoldParent = value;
+					await plugin.saveSettings();
+				});
+			});
+
+  }
+
+}
+
+
+
+function getFolds(view: MarkdownView): Array<Fold> {
+  const foldInfo = (view.currentMode as any).getFoldInfo();
+  if (foldInfo) return foldInfo.folds;
+  return [];
+}
+
+function applyFolds(view: MarkdownView, folds: Array<Fold>): void {
+  (view.currentMode as any).applyFoldInfo({
+    folds, lines: view.editor.lineCount()
+  });
+  (view as any).onMarkdownFold();
+}
+
+
+
+async function cleanToggleFoldOnChildrenHeadings(
   editor: Editor,
   view: MarkdownView,
 ) {
@@ -64,7 +163,7 @@ export async function cleanToggleFoldOnChildrenHeadings(
 }
 
 
-export async function cleanToggleFoldOnSiblingHeadings(
+async function cleanToggleFoldOnSiblingHeadings(
   editor: Editor,
   view: MarkdownView,
 ) {
@@ -111,7 +210,6 @@ function getToggledSiblingHeadingFolds(
   }
 
   return folds;
-  // applyFolds(view, folds);
 }
 
 
@@ -157,18 +255,8 @@ function getSiblingsInfo(
 }
 
 
-export function cleanToggleFold(editor: Editor) {
+function cleanToggleFold(editor: Editor) {
   editor.exec("toggleFold");
   scrollToCursor(editor);
 }
 
-
-    // const siblingRange = {
-    //   from: {line: heading.position.start.line, ch: 0},
-    //   to: {line: endLine, ch: editor.getLine(endLine).length},
-    // };
-    // return {
-    //   range: siblingRange,
-    //   display: heading.heading,
-    //   // text: editor.getRange(siblingRange.from, siblingRange.to),
-    // };
