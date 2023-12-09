@@ -123,15 +123,15 @@ export default class MoveComponent implements BundleComponent {
 			}
 		});
 
-		// Move cursor to parent heading
-		plugin.addCommand({
-			id: "parent-heading",
-			name: "Move cursor to parent heading",
-			icon: "arrow-up",
-			editorCallback: (editor: Editor) => {
-        moveCursorToHeading(editor, "parent");
-			}
-		});
+		// // Move cursor to parent heading
+		// plugin.addCommand({
+		// 	id: "parent-heading",
+		// 	name: "Move cursor to parent heading",
+		// 	icon: "arrow-up",
+		// 	editorCallback: (editor: Editor) => {
+    //     moveCursorToHeading(editor, "parent");
+		// 	}
+		// });
 
 		// Move cursor to next contiguous heading down
 		plugin.addCommand({
@@ -152,6 +152,48 @@ export default class MoveComponent implements BundleComponent {
 				moveCursorToHeading(editor, "contiguous", {backwards: true});
 			}
 		});
+
+    // Move cursor to highest heading upwards
+    plugin.addCommand({
+      id: "highest-heading-up",
+      name: "Move cursor to highest heading upwards",
+      icon: "arrow-up",
+      editorCallback: (editor: Editor) => {
+        moveCursorToHeading(editor, "highest", {backwards: true});
+      }
+    });
+
+
+    // Move cursor to highest heading downwards
+    plugin.addCommand({
+      id: "highest-heading-down",
+      name: "Move cursor to highest heading downwards",
+      icon: "arrow-down",
+      editorCallback: (editor: Editor) => {
+        moveCursorToHeading(editor, "highest", {backwards: false});
+      }
+    });
+
+    // Move cursor to higher heading upwards
+    plugin.addCommand({
+      id: "higher-heading-up",
+      name: "Move cursor to higher heading upwards (parent)",
+      icon: "arrow-up",
+      editorCallback: (editor: Editor) => {
+        moveCursorToHeading(editor, "higher", {backwards: true});
+      }
+    });
+
+
+    // Move cursor to higher heading downwards
+    plugin.addCommand({
+      id: "higher-heading-down",
+      name: "Move cursor to higher heading downwards",
+      icon: "arrow-down",
+      editorCallback: (editor: Editor) => {
+        moveCursorToHeading(editor, "higher", {backwards: false});
+      }
+    });
 
   }
 
@@ -250,9 +292,11 @@ export default class MoveComponent implements BundleComponent {
 
 const movementFunctions = {
   contiguous: contiguousHeading,
-  parent: parentHeading,
+  higher: higherHeading,
+  highest: highestHeading,
   looseSibling: looseSiblingHeading,
   strictSibling: strictSiblingHeading,
+  // TODO: Deprecate lastChild
   lastChild: lastChildHeading,
 }
 type MovementMode = keyof typeof movementFunctions;
@@ -283,7 +327,7 @@ function moveCursorToHeading(
 
   let inCodeBlock = false;
   for (let i = 0; i <= startLine; i++) {
-    if (lines[i].trim().startsWith('```')) inCodeBlock = !inCodeBlock;
+    if (isCodeBlockEnd(lines[i])) inCodeBlock = !inCodeBlock;
   }
 
   const headingLevel = !inCodeBlock ? getCurrentHeadingLevel(editor) : 0;
@@ -311,21 +355,23 @@ function moveCursorToHeading(
 }
 
 
-function getCurrentHeadingLevel(editor: Editor) {
-  const cursorLine = editor.getCursor().line;
-  const match = editor.getLine(cursorLine).match(/^#{1,6} /);
-  if (match) return match[0].length - 1;
-  else return 0;
-}
-
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // MOVE CURSOR FUNCTIONS
 ////////////////////////////////////////////////////////////////////////////////
 
 function contiguousHeading(args: MovementArgs) {
   return searchContiguousHeading(args);
+}
+
+function higherHeading(args: MovementArgs) {
+  if (args.headingLevel === 1) return -1;
+  if (args.headingLevel === 0) return searchContiguousHeading(args);
+  return searchHigherHeading(args);
+}
+
+function highestHeading(args: MovementArgs) {
+  if (args.headingLevel === 1) return -1;
+  return searchHighestHeading(args);
 }
 
 function looseSiblingHeading(args: MovementArgs) {
@@ -361,15 +407,6 @@ function strictSiblingHeading(args: MovementArgs) {
 }
 
 
-function parentHeading(args: MovementArgs) {
-  if (args.headingLevel === 1) return -1;
-  if (args.headingLevel === 0) {
-    args.backwards = true;
-    return searchContiguousHeading(args);
-  }
-  return searchParentHeading(args);
-}
-
 function lastChildHeading(args: MovementArgs) {
   if (args.headingLevel >= 6) return -1;
   if (args.headingLevel === 0) {
@@ -386,7 +423,18 @@ function lastChildHeading(args: MovementArgs) {
 ////////////////////////////////////////////////////////////////////////////////
 
 function isCodeBlockEnd(line: string): boolean {
-  return line.trim().startsWith('```');
+  return line.trimStart().startsWith('```');
+}
+
+function getCurrentHeadingLevel(editor: Editor) {
+  const cursorLine = editor.getCursor().line;
+  const match = editor.getLine(cursorLine).match(/^#{1,6} /);
+  if (match) return match[0].length - 1;
+  else return 0;
+}
+
+function getHeadingLevel(line: string): number {
+  return line.match(/^#+/)![0].length;
 }
 
 function getOffset(args: MovementArgs): number {
@@ -395,11 +443,6 @@ function getOffset(args: MovementArgs): number {
   if (isCodeBlockEnd(args.lines[args.startLine])) return 0;
   return -1;
 }
-
-function getHeadingLevel(line: string): number {
-  return line.match(/^#+/)![0].length;
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // SEARCH FUNCTIONS
@@ -428,6 +471,36 @@ function searchContiguousHeading(args: MovementArgs, wrapSearch: boolean = false
   return nextHeadingLine;
 }
 
+
+function searchLastChildHeading(args: MovementArgs): number {
+  let {lines, inCodeBlock, headingLevel} = args;
+  let lastChildHeadingLine = -1;
+  let lowestChildLevel = 6;
+  for (let i = args.startLine + 1; i < lines.length; i++) {
+    if (isCodeBlockEnd(lines[i])) {
+      inCodeBlock = !inCodeBlock; continue;
+    } else if (inCodeBlock) continue;
+    if (/^#{1,6} /.test(lines[i])) {
+      // const foundHeadingLevel = lines[i].match(/^#+/)![0].length;
+      const foundHeadingLevel = getHeadingLevel(lines[i]);
+      if (foundHeadingLevel <= headingLevel) break;
+      // // foundHeadingLevel will never be greater than 6 at this point.
+      // if (foundHeadingLevel > lowestChildLevel) continue;
+      if (foundHeadingLevel < lowestChildLevel) {
+        lowestChildLevel = foundHeadingLevel;
+      }
+      lastChildHeadingLine = i;
+    }
+  }
+  return lastChildHeadingLine;
+}
+
+
+
+
+////////////////////////////////////////
+// STRICT/LOOSE SIBLING HEADING
+////////////////////////////////////////
 
 function searchLooseSiblingHeading(args: MovementArgs, wrapSearch: boolean = false): number {
   let {lines, inCodeBlock, backwards} = args;
@@ -519,46 +592,28 @@ function getSiblingHeadingSectionBounds(args: MovementArgs): {start: number, end
 
 
 
-function searchParentHeading(args: MovementArgs): number {
-  let {lines, inCodeBlock, headingLevel} = args;
-  const offset = isCodeBlockEnd(lines[args.startLine]) ? 0 : -1;
-  let parentHeadingLine = -1;
-  for (let i = args.startLine + offset; i >= 0; i--) {
+
+////////////////////////////////////////
+// HIGHER HEADING
+////////////////////////////////////////
+
+function searchHigherHeading(args: MovementArgs): number {
+  let {lines, startLine, inCodeBlock, headingLevel, backwards} = args;
+  const regex = new RegExp(`^#{1,${headingLevel - 1}} `);
+  const offset = getOffset(args);
+  const step = backwards ? -1 : 1;
+  const condition = backwards
+                  ? (i:number) => i >= 0
+                  : (i: number) => i < lines.length;
+
+  for (let i = startLine + offset; condition(i); i += step) {
     if (isCodeBlockEnd(lines[i])) {
       inCodeBlock = !inCodeBlock; continue;
     } else if (inCodeBlock) continue;
-    if (/^#{1,6} /.test(lines[i])) {
-      // const foundHeadingLevel = lines[i].match(/^#+/)![0].length;
-      if (headingLevel === 0 || getHeadingLevel(lines[i]) < headingLevel) {
-        parentHeadingLine = i; break;
-      }
-    }
-  }
-  return parentHeadingLine;
-}
 
-
-function searchLastChildHeading(args: MovementArgs): number {
-  let {lines, inCodeBlock, headingLevel} = args;
-  let lastChildHeadingLine = -1;
-  let lowestChildLevel = 6;
-  for (let i = args.startLine + 1; i < lines.length; i++) {
-    if (isCodeBlockEnd(lines[i])) {
-      inCodeBlock = !inCodeBlock; continue;
-    } else if (inCodeBlock) continue;
-    if (/^#{1,6} /.test(lines[i])) {
-      // const foundHeadingLevel = lines[i].match(/^#+/)![0].length;
-      const foundHeadingLevel = getHeadingLevel(lines[i]);
-      if (foundHeadingLevel <= headingLevel) break;
-      // // foundHeadingLevel will never be greater than 6 at this point.
-      // if (foundHeadingLevel > lowestChildLevel) continue;
-      if (foundHeadingLevel < lowestChildLevel) {
-        lowestChildLevel = foundHeadingLevel;
-      }
-      lastChildHeadingLine = i;
-    }
+    if (regex.test(lines[i])) return i;
   }
-  return lastChildHeadingLine;
+  return -1;
 }
 
 
@@ -566,7 +621,117 @@ function searchLastChildHeading(args: MovementArgs): number {
 
 
 
-  // TODO: Deprecate the "levelZeroBehavior" setting in favor of strong defaults.
+////////////////////////////////////////
+// HIGHEST HEADING
+////////////////////////////////////////
+
+function searchHighestHeading(args: MovementArgs): number {
+  const highestHeadings = getRelativeHighestHeadings(args);
+  if (highestHeadings.level === args.headingLevel) return -1;
+  if (highestHeadings.lines.length !== 0)
+    return highestHeadings.lines[0];
+  return -1;
+}
+
+// The returned lines array is sorted from the startLine outwards.
+function getRelativeHighestHeadings(args: MovementArgs): {lines: number[], level: number} {
+  let {lines, startLine, inCodeBlock, headingLevel, backwards} = args;
+  let offset = getOffset(args);
+  let step = backwards ? -1 : 1;
+  let condition = backwards
+                  ? (i: number) => i >= 0
+                  : (i: number) => i < lines.length;
+
+  let highestLevel = headingLevel ? headingLevel : 6;
+  let headingRegex = new RegExp(`^(#{1,${highestLevel}})`);
+
+  let headings: {lines: number[], level: number} = {lines: [], level: highestLevel};
+
+  for (let i = startLine + offset; condition(i); i += step) {
+    if (isCodeBlockEnd(lines[i])) {
+      inCodeBlock = !inCodeBlock; continue;
+    } else if (inCodeBlock) continue;
+
+    let match = lines[i].match(headingRegex);
+    if (!match) continue;
+
+    if (match[1].length < highestLevel) {
+      highestLevel = match[1].length;
+      headingRegex = new RegExp(`^(#{1,${highestLevel}}) `);
+      headings = {lines: [i], level: highestLevel};
+    } else {
+      headings.lines.push(i);
+    }
+  }
+  return headings;
+}
+
+
+// function getHighestHeadings(args: MovementArgs) {
+//   let {lines, inCodeBlock} = args;
+//   let highestLevel = 6;
+//   let headingRegex = /^(#{1,6}) /;
+//   let headings: {lines: number[], level: number} = {lines: [], level: highestLevel};
+
+//   for (let i = 0; i < lines.length - 1; i++) {
+//     if (isCodeBlockEnd(lines[i])) {
+//       inCodeBlock = !inCodeBlock; continue;
+//     } else if (inCodeBlock) continue;
+
+//     let match = lines[i].match(headingRegex);
+//     if (!match) continue;
+
+//     if (match[1].length < highestLevel) {
+//       highestLevel = match[1].length;
+//       headingRegex = new RegExp(`^(#{1,${highestLevel}}) `);
+//       headings = {lines: [i], level: highestLevel};
+//     } else {
+//       headings.lines.push(i);
+//     }
+//   }
+//   return headings;
+// }
+
+
+
+
+////////////////////////////////////////
+// DEPRECATED
+////////////////////////////////////////
+
+
+// PARENT HEADING
+
+// function parentHeading(args: MovementArgs) {
+//   if (args.headingLevel === 1) return -1;
+//   if (args.headingLevel === 0) {
+//     args.backwards = true;
+//     return searchContiguousHeading(args);
+//   }
+//   return searchParentHeading(args);
+// }
+
+// function searchParentHeading(args: MovementArgs): number {
+//   let {lines, inCodeBlock, headingLevel} = args;
+//   const offset = isCodeBlockEnd(lines[args.startLine]) ? 0 : -1;
+//   let parentHeadingLine = -1;
+//   for (let i = args.startLine + offset; i >= 0; i--) {
+//     if (isCodeBlockEnd(lines[i])) {
+//       inCodeBlock = !inCodeBlock; continue;
+//     } else if (inCodeBlock) continue;
+//     if (/^#{1,6} /.test(lines[i])) {
+//       // const foundHeadingLevel = lines[i].match(/^#+/)![0].length;
+//       if (headingLevel === 0 || getHeadingLevel(lines[i]) < headingLevel) {
+//         parentHeadingLine = i; break;
+//       }
+//     }
+//   }
+//   return parentHeadingLine;
+// }
+
+
+
+  // LEVEL ZERO BEHAVIOR
 
   // let mode = mode;
   // if (headingLevel === 0) {
