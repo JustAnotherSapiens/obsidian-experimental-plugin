@@ -102,12 +102,12 @@ export default class SuggestComponent implements BundleComponent {
       }
     });
 
-    // MyCustomSuggest
+    // OpenMultitabSuggest
     plugin.addCommand({
       id: "my-custom-suggest",
       name: "My Custom Suggest (test)",
       callback: () => {
-        new MyCustomSuggest(plugin.app).open();
+        new OpenMultitabSuggest(plugin.app).open();
       }
     });
 
@@ -375,11 +375,14 @@ abstract class CustomModal<T> {
   inputEl: HTMLInputElement;
   resultsEl: HTMLElement;
 
+  results: T[];
+  selectionIndex: number;
+
+  private selectionClass = "is-selected";
 
   constructor(app: App, modalId: string) {
     this.app = app;
     this.id = modalId;
-    // this.scope = modalScope;
     this.createContainerEl();
   }
 
@@ -427,11 +430,47 @@ abstract class CustomModal<T> {
 
   configureScope(): void {
     this.scope = new Scope();
+
     this.scope.register([], "Escape", this.close.bind(this));
+
+    this.scope.register([], "ArrowUp", (event) => {
+      if (!event.isComposing) {
+        this.setSelectedResultEl(this.selectionIndex - 1);
+        return false;
+      }
+    });
+    this.scope.register([], "ArrowDown", (event) => {
+      if (!event.isComposing) {
+        this.setSelectedResultEl(this.selectionIndex + 1);
+        return false;
+      }
+    });
+
+    this.scope.register(["Alt"], "k", (event) => {
+      if (!event.isComposing) {
+        this.setSelectedResultEl(this.selectionIndex - 1);
+        return false;
+      }
+    });
+    this.scope.register(["Alt"], "j", (event) => {
+      if (!event.isComposing) {
+        this.setSelectedResultEl(this.selectionIndex + 1);
+        return false;
+      }
+    });
+
+    this.scope.register([], "Enter", (event) => {
+      if (!event.isComposing) {
+        this.useSelectedResult(this.results[this.selectionIndex], event);
+        this.close.bind(this);
+        return false;
+      }
+    });
 
     this.inputEl.addEventListener("input", this.onInputChanged.bind(this));
     this.inputEl.addEventListener("focus", this.onInputChanged.bind(this));
-    this.inputEl.addEventListener("blur", this.close.bind(this));
+    // // This one throws an error whenever the modal is closed.
+    // this.inputEl.addEventListener("blur", this.close.bind(this));
     // this.suggestEl.on(
     //   "mousedown",
     //   ".suggestion-container",
@@ -442,9 +481,7 @@ abstract class CustomModal<T> {
   }
 
   onInputChanged(): void {
-    const inputStr = this.inputEl.value;
-    const results = this.getResults(inputStr);
-    this.setResults(results);
+    this.setResults(this.inputEl.value);
   }
 
 
@@ -455,8 +492,7 @@ abstract class CustomModal<T> {
     this.inputEl = document.getElementById(`${this.id}-input`) as HTMLInputElement;
     this.inputEl.focus();
 
-    const results = this.getResults();
-    this.setResults(results);
+    this.setResults();
 
     this.configureScope();
     this.app.keymap.pushScope(this.scope);
@@ -467,22 +503,34 @@ abstract class CustomModal<T> {
     this.containerEl.remove();
   }
 
-  setResults(results: T[]) {
+  setResults(query?: string) {
+    this.results = this.getResults(query);
     this.resultsEl.empty();
-    results.forEach((result) => {
+    this.results.forEach((result) => {
       const resultEl = this.renderResult(result);
       resultEl.addClass("suggestion-item");
       this.resultsEl.appendChild(resultEl);
+      this.setSelectedResultEl(0);
     });
+  }
+
+  setSelectedResultEl(index: number) {
+    this.selectionIndex = wrapAround(index, this.results.length);
+
+    const newSelected = this.resultsEl.children[this.selectionIndex] as HTMLElement;
+    const prevSelected = this.resultsEl.find(`.${this.selectionClass}`);
+    if (prevSelected) prevSelected.removeClass(this.selectionClass);
+    newSelected.addClass(this.selectionClass);
   }
 
   abstract getResults(query?: string): T[];
   abstract renderResult(result: T): HTMLElement;
+  abstract useSelectedResult(result: T, evt: MouseEvent | KeyboardEvent): void;
 }
 
 
 
-class MyCustomSuggest extends CustomModal<TFile> {
+class OpenMultitabSuggest extends CustomModal<TFile> {
   query?: string;
 
   constructor(app: App) {
@@ -517,6 +565,12 @@ class MyCustomSuggest extends CustomModal<TFile> {
     return resultEl;
   }
 
+  useSelectedResult(result: TFile, evt: MouseEvent | KeyboardEvent): void {
+    this.app.workspace.getLeaf(true).openFile(result, { active: false });
+    this.inputEl.value = "";
+    this.setResults();
+    // this.close();
+  }
 
 }
 
