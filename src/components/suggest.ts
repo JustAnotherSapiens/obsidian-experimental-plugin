@@ -1,33 +1,19 @@
 import {
-  App, Vault, Setting, Notice, Scope,
-  Editor, MarkdownView, HeadingCache,
-  ToggleComponent, DropdownComponent, TextComponent,
-  ISuggestOwner, Modal, FuzzyMatch,
-  PopoverSuggest, AbstractInputSuggest,
-  SuggestModal, FuzzySuggestModal,
+  App, Vault, Notice, Scope,
   TFile, TFolder, TAbstractFile,
+  Modal, SuggestModal, FuzzySuggestModal,
+  PreparedQuery, prepareQuery, fuzzySearch,
 } from "obsidian";
-
 
 import BundlePlugin from "main";
 import BundleComponent from "types";
-
-import {
-  getSetting,
-  getActiveFileCache,
-  getHeadingIndex,
-  scrollToCursor,
-} from "utils";
-
-import { TextInputSuggest } from "./_suggest";
 
 
 
 export default class SuggestComponent implements BundleComponent {
 
   parent: BundlePlugin;
-  settings: {
-  };
+  settings: {};
   suggestModal: SuggestModal<TFile>;
   fuzzySuggestModal: FuzzySuggestModal<TFile>;
 
@@ -47,67 +33,12 @@ export default class SuggestComponent implements BundleComponent {
   addCommands(): void {
     const plugin = this.parent;
 
-		// // Test SuggestModal
-		// plugin.addCommand({
-		// 	id: "test-suggest-modal",
-		// 	name: "Test SuggestModal",
-		// 	icon: "arrow-down",
-		// 	mobileOnly: false,
-		// 	repeatable: false,
-		// 	callback: () => {
-		// 		new Notice("Testing ExperimentalSuggestModal");
-		// 		new MySuggestModal(plugin.app).open();
-		// 	}
-		// });
-
-		// Test ExperimentalModal
-		plugin.addCommand({
-			id: "test-modal",
-			name: "Test Modal",
-			icon: "arrow-down",
-			mobileOnly: false,
-			repeatable: false,
-			callback: () => {
-				new Notice("Testing ExperimentalModal");
-				new MyModal(plugin.app, (result: string) => {
-					new Notice(`Result: ${result}`);
-				}).open();
-			}
-		});
-
-    // MySuggestModal
+    // QuickTabOpenSuggest
     plugin.addCommand({
-      id: "my-suggest-modal",
-      name: "My Suggest Modal (test)",
+      id: "quick-tab-open-suggest",
+      name: "Quick Tab Open Suggest (test)",
       callback: () => {
-        new MySuggestModal(plugin.app, {ignoreCase: true}).open();
-      }
-    });
-
-    // MyFuzzySuggestModal
-    plugin.addCommand({
-      id: "my-fuzzy-suggest-modal",
-      name: "My Fuzzy Suggest Modal (test)",
-      callback: () => {
-        new MyFuzzySuggestModal(this).open();
-      }
-    });
-
-    // FileSuggestModal
-    plugin.addCommand({
-      id: "file-suggest-modal",
-      name: "File Suggest Modal (test)",
-      callback: () => {
-        new FileSuggestModal(this).open();
-      }
-    });
-
-    // OpenMultitabSuggest
-    plugin.addCommand({
-      id: "my-custom-suggest",
-      name: "My Custom Suggest (test)",
-      callback: () => {
-        new OpenMultitabSuggest(plugin.app).open();
+        new QuickTabOpenSuggest(plugin.app, {fuzzy: true}).open();
       }
     });
 
@@ -115,11 +46,6 @@ export default class SuggestComponent implements BundleComponent {
 
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
-  }
-
-
-  processSuggestSelection(selection: string) {
-    new Notice(`You selected ${selection}.`);
   }
 
 
@@ -144,259 +70,55 @@ export default class SuggestComponent implements BundleComponent {
 
 
 
-const wrapAround = (value: number, size: number): number => {
-    return ((value % size) + size) % size;
-};
+abstract class CustomSuggest<T> {
 
+  public id: string;
+  protected app: App;
+  protected scope: Scope;
 
-class Suggest<T> {
-    private owner: ISuggestOwner<T>;
-    private values: T[];
-    private suggestions: HTMLDivElement[];
-    private selectedItem: number;
-    private containerEl: HTMLElement;
+  protected containerEl: HTMLElement;
+  protected promptEl: HTMLElement;
+  protected inputEl: HTMLInputElement;
+  protected resultsEl: HTMLElement;
+  protected instructionsEl: HTMLElement;
 
-    constructor(
-        owner: ISuggestOwner<T>,
-        containerEl: HTMLElement,
-        scope: Scope
-    ) {
-        this.owner = owner;
-        this.containerEl = containerEl;
-
-        containerEl.on(
-            "click",
-            ".suggestion-item",
-            this.onSuggestionClick.bind(this)
-        );
-        containerEl.on(
-            "mousemove",
-            ".suggestion-item",
-            this.onSuggestionMouseover.bind(this)
-        );
-
-        scope.register([], "ArrowUp", (event) => {
-            if (!event.isComposing) {
-                this.setSelectedItem(this.selectedItem - 1, true);
-                return false;
-            }
-        });
-
-        scope.register([], "ArrowDown", (event) => {
-            if (!event.isComposing) {
-                this.setSelectedItem(this.selectedItem + 1, true);
-                return false;
-            }
-        });
-
-        scope.register([], "Enter", (event) => {
-            if (!event.isComposing) {
-                this.useSelectedItem(event);
-                return false;
-            }
-        });
-    }
-
-    onSuggestionClick(event: MouseEvent, el: HTMLDivElement): void {
-        event.preventDefault();
-
-        const item = this.suggestions.indexOf(el);
-        this.setSelectedItem(item, false);
-        this.useSelectedItem(event);
-    }
-
-    onSuggestionMouseover(_event: MouseEvent, el: HTMLDivElement): void {
-        const item = this.suggestions.indexOf(el);
-        this.setSelectedItem(item, false);
-    }
-
-    setSuggestions(values: T[]) {
-        this.containerEl.empty();
-        const suggestionEls: HTMLDivElement[] = [];
-
-        values.forEach((value) => {
-            const suggestionEl = this.containerEl.createDiv("suggestion-item");
-            this.owner.renderSuggestion(value, suggestionEl);
-            suggestionEls.push(suggestionEl);
-        });
-
-        this.values = values;
-        this.suggestions = suggestionEls;
-        this.setSelectedItem(0, false);
-    }
-
-    useSelectedItem(event: MouseEvent | KeyboardEvent) {
-        const currentValue = this.values[this.selectedItem];
-        if (currentValue) {
-            this.owner.selectSuggestion(currentValue, event);
-        }
-    }
-
-    setSelectedItem(selectedIndex: number, scrollIntoView: boolean) {
-        const normalizedIndex = wrapAround(
-            selectedIndex,
-            this.suggestions.length
-        );
-        const prevSelectedSuggestion = this.suggestions[this.selectedItem];
-        const selectedSuggestion = this.suggestions[normalizedIndex];
-
-        prevSelectedSuggestion?.removeClass("is-selected");
-        selectedSuggestion?.addClass("is-selected");
-
-        this.selectedItem = normalizedIndex;
-
-        if (scrollIntoView) {
-            selectedSuggestion.scrollIntoView(false);
-        }
-    }
-}
-
-
-
-
-
-abstract class RawSuggestModal<T> extends Modal implements ISuggestOwner<T> {
-  private limit: number;
-  private emptyStateText: string;
-  private inputEl: HTMLInputElement;
-  private resultContainerEl: HTMLElement;
-  private suggestEl: HTMLElement;
-  private suggest: Suggest<T>;
-  private resolve: (value: T) => void;
-  private reject: (reason?: any) => void;
-
-  constructor(app: App) {
-    super(app);
-    this.app = app;
-
-    this.inputEl = this.contentEl.createEl("input", {
-      attr: { type: "text" },
-    });
-
-    this.suggestEl = createDiv("suggestion-container");
-    const suggestion = this.suggestEl.createDiv("suggestion");
-    this.suggest = new Suggest(this, suggestion, this.scope);
-    this.contentEl.appendChild(this.suggestEl);
-
-    this.scope.register([], "Escape", this.close.bind(this));
-
-    this.inputEl.addEventListener("input", this.onInputChanged.bind(this));
-    this.inputEl.addEventListener("focus", this.onInputChanged.bind(this));
-    this.inputEl.addEventListener("blur", this.close.bind(this));
-    this.suggestEl.on(
-      "mousedown",
-      ".suggestion-container",
-      (event: MouseEvent) => {
-        event.preventDefault();
-      }
-    );
-
-  }
-
-
-  onInputChanged(): void {
-    const inputStr = this.inputEl.value;
-    const suggestions = this.getSuggestions(inputStr);
-    this.suggest.setSuggestions(suggestions);
-  }
-
-
-  // open(container: HTMLElement, inputEl: HTMLElement): void {
-  //   this.app.keymap.pushScope(this.scope);
-  //   container.appendChild(this.suggestEl);
-  // }
-
-  // close(): void {
-  //     this.app.keymap.popScope(this.scope);
-  //     this.suggest.setSuggestions([]);
-  //     this.suggestEl.detach();
-  // }
-
-  abstract getSuggestions(inputStr: string): T[];
-  abstract renderSuggestion(item: T, el: HTMLElement): void;
-  abstract selectSuggestion(item: T): void;
-}
-
-
-
-
-
-
-class FileSuggestModal extends RawSuggestModal<TFile> {
-  private plugin: BundlePlugin;
-  private component: SuggestComponent;
-
-  constructor(component: SuggestComponent) {
-    super(component.parent.app);
-    this.plugin = component.parent;
-    this.component = component;
-  }
-
-  onOpen(): void {
-    this.app.keymap.pushScope(this.scope);
-    super.onOpen();
-  }
-
-  onClose(): void {
-    this.app.keymap.popScope(this.scope);
-    super.onClose();
-  }
-
-  getSuggestions(query: string): TFile[] {
-    const folder = this.plugin.app.vault.getRoot().path;
-    const files = getTFilesFromFolder(this.plugin.app, folder);
-    if (!files) return [];
-    return files;
-  }
-
-  renderSuggestion(value: TFile, el: HTMLElement) {
-    el.setText(value.basename);
-  }
-
-  selectSuggestion(value: TFile): void {
-    this.component.processSuggestSelection(value.basename);
-  }
-
-  // onChooseSuggestion(item: string, evt: MouseEvent | KeyboardEvent): void {
-  //   this.component.processSuggestSelection(item.basename);
-  //   console.log(evt);
-  // }
-}
-
-
-
-abstract class CustomModal<T> {
-  app: App;
-  id: string;
-  scope: Scope;
-  containerEl: HTMLElement;
-
-  suggestEl: HTMLElement;
-  inputEl: HTMLInputElement;
-  resultsEl: HTMLElement;
-
-  results: T[];
-  selectionIndex: number;
-
+  protected results: T[];
+  protected selectionIndex: number;
   private selectionClass = "is-selected";
+
 
   constructor(app: App, modalId: string) {
     this.app = app;
     this.id = modalId;
     this.createContainerEl();
+    this.setPlaceholder("Enter text here...");
+    this.setInstructions([
+      {command: "<A-j/k>", purpose: "to navigate"},
+      {command: "<CR>", purpose: "to choose"},
+      {command: "<Esc>", purpose: "to dismiss"},
+    ]);
+    this.setDefaultScope();
+    this.setDefaultEvents();
   }
 
   createContainerEl(): void {
-    this.containerEl = createDiv("modal-container mod-dim");
+    const containerEl = createEl("div", {
+      cls: "modal-container mod-dim",
+      attr: {
+        id: `${this.id}-container`,
+        // visibility: "hidden",
+        // display: "none",
+      },
+    })
 
-    this.containerEl.appendChild(createEl("div", {
+    containerEl.appendChild(createEl("div", {
       cls: "modal-bg",
       attr: { style: "opacity: 0.85;" },
     }));
 
     const promptEl = createEl("div", {
       cls: "prompt",
-      attr: { id: `${this.id}-suggest` },
+      attr: { id: `${this.id}-prompt` },
     });
 
     const promptInputContainerEl = createEl("div", { cls: "prompt-input-container" });
@@ -406,7 +128,6 @@ abstract class CustomModal<T> {
         id: `${this.id}-input`,
         enterkeyhint: "done",
         type: "text",
-        placeholder: "Enter text here...",
       },
     });
     const promptInputCta = createEl("div", { cls: "prompt-input-cta" });
@@ -421,21 +142,65 @@ abstract class CustomModal<T> {
       },
     });
 
+    const instructionsEl = createEl("div", {
+      cls: "prompt-instructions",
+      attr: {
+        id: `${this.id}-instructions`,
+      }
+    });
+
     promptEl.appendChild(promptInputContainerEl);
     promptEl.appendChild(promptResultsEl);
+    promptEl.appendChild(instructionsEl);
 
-    this.containerEl.appendChild(promptEl);
+    containerEl.appendChild(promptEl);
+    document.body.appendChild(containerEl);
+
+    this.containerEl = document.getElementById(`${this.id}-container`) as HTMLElement;
+    this.promptEl = document.getElementById(`${this.id}-prompt`) as HTMLElement;
+    this.inputEl = document.getElementById(`${this.id}-input`) as HTMLInputElement;
+    this.resultsEl = document.getElementById(`${this.id}-results`) as HTMLElement;
+    this.instructionsEl = document.getElementById(`${this.id}-instructions`) as HTMLElement;
   }
 
 
-  configureScope(): void {
+  setPlaceholder(placeholder: string): void {
+    this.inputEl.setAttribute("placeholder", placeholder);
+  }
+
+
+  setInstructions(instructions: Array<{command: string, purpose: string}>): void {
+    this.instructionsEl.empty();
+    instructions.forEach((instruction) => {
+      const instructionEl = createEl("div", {
+        cls: "prompt-instruction",
+      });
+      instructionEl.createEl("span", {
+        cls: "prompt-instruction-command",
+        text: instruction.command,
+      });
+      instructionEl.createEl("span", {
+        cls: "prompt-instruction-purpose",
+        text: instruction.purpose,
+      });
+      this.instructionsEl.appendChild(instructionEl);
+    });
+  }
+
+
+  setDefaultScope(): void {
     this.scope = new Scope();
 
-    this.scope.register([], "Escape", this.close.bind(this));
-
-    this.scope.register([], "ArrowUp", (event) => {
+    // DEFAULT KEYBINDINGS
+    this.scope.register([], "Escape", (event) => {
       if (!event.isComposing) {
-        this.setSelectedResultEl(this.selectionIndex - 1);
+        this.close();
+        return false;
+      }
+    });
+    this.scope.register([], "Enter", (event) => {
+      if (!event.isComposing) {
+        this.enterAction(this.results[this.selectionIndex], event);
         return false;
       }
     });
@@ -445,56 +210,64 @@ abstract class CustomModal<T> {
         return false;
       }
     });
-
-    this.scope.register(["Alt"], "k", (event) => {
+    this.scope.register([], "ArrowUp", (event) => {
       if (!event.isComposing) {
         this.setSelectedResultEl(this.selectionIndex - 1);
         return false;
       }
     });
+
+    // ALTERNATE KEYBINDINGS
     this.scope.register(["Alt"], "j", (event) => {
       if (!event.isComposing) {
         this.setSelectedResultEl(this.selectionIndex + 1);
         return false;
       }
     });
-
-    this.scope.register([], "Enter", (event) => {
+    this.scope.register(["Alt"], "k", (event) => {
       if (!event.isComposing) {
-        this.useSelectedResult(this.results[this.selectionIndex], event);
-        this.close.bind(this);
+        this.setSelectedResultEl(this.selectionIndex - 1);
         return false;
       }
     });
 
-    this.inputEl.addEventListener("input", this.onInputChanged.bind(this));
-    this.inputEl.addEventListener("focus", this.onInputChanged.bind(this));
-    // // This one throws an error whenever the modal is closed.
-    // this.inputEl.addEventListener("blur", this.close.bind(this));
-    // this.suggestEl.on(
-    //   "mousedown",
-    //   ".suggestion-container",
-    //   (event: MouseEvent) => {
-    //     event.preventDefault();
-    //   }
-    // );
   }
 
-  onInputChanged(): void {
-    this.setResults(this.inputEl.value);
+
+  setDefaultEvents(): void {
+
+    // On Result Click
+    this.resultsEl.on("click", ".suggestion-item", (event, element) => {
+      event.preventDefault();
+      const clickedIndex = this.resultsEl.indexOf(element);
+      this.setSelectedResultEl(clickedIndex);
+      this.clickAction(this.results[clickedIndex], event);
+    })
+
+    // On Result Hover
+    this.resultsEl.on("mousemove", ".suggestion-item", (event, element) => {
+      const hoveredIndex = this.resultsEl.indexOf(element);
+      this.setSelectedResultEl(hoveredIndex);
+    })
+
+    // On Input Change
+    this.inputEl.addEventListener("input", () => {
+      this.setResults(this.inputEl.value);
+    })
+
+    // Close on click outside of prompt.
+    this.containerEl.addEventListener("click", (event) => {
+      if (!this.promptEl.contains(event.target as Node)){
+        this.close();
+      }
+    }, {capture: true});
+
   }
 
 
   open() {
-    document.body.appendChild(this.containerEl);
-    this.suggestEl = document.getElementById(`${this.id}-suggest`) as HTMLElement;
-    this.resultsEl = document.getElementById(`${this.id}-results`) as HTMLElement;
-    this.inputEl = document.getElementById(`${this.id}-input`) as HTMLInputElement;
     this.inputEl.focus();
-
     this.setResults();
-
-    this.configureScope();
     this.app.keymap.pushScope(this.scope);
   }
 
@@ -521,55 +294,195 @@ abstract class CustomModal<T> {
     const prevSelected = this.resultsEl.find(`.${this.selectionClass}`);
     if (prevSelected) prevSelected.removeClass(this.selectionClass);
     newSelected.addClass(this.selectionClass);
+
+    if (newSelected.getBoundingClientRect().bottom > this.resultsEl.getBoundingClientRect().bottom) {
+      newSelected.scrollIntoView({block: "end", inline: "nearest", behavior: "instant"})
+      // newSelected.scrollIntoView(false);
+    } else if (newSelected.getBoundingClientRect().top < this.resultsEl.getBoundingClientRect().top) {
+      newSelected.scrollIntoView({block: "start", inline: "nearest", behavior: "instant"})
+      // newSelected.scrollIntoView(true);
+    }
   }
 
   abstract getResults(query?: string): T[];
   abstract renderResult(result: T): HTMLElement;
-  abstract useSelectedResult(result: T, evt: MouseEvent | KeyboardEvent): void;
+  abstract enterAction(result: T, event: MouseEvent | KeyboardEvent): void;
+  abstract clickAction(result: T, event: MouseEvent | KeyboardEvent): void;
 }
 
 
 
-class OpenMultitabSuggest extends CustomModal<TFile> {
-  query?: string;
 
-  constructor(app: App) {
+class QuickTabOpenSuggest extends CustomSuggest<TFile> {
+  private renderFunction: (text: string, resultEl: HTMLElement) => void;
+  private fuzzy: boolean;
+  private query?: string;
+  private preparedQuery?: PreparedQuery | null;
+
+  constructor(app: App, options?: {fuzzy?: boolean}) {
     super(app, "my-custom-suggest");
+    this.fuzzy = options?.fuzzy ?? true;
+    this.setRenderFunction(this.fuzzy);
+
+    this.setInstructions([
+      {command: "<A-f>", purpose: "fuzzy toggle"},
+      {command: "<A-j/k>", purpose: "to navigate"},
+      {command: "<A-l>", purpose: "choose without closing"},
+      {command: "<CR>", purpose: "choose and close"},
+    ]);
+
+    this.scope.register(["Alt"], "f", (event) => {
+      if (!event.isComposing) {
+        this.fuzzy = !this.fuzzy;
+        this.setRenderFunction(this.fuzzy);
+        this.setResults(this.query);
+        return false;
+      }
+    });
+
+    this.scope.register(["Alt"], "l", (event) => {
+      if (!event.isComposing) {
+        this.customAction1(this.results[this.selectionIndex], event);
+        return false;
+      }
+    });
+    this.scope.register(["Alt"], "h", (event) => {
+      if (!event.isComposing) {
+        this.customAction2(this.results[this.selectionIndex], event);
+        return false;
+      }
+    });
+    this.scope.register(["Shift"], "Enter", (event) => {
+      if (!event.isComposing) {
+        this.clickAction(this.results[this.selectionIndex], event);
+        return false;
+      }
+    });
+
   }
 
   getResults(query?: string): TFile[] {
     this.query = query;
+    this.preparedQuery = prepareQuery(query ?? "");
+
     const folder = this.app.vault.getRoot().path;
     const files = getTFilesFromFolder(this.app, folder);
     if (!files) return [];
     if (!query) return files;
-    return files.filter((file) => file.basename.toLocaleLowerCase().contains(query.toLocaleLowerCase()));
+
+    if (!this.fuzzy) {
+      return files.filter((file) => file.basename.toLocaleLowerCase().contains(query.toLocaleLowerCase()));
+    }
+
+    const matchedFiles = files.filter((file) => {
+      const result = fuzzySearch(this.preparedQuery!, file.basename);
+      if (!result) return false;
+      (file as any).fuzzyScore = result.score;
+      return true;
+    });
+
+    // Sort in descending order of fuzzy score.
+    matchedFiles.sort((a, b) => (b as any).fuzzyScore - (a as any).fuzzyScore);
+    // Remove the fuzzy score from the file objects.
+    matchedFiles.forEach((file) => delete (file as any).fuzzyScore);
+
+    return matchedFiles;
+  }
+
+
+  setRenderFunction(isFuzzy: boolean): void {
+
+    function fuzzyRender(text: string, resultEl: HTMLElement): void {
+      const fuzzyResult = fuzzySearch(this.preparedQuery!, text)!;
+      // if (!fuzzyResult) return resultEl;
+
+      let { score, matches } = fuzzyResult;
+      // Sort in descending order to replace string sections from right to left at 
+      // the appropriate indices.
+      matches.sort((a, b) => b[0] - a[0]);
+      // We also assume that the matches do not overlap.
+      matches.forEach((match) => {
+        const leadStr = text.slice(0, match[0]);
+        const matchStr = text.slice(match[0], match[1]);
+        const tailStr = text.slice(match[1]);
+        text = `${leadStr}<b style="color: var(--text-accent);">${matchStr}</b>${tailStr}`;
+      });
+
+      // resultEl.innerHTML = `<span style="color: var(--color-red);">${score.toFixed(4)}</span>  ${text}`;
+      resultEl.innerHTML = text;
+    }
+
+    function simpleRender(text: string, resultEl: HTMLElement): void {
+      const matchIdx = text.toLocaleLowerCase().indexOf(this.query.toLocaleLowerCase());
+      const match = [matchIdx, matchIdx + this.query.length];
+
+      const leadStr = text.slice(0, match[0]);
+      const matchStr = text.slice(match[0], match[1]);
+      const tailStr = text.slice(match[1]);
+
+      resultEl.innerHTML = `${leadStr}<b style="color: var(--text-accent);">${matchStr}</b>${tailStr}`;
+    }
+
+    if (isFuzzy) {
+      this.renderFunction = fuzzyRender;
+    } else {
+      this.renderFunction = simpleRender;
+    }
   }
 
   renderResult(result: TFile): HTMLElement {
+    let text = result.basename;
     const resultEl = createEl("div");
 
     if (this.query) {
-      const queryIndex = result.basename.toLocaleLowerCase().indexOf(this.query.toLocaleLowerCase());
-      const endQueryIndex = queryIndex + this.query.length;
+      this.renderFunction(text, resultEl);
+      // const fuzzyResult = fuzzySearch(this.preparedQuery!, text);
+      // if (!fuzzyResult) return resultEl;
 
-      const preQuery = result.basename.slice(0, queryIndex);
-      const query = result.basename.slice(queryIndex, endQueryIndex);
-      const postQuery = result.basename.slice(endQueryIndex);
+      // let { score, matches } = fuzzyResult;
+      // // Sort in descending order to replace string sections from right to left at 
+      // // the appropriate indices.
+      // matches.sort((a, b) => b[0] - a[0]);
+      // // We also assume that the matches do not overlap.
+      // matches.forEach((match) => {
+      //   const leadStr = text.slice(0, match[0]);
+      //   const matchStr = text.slice(match[0], match[1]);
+      //   const tailStr = text.slice(match[1]);
+      //   text = `${leadStr}<b style="color: var(--text-accent);">${matchStr}</b>${tailStr}`;
+      // });
 
-      resultEl.innerHTML = `${preQuery}<b>${query}</b>${postQuery}`;
+      // resultEl.innerHTML = `<span style="color: var(--color-red);">${score.toFixed(4)}</span>  ${text}`;
+      // // resultEl.innerHTML = text;
     } else {
-      resultEl.innerText = result.basename;
+      resultEl.innerText = text;
     }
 
     return resultEl;
   }
 
-  useSelectedResult(result: TFile, evt: MouseEvent | KeyboardEvent): void {
-    this.app.workspace.getLeaf(true).openFile(result, { active: false });
+
+  enterAction(result: TFile, evt: MouseEvent | KeyboardEvent): void {
+    this.openFileInBackgroudTab(result);
+    this.close();
+  }
+
+  clickAction(result: TFile, evt: MouseEvent | KeyboardEvent): void {
+    this.customAction1(result, evt);
+  }
+
+  customAction1(result: TFile, event: MouseEvent | KeyboardEvent): void {
+    this.openFileInBackgroudTab(result);
+    this.inputEl.focus();
+  }
+
+  customAction2(result: TFile, event: MouseEvent | KeyboardEvent): void {
+    this.openFileInBackgroudTab(result);
     this.inputEl.value = "";
     this.setResults();
-    // this.close();
+  }
+
+  openFileInBackgroudTab(result: TFile): void {
+    this.app.workspace.getLeaf(true).openFile(result, { active: false });
   }
 
 }
@@ -577,303 +490,16 @@ class OpenMultitabSuggest extends CustomModal<TFile> {
 
 
 
-
-
- const sampleItems: Array<string> = [
-    "one",
-    "two",
-    "three",
- ];
-
-
-
-// Modal with test text content.
-class MyModal extends Modal {
-  result: string;
-  onSubmit: (result: string) => void;
-  setTitle: (title: string) => this; // Undocumented method.
-
-  constructor(app: App, onSubmit: (result: string) => void) {
-    super(app);
-    this.setTitle("Set Title");
-    this.onSubmit = onSubmit;
-  }
-
-  onOpen() {
-    let {contentEl} = this;
-    contentEl.createEl("h1", {text: 'contentEl.createEl("h1", ...)'});
-    contentEl.createEl("h2", {text: 'contentEl.createEl("h2", ...)'});
-    this.titleEl.appendText(" -- appendText()");
-    this.titleEl.append(" -- append()");
-    this.titleEl.createSpan({text: " -- createSpan()"});
-    // contentEl.createEl("h1", {text: 'contentEl.createEl("h1", ...)'});
-
-    // setText() replaces all previous content.
-    // contentEl.setText("This text was set with the  contentEl.setText() method.");
-  }
-
-  onClose() {
-    let {contentEl} = this;
-    contentEl.empty();
-  }
-}
-
-
-
-// Attempted suggest modal to accept alt key bindings for navigation.
-export class MySuggestModal extends SuggestModal<string> {
-  private suggestions: string[];
-  private selectedSuggestion: string;
-  private query: string;
-  private ignoreCase: boolean;
-  private suggestionFilter: (s: string) => boolean;
-  private getQueryIndex: (t: string) => number;
-
-
-  constructor(app: App, args: {ignoreCase: boolean} = {ignoreCase: false}) {
-    super(app);
-    this.setPlaceholder("Select a file...");
-
-    this.resultContainerEl.addClass("MySuggestModal-results");
-    // this.shouldRestoreSelection = true;
-
-    this.suggestions = this.app.vault.getMarkdownFiles().map((file) => file.path);
-    this.setIgnoreCase(args.ignoreCase);
-
-    this.scope.register(["Alt"], "i", (event: KeyboardEvent) => {
-      if (!event.isComposing) {
-        console.log(`Ignore Case: ${!this.ignoreCase}`);
-        this.setIgnoreCase(!this.ignoreCase);
-        this.inputEl.setText("foo");
-        return false;
-      }
-    });
-
-    this.scope.register(["Alt"], "j", (event: KeyboardEvent) => {
-      if (!event.isComposing) {
-        const selectionClass = "is-selected";
-        const selected = this.resultContainerEl.find(`.${selectionClass}`);
-        selected.removeClass(selectionClass);
-        const newSelected = (selected.nextSibling ?? this.resultContainerEl.firstChild) as HTMLElement;
-        newSelected.addClass(selectionClass);
-        return false;
-      }
-    });
-
-    this.scope.register(["Alt"], "k", (event: KeyboardEvent) => {
-      if (!event.isComposing) {
-        const selectionClass = "is-selected";
-        const selected = this.resultContainerEl.find(`.${selectionClass}`);
-        selected.removeClass(selectionClass);
-        const newSelected = (selected.previousSibling ?? this.resultContainerEl.lastChild) as HTMLElement;
-        newSelected.addClass(selectionClass);
-        return false;
-      }
-    });
-    // this.scope.register(["Alt"], "j", (event: KeyboardEvent) => {
-    // });
-
-    console.log("MySuggestModal:", this);
-    
-
-  }
-
-  private setIgnoreCase(ignoreCase: boolean) {
-    this.ignoreCase = ignoreCase;
-    if (ignoreCase) {
-      this.suggestionFilter = (s: string) => 
-        s.toLocaleLowerCase().contains(this.query.toLocaleLowerCase());
-      this.getQueryIndex = (t: string) =>
-        t.toLocaleLowerCase().indexOf(this.query.toLocaleLowerCase());
-    } else {
-      this.suggestionFilter = (s: string) => s.contains(this.query);
-      this.getQueryIndex = (t: string) => t.indexOf(this.query);
-    }
-  }
-
-  onOpen(): void {
-    this.app.keymap.pushScope(this.scope);
-    super.onOpen();
-  }
-
-  onClose(): void {
-    this.app.keymap.popScope(this.scope);
-    super.onClose();
-  }
-
-  getSuggestions(query: string): string[] | Promise<string[]> {
-    this.query = query;
-    return this.suggestions.filter(this.suggestionFilter);
-  }
-
-  renderSuggestion(value: string, el: HTMLElement) {
-    if (this.query) {
-      const queryIndex = this.getQueryIndex(value);
-      const endQueryIndex = queryIndex + this.query.length;
-
-      const preQuery = value.slice(0, queryIndex);
-      const query = value.slice(queryIndex, endQueryIndex);
-      const postQuery = value.slice(endQueryIndex);
-
-      el.innerHTML = `${preQuery}<b>${query}</b>${postQuery}`;
-    } else {
-      el.innerText = value;
-    }
-  }
-
-  selectSuggestion(value: string, evt: MouseEvent | KeyboardEvent): void {
-    this.selectedSuggestion = value;
-    console.log("selectSuggestion:", value);
-    
-  }
-
-  onChooseSuggestion(item: string, evt: MouseEvent | KeyboardEvent): string {
-    new Notice(`'${item}' selected.`, 5000);
-    return item;
-  }
-}
-
-
-
-
-// Fuzzy suggest for files at the root of the vault.
-export class MyFuzzySuggestModal extends FuzzySuggestModal<TFile> {
-  private plugin: BundlePlugin;
-  private component: SuggestComponent;
-
-  constructor(component: SuggestComponent) {
-    super(component.parent.app);
-    this.plugin = component.parent;
-    this.component = component;
-    this.setPlaceholder("Generic placeholder");
-    this.setInstructions([
-      {command: "↑↓", purpose: "to navigate"},
-      {command: "↵", purpose: "to choose"},
-      {command: "esc", purpose: "to dismiss"},
-    ]);
-
-  }
-
-  onOpen() {
-    super.onOpen();
-    // Add "Alt+J" and "Alt+K" as alternative keys for navigation.
-    document.addEventListener("keydown", (evt) => {
-      if (evt.altKey && evt.key === "j") {
-        console.debug("TODO: Implement Alt+J to navigate down.");
-      } else if (evt.altKey && evt.key === "k") {
-        console.debug("TODO: Implement Alt+K to navigate up.");
-      }
-    })
-  }
-
-  tryCommand(title: string, command: () => void) {
-    try {
-      command();
-    } catch (error) {
-      new Notice(`Error running command: ${title}`);
-      console.error(`Error running command: ${title}`, error);
-    }
-  }
-
-  getItems(): TFile[] {
-    const folder = this.plugin.app.vault.getRoot().path;
-    const files = getTFilesFromFolder(this.plugin.app, folder);
-    if (!files) return [];
-    return files;
-  }
-
-  getItemText(item: TFile): string {
-    return item.basename;
-  }
-
-  onChooseItem(item: TFile, evt: MouseEvent | KeyboardEvent): void {
-    this.component.processSuggestSelection(item.basename);
-    console.log(evt);
-  }
-
-  // renderSuggestion(item: FuzzyMatch<string>, el: HTMLElement): void {
-  //   el.setText(item.item);
-  // }
-
-  // selectSuggestion(value: FuzzyMatch<string>, evt: MouseEvent | KeyboardEvent): void {
-  //   this.close();
-  // }
-
-  // onChooseSuggestion(item: FuzzyMatch<string>, evt: MouseEvent | KeyboardEvent): void {
-  //   this.close();
-  // }
-
-}
-
-
-
-
-// Unused.
-class MyPopoverSuggest extends PopoverSuggest<string> {
-
-  constructor(app: App) {
-    super(app)
-  }
-
-  renderSuggestion(value: string, el: HTMLElement): void {
-    let parts = value.split("/");
-    let head = parts.pop();
-    let boldHead = el.createEl("b", head);
-    el.appendText(parts.join("/") + "/");
-    el.appendChild(boldHead);
-    // el.textContent = value;
-  }
-
-  selectSuggestion(value: string, evt: MouseEvent | KeyboardEvent): void {
-    processTextSelection(value);
-  }
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-////////////////////////////////////////
-// STRING PROCESSING FUNCTIONS
-////////////////////////////////////////
-
-function processTextSelection(text: string) {
-  new Notice(`"${text}" was selected.`, 5000);
-}
 
 
 
 ////////////////////////////////////////
 // UTILITY FUNCTIONS
 ////////////////////////////////////////
+
+const wrapAround = (value: number, size: number): number => {
+    return ((value % size) + size) % size;
+};
 
 
 function resolveTFile(app: App, fileStr: string): TFile {
