@@ -46,12 +46,12 @@ export default class HelperComponent implements BundleComponent {
 			id: "toggle-line-numbers",
 			name: "Toggle line numbers",
 			icon: "list-ordered",
-			callback: () => {
-				const vault = plugin.app.vault as any;
-        // TODO: Account for the case where the user has not yet set the config option
-				const showLineNumber = vault.getConfig("showLineNumber");
-				vault.setConfig("showLineNumber", !showLineNumber);
-			}
+      editorCallback: (editor: Editor) => {
+        const vault = plugin.app.vault as any;
+        // Already accounts for the case where the config was never set
+        vault.setConfig("showLineNumber", !vault.getConfig("showLineNumber"));
+        editor.refresh();
+      },
 		});
 
 		// Toggle Vim Mode (and Vim-related plugins)
