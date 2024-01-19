@@ -118,7 +118,7 @@ function newMultilinePluginNotice (
 //////////////////////////
 
 
-type DateFormat = {
+export type DateFormat = {
   name: string,
   format: string,
   regex: RegExp,
@@ -166,7 +166,7 @@ export async function timeFormatTransform(tp: any, editor: Editor) {
   const cursorLineStr = editor.getLine(cursorLine);
 
   // Get the date format of the current line.
-  const matchedDate = getMatchedDate(cursorLineStr) as DateFormat;
+  const matchedDate = getMatchedDate(cursorLineStr, {verbose: true}) as DateFormat;
   if (!matchedDate) return;
 
   // Prompt the user for the date format to transform to.
@@ -192,7 +192,7 @@ async function dateTransformInSelection(tp: any, editor: Editor) {
   const rangeText = editor.getRange(editRange.from, editRange.to);
 
   // Find all the matching date formats in the selection.
-  const matchedDates = getMatchedDate(rangeText, {multiple: true}) as DateFormat[];
+  const matchedDates = getMatchedDate(rangeText, {multiple: true, verbose: true}) as DateFormat[];
   if (!matchedDates) return;
 
   // Prompt the user for the date format to transform from if there are multiple.
@@ -231,7 +231,14 @@ async function dateTransformInSelection(tp: any, editor: Editor) {
 }
 
 
-function getMatchedDate(text: string, args = {multiple: false}) {
+export function getMatchedDate(
+  text: string,
+  args?:  {multiple?: boolean, verbose?: boolean}
+): DateFormat | DateFormat[] | undefined {
+  if (!args) args = {multiple: false, verbose: false};
+  if (!args.multiple) args.multiple = false;
+  if (!args.verbose) args.verbose = false;
+
   if (!args.multiple) {
     // Return the first date found.
     for (const date of dateFormats) {
@@ -246,11 +253,12 @@ function getMatchedDate(text: string, args = {multiple: false}) {
     if (matchedDates.length > 0) return matchedDates;
   }
 
+  if (!args.verbose) return;
+
   // If no date was found, show a notice and return.
   const message = "None of the supported date formats were found.";
   console.log(this.moment().format("YYYY-MM-DD HH:mm:ss"), message);
-  new Notice(message, 3000);
-  return;
+  new Notice(message, 3500);
 }
 
 
@@ -315,47 +323,6 @@ async function getHeadingsDateChanges(
     text: this.moment(dateMatch[0], matchedDate.format).format(newFormat),
   }];
 }
-
-
-// async function getActiveFileCache(property: string) {
-//   const startTime = this.moment().format("YYYY-MM-DD[T]HH:mm:ss.SSS");
-//   // await new Promise(resolve => setTimeout(resolve, msDelay));
-
-//   // Ensure that the file is saved before getting the cache.
-//   this.app.commands.executeCommandById('editor:save-file');
-
-//   try {
-//     const currentFile = this.app.workspace.getActiveFile();
-//     if (!currentFile) throw new Error("Couldn't get currentFile");
-
-//     // Ensure that the file is indexed before getting the cache.
-//     void await this.app.vault.adapter.read(currentFile.path);
-
-//     const fileCache = this.app.metadataCache.getFileCache(currentFile);
-//     if (!fileCache) throw new Error("Couldn't get fileCache");
-
-//     if (!property) return fileCache;
-
-//     const fileProperty = structuredClone(fileCache[property]);
-//     if (!fileProperty) throw new Error(`Couldn't get file ${property} from cache`);
-
-//     return fileProperty;
-
-//   } catch (error) {
-//     console.debug(startTime, "getActiveFileHeadings() failed:", error.message);
-//   }
-// }
-
-
-// function getHeadingIndex(fileHeadings: HeadingCache[], cursorLine: number) {
-//   let headingIndex = -1;
-//   for (let i = fileHeadings.length - 1; i >= 0; i--) {
-//     if (fileHeadings[i].position.start.line > cursorLine) continue;
-//     if (fileHeadings[i].position.start.line === cursorLine) headingIndex = i;
-//     break;
-//   }
-//   return headingIndex;
-// }
 
 
 function getSiblingHeadings(fileHeadings: HeadingCache[], refHeadingIndex: number) {
