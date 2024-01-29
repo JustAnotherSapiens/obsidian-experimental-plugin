@@ -1,19 +1,10 @@
 import {
   Setting, Notice,
-  Editor, MarkdownView, HeadingCache,
   ToggleComponent, DropdownComponent, TextComponent, ButtonComponent,
 } from "obsidian";
 
 import BundlePlugin from "main";
 import BundleComponent from "types";
-
-import {
-  getSetting,
-  getActiveFileCache,
-  getHeadingIndex,
-  scrollToCursor,
-} from "utils";
-
 
 
 const scriptComplexityLevels = [
@@ -118,7 +109,7 @@ export default class ScriptComponent implements BundleComponent {
 							await plugin.saveSettings();
 						});
 					});
-				}
+				};
 				addTimeOffsetButton("-100");
 				addTimeOffsetButton("+100");
 				addTimeOffsetButton("-250");

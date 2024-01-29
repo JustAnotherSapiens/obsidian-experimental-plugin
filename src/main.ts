@@ -2,13 +2,13 @@ import { Plugin, PluginSettingTab, App } from "obsidian";
 
 import BundleComponent from "types";
 
-import FoldComponent from "components/fold";
-import MoveComponent from "components/move";
 import HelperComponent from "components/helper";
-import ScriptComponent from "components/script";
+import SuggestComponent from "components/suggest";
+import MoveComponent from "components/move";
+import FoldComponent from "components/fold";
 import TimeComponent from "components/time";
 import EditComponent from "components/edit";
-import SuggestComponent from "components/suggest";
+import ScriptComponent from "components/script";
 
 
 
@@ -21,13 +21,13 @@ export default class BundlePlugin extends Plugin {
     console.log("Loading Bundle Plugin");
 
     this.components = [
-      new FoldComponent(this),
-      new MoveComponent(this),
       new HelperComponent(this),
-      new ScriptComponent(this),
+      new SuggestComponent(this),
+      new MoveComponent(this),
+      new FoldComponent(this),
       new TimeComponent(this),
       new EditComponent(this),
-      new SuggestComponent(this),
+      new ScriptComponent(this),
     ]
 
     await this.loadSettings();
@@ -50,7 +50,7 @@ export default class BundlePlugin extends Plugin {
 
 
   async loadSettings() {
-    let bundleSettings = {};
+    let bundleSettings: {[key: string]: any} = {};
     this.components.forEach((component: BundleComponent) => {
       bundleSettings = { ...bundleSettings, ...component.settings };
     });
