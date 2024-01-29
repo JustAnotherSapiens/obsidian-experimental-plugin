@@ -9,15 +9,23 @@ import BundleComponent from "types";
 
 import {
   getSetting,
-  getHeadingIndex,
-  scrollToCursor,
+  ScrollOptions,
+  customActiveLineScroll,
+  shrinkSettingInputField,
 } from "utils";
 
 
 
+interface DynamicSetting extends Setting {
+  show: () => void,
+  hide: () => void,
+}
+
 // type LevelZeroBehavior = "snap-contiguous" | "snap-parent" | "on-parent-behavior";
 type SiblingMode = "strictSibling" | "looseSibling";
 
+type ScrollExecution = "never" | "always" | "onThreshold";
+export type ScrollMode = "viewportFraction" | "offsetLines";
 
 
 export default class MoveComponent implements BundleComponent {
@@ -26,7 +34,14 @@ export default class MoveComponent implements BundleComponent {
   settings: {
     // levelZeroBehavior: LevelZeroBehavior,
     siblingMode: SiblingMode,
-    scrollOffset: number,
+
+    scrollExecution: ScrollExecution,
+    scrollMode: ScrollMode,
+    scrollThreshold: number,
+    scrollFraction: number,
+    scrollOffsetLines: number,
+    useScrollTimeout: boolean,
+
     globalWrapAround: boolean,
     contiguousWrapAround: boolean,
     looseSiblingWrapAround: boolean,
@@ -39,7 +54,14 @@ export default class MoveComponent implements BundleComponent {
     this.settings = {
       // levelZeroBehavior: "snap-contiguous",
       siblingMode: "looseSibling",
-      scrollOffset: 0,
+
+      scrollExecution: "onThreshold",
+      scrollMode: "viewportFraction",
+      scrollThreshold: 0.25,
+      scrollFraction: 0.25,
+      scrollOffsetLines: 5,
+      useScrollTimeout: false,
+
       globalWrapAround: false,
       contiguousWrapAround: false,
       looseSiblingWrapAround: false,
@@ -106,9 +128,10 @@ export default class MoveComponent implements BundleComponent {
 			id: "sibling-heading-down",
 			name: "Move cursor to next sibling heading down",
 			icon: "arrow-down",
-			editorCallback: (editor: Editor) => {
+      repeatable: true,
+			editorCallback: (editor: Editor, view: MarkdownView) => {
 				const siblingMode = plugin.settings.siblingMode;
-        moveCursorToHeading(editor, siblingMode, {backwards: false});
+        moveCursorToHeading(editor, view, siblingMode, {backwards: false});
 			}
 		});
 
@@ -117,29 +140,21 @@ export default class MoveComponent implements BundleComponent {
 			id: "sibling-heading-up",
 			name: "Move cursor to next sibling heading up",
 			icon: "arrow-up",
-			editorCallback: (editor: Editor) => {
+      repeatable: true,
+			editorCallback: (editor: Editor, view: MarkdownView) => {
 				const siblingMode = plugin.settings.siblingMode;
-        moveCursorToHeading(editor, siblingMode, {backwards: true});
+        moveCursorToHeading(editor, view, siblingMode, {backwards: true});
 			}
 		});
-
-		// // Move cursor to parent heading
-		// plugin.addCommand({
-		// 	id: "parent-heading",
-		// 	name: "Move cursor to parent heading",
-		// 	icon: "arrow-up",
-		// 	editorCallback: (editor: Editor) => {
-    //     moveCursorToHeading(editor, "parent");
-		// 	}
-		// });
 
 		// Move cursor to next contiguous heading down
 		plugin.addCommand({
 			id: "contiguous-heading-down",
 			name: "Move cursor to contiguous heading down",
 			icon: "arrow-down",
-			editorCallback: (editor: Editor) => {
-        moveCursorToHeading(editor, "contiguous", {backwards: false});
+      repeatable: true,
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+        moveCursorToHeading(editor, view, "contiguous", {backwards: false});
 			}
 		});
 
@@ -148,8 +163,9 @@ export default class MoveComponent implements BundleComponent {
 			id: "contiguous-heading-up",
 			name: "Move cursor to contiguous heading up",
 			icon: "arrow-up",
-			editorCallback: (editor: Editor) => {
-				moveCursorToHeading(editor, "contiguous", {backwards: true});
+      repeatable: true,
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				moveCursorToHeading(editor, view, "contiguous", {backwards: true});
 			}
 		});
 
@@ -158,8 +174,8 @@ export default class MoveComponent implements BundleComponent {
       id: "highest-heading-up",
       name: "Move cursor to highest heading upwards",
       icon: "arrow-up",
-      editorCallback: (editor: Editor) => {
-        moveCursorToHeading(editor, "highest", {backwards: true});
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        moveCursorToHeading(editor, view, "highest", {backwards: true});
       }
     });
 
@@ -169,8 +185,8 @@ export default class MoveComponent implements BundleComponent {
       id: "highest-heading-down",
       name: "Move cursor to highest heading downwards",
       icon: "arrow-down",
-      editorCallback: (editor: Editor) => {
-        moveCursorToHeading(editor, "highest", {backwards: false});
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        moveCursorToHeading(editor, view, "highest", {backwards: false});
       }
     });
 
@@ -179,8 +195,8 @@ export default class MoveComponent implements BundleComponent {
       id: "higher-heading-up",
       name: "Move cursor to higher heading upwards (parent)",
       icon: "arrow-up",
-      editorCallback: (editor: Editor) => {
-        moveCursorToHeading(editor, "higher", {backwards: true});
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        moveCursorToHeading(editor, view, "higher", {backwards: true});
       }
     });
 
@@ -190,8 +206,8 @@ export default class MoveComponent implements BundleComponent {
       id: "higher-heading-down",
       name: "Move cursor to higher heading downwards",
       icon: "arrow-down",
-      editorCallback: (editor: Editor) => {
-        moveCursorToHeading(editor, "higher", {backwards: false});
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        moveCursorToHeading(editor, view, "higher", {backwards: false});
       }
     });
 
@@ -234,19 +250,191 @@ export default class MoveComponent implements BundleComponent {
 				});
 			});
 
-		// Scroll Offset
-		new Setting(containerEl)
-		  .setName("Scroll offset")
-			.setDesc("Minimum number of offset lines visible from the cursor position when moving to a heading.")
+
+    /* Scroll Settings */
+    containerEl.createEl("h5", {text: "Scroll Settings"});
+
+
+    // Scroll Fraction
+    const setScrollFractionSetting = () => new Setting(containerEl)
+      .setName("Viewport fraction")
+      .then((setting: Setting) => {
+        const fragment = document.createDocumentFragment();
+        fragment.append(
+          "When scrolling, the target line will be placed at this fraction of the viewport.",
+          fragment.createEl("br"),
+          fragment.createEl("b", {text: "Recommended: "}),
+          "Keep this value the same as the trigger threshold."
+        );
+        setting.setDesc(fragment);
+      })
+      .addText((textField: TextComponent) => {
+        textField.inputEl.type = "number";
+        textField.setPlaceholder("scroll_fraction");
+        textField.setValue(String(plugin.settings.scrollFraction));
+        textField.onChange(async (value: string) => {
+          plugin.settings.scrollFraction = Number(value);
+          await plugin.saveSettings();
+        });
+      })
+      .then(shrinkSettingInputField);
+
+
+		// Scroll Offset Lines
+		const setScrollOffsetLinesSetting = () => new Setting(containerEl)
+		  .setName("Offset lines")
+			.setDesc("Minimum number of lines visible above and below the target line.")
 			.addText((textField: TextComponent) => {
 				textField.inputEl.type = "number";
 				textField.setPlaceholder("scroll_offset");
-				textField.setValue(String(plugin.settings.scrollOffset));
+				textField.setValue(String(plugin.settings.scrollOffsetLines));
 				textField.onChange(async (value: string) => {
-					plugin.settings.scrollOffset = Number(value);
+					plugin.settings.scrollOffsetLines = Number(value);
 					await plugin.saveSettings();
 				});
-			});
+			})
+      .then(shrinkSettingInputField);
+
+
+    // Scroll Mode
+    // 1. Viewport Fraction
+    // 2. Offset Lines
+    const setScrollModeSetting = () => new Setting(containerEl)
+      .setName("Scroll mode")
+      // .setDesc("How to scroll to a heading.")
+      .then((setting: Setting) => {
+
+        const scrollFraction = setScrollFractionSetting();
+        const scrollOffsetLines = setScrollOffsetLinesSetting();
+
+        const scrollModeSwitch = (value: ScrollMode) => {
+          switch (value) {
+            case "viewportFraction":
+              scrollFraction.settingEl.show();
+              scrollOffsetLines.settingEl.hide();
+              break;
+            case "offsetLines":
+              scrollFraction.settingEl.hide();
+              scrollOffsetLines.settingEl.show();
+              break;
+          }
+        };
+
+        setting.addDropdown((dropdown: DropdownComponent) => {
+          dropdown.addOptions({
+            "viewportFraction": "Viewport fraction",
+            "offsetLines":      "Offset lines",
+          });
+          dropdown.setValue(plugin.settings.scrollMode);
+          dropdown.onChange(async (value: ScrollMode) => {
+            plugin.settings.scrollMode = value;
+            scrollModeSwitch(value);
+            await plugin.saveSettings();
+          });
+        });
+
+        (setting as DynamicSetting).show = () => {
+          setting.settingEl.show();
+          scrollModeSwitch(plugin.settings.scrollMode);
+        };
+
+        (setting as DynamicSetting).hide = () => {
+          setting.settingEl.hide();
+          scrollFraction.settingEl.hide();
+          scrollOffsetLines.settingEl.hide();
+        };
+
+      });
+
+
+    // Scroll Threshold
+    const setScrollThresholdSetting = () => new Setting(containerEl)
+      .setName("Trigger threshold")
+      .then((setting: Setting) => {
+        const fragment = document.createDocumentFragment();
+        fragment.append(
+          "Fraction of the viewport that the target line must be outside of to trigger scrolling.",
+          fragment.createEl("br"),
+          fragment.createEl("b", {text: "Example: "}),
+          "For a value of 0.25, if the target line is either on the top 25% or bottom 25% of the viewport, scrolling will be triggered."
+        );
+        setting.setDesc(fragment);
+      })
+      .setTooltip("Value should be between 0 and 0.5")
+      .addText((textField: TextComponent) => {
+        textField.inputEl.type = "number";
+        textField.setPlaceholder("scroll_fraction");
+        textField.setValue(String(plugin.settings.scrollThreshold));
+        textField.onChange(async (value: string) => {
+          plugin.settings.scrollThreshold = Number(value);
+          await plugin.saveSettings();
+        });
+      })
+      .then(shrinkSettingInputField);
+
+
+    // Use Scroll Timeout
+    const setUseScrollTimeoutSetting = () => new Setting(containerEl)
+      .setName("Use Scroll timeout")
+      .setDesc("This guarantees expected scroll behavior, but at the cost of some UI flicking.")
+      .addToggle((toggle: ToggleComponent) => {
+        toggle.setValue(plugin.settings.useScrollTimeout);
+        toggle.onChange(async (value: boolean) => {
+          plugin.settings.useScrollTimeout = value;
+          await plugin.saveSettings();
+        });
+      });
+
+
+    // Scroll Trigger
+    // 1. At threshold
+    // 2. Forced (always)
+    // 3. Built-in (default)
+    new Setting(containerEl)
+      .setName("Scroll trigger")
+      .setDesc("When to trigger the plugin's scroll.")
+      .then((setting: Setting) => {
+
+        const scrollThreshold = setScrollThresholdSetting();
+        const scrollMode = setScrollModeSetting() as DynamicSetting;
+        const useScrollTimeout = setUseScrollTimeoutSetting();
+
+        const scrollTriggerSwitch = (value: ScrollExecution) => {
+          switch (value) {
+            case "onThreshold":
+              scrollThreshold.settingEl.show();
+              scrollMode.show();
+              useScrollTimeout.settingEl.show();
+              break;
+            case "always":
+              scrollThreshold.settingEl.hide();
+              scrollMode.show();
+              useScrollTimeout.settingEl.show();
+              break;
+            case "never":
+              scrollThreshold.settingEl.hide();
+              scrollMode.hide();
+              useScrollTimeout.settingEl.hide();
+              break;
+          }
+        };
+
+        setting.addDropdown((dropdown: DropdownComponent) => {
+          dropdown.addOptions({
+            "onThreshold": "On threshold",
+            "always":      "Always",
+            "never":       "Never",
+          });
+          dropdown.setValue(plugin.settings.scrollExecution);
+          dropdown.onChange(async (value: ScrollExecution) => {
+            plugin.settings.scrollExecution = value;
+            scrollTriggerSwitch(value);
+            await plugin.saveSettings();
+          });
+          scrollTriggerSwitch(dropdown.getValue() as ScrollExecution);
+        });
+      });
+
 
 		/* Wrap Around Settings */
     containerEl.createEl("h5", {text: "Wrap around..."});
@@ -302,10 +490,6 @@ const movementFunctions = {
 type MovementMode = keyof typeof movementFunctions;
 
 const wrapableMovementModes = ["contiguous", "looseSibling", "strictSibling"];
-// type WrapableMovementMode = Exclude<MovementMode, ["lastChild", "parent"]>;
-
-type MovementFunction = (args: MovementArgs) => number;
-type SearchFunction = (args: MovementArgs) => {found: boolean, line: number};
 
 type MovementArgs = {
   lines: string[],
@@ -319,6 +503,7 @@ type MovementArgs = {
 
 function moveCursorToHeading(
   editor: Editor,
+  view: MarkdownView,
   mode: MovementMode,
   opts?: {backwards: boolean}
 ) {
@@ -342,17 +527,43 @@ function moveCursorToHeading(
   };
 
   const movementLine = movementFunctions[mode](args);
-  console.log("movementLine:", movementLine);
-  
+  if (movementLine === -1 || movementLine === startLine) return;
 
-  if(movementLine !== -1 && movementLine !== startLine) {
-    editor.setCursor({line: movementLine, ch: 0});
-    scrollToCursor(editor, getSetting("scrollOffset"))
-    // const cursorPos = editor.getCursor();
-    // editor.scrollIntoView({from: cursorPos, to: cursorPos}, true);
-  }
+  editor.setCursor({line: movementLine, ch: 0});
+  resolveScroll(view);
 
 }
+
+
+function resolveScroll(view: MarkdownView): void {
+
+  const scrollExecution = getSetting("scrollExecution");
+  if (scrollExecution === "never") return;
+
+  let scrollOptions = {} as ScrollOptions;
+  if (getSetting("useScrollTimeout")) scrollOptions["timeout"] = 0;
+
+  switch (scrollExecution) {
+    case "always":
+      scrollOptions["viewportThreshold"] = 1;
+      break;
+    case "onThreshold":
+      scrollOptions["viewportThreshold"] = getSetting("scrollThreshold");
+      break;
+  }
+
+  switch (getSetting("scrollMode")) {
+    case "viewportFraction":
+      scrollOptions!["scrollFraction"] = getSetting("scrollFraction");
+      break;
+    case "offsetLines":
+      scrollOptions!["scrollOffsetLines"] = getSetting("scrollOffsetLines");
+      break;
+  }
+
+  customActiveLineScroll(view, scrollOptions!);
+}
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -643,7 +854,7 @@ function getRelativeHighestHeadings(args: MovementArgs): {lines: number[], level
                   : (i: number) => i < lines.length;
 
   let highestLevel = headingLevel ? headingLevel : 6;
-  let headingRegex = new RegExp(`^(#{1,${highestLevel}})`);
+  let headingRegex = new RegExp(`^(#{1,${highestLevel}}) `);
 
   let headings: {lines: number[], level: number} = {lines: [], level: highestLevel};
 

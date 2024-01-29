@@ -12,6 +12,7 @@ import {
   getActiveFileCache,
   getHeadingIndex,
   scrollToCursor,
+  customActiveLineScroll,
 } from "utils";
 
 
@@ -68,8 +69,8 @@ export default class FoldComponent implements BundleComponent {
 			id: "toggle-fold",
 			name: "Toggle fold",
 			icon: "fold-vertical",
-			editorCallback: (editor: Editor) => {
-				cleanToggleFold(editor);
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				cleanToggleFold(editor, view);
 			}
 		});
 
@@ -111,6 +112,7 @@ function applyFolds(view: MarkdownView, folds: Array<Fold>): void {
 
 
 
+// TODO: Rewrite without FileCache dependency.
 async function cleanToggleFoldOnChildrenHeadings(
   editor: Editor,
   view: MarkdownView,
@@ -148,7 +150,7 @@ async function cleanToggleFoldOnChildrenHeadings(
     }
   }
 
-  let folds = getToggledSiblingHeadingFolds(view, fileHeadings, refChildHeadingIdx);
+  let {folds, unfold} = getToggledSiblingHeadingFolds(view, fileHeadings, refChildHeadingIdx);
 
   if (getSetting("alwaysUnfoldParent")) {
     const parentLine = fileHeadings[parentHeadingIdx].position.start.line;
@@ -159,10 +161,17 @@ async function cleanToggleFoldOnChildrenHeadings(
   }
 
   applyFolds(view, folds);
-  scrollToCursor(editor, 1);
+
+  customActiveLineScroll(view, {
+    viewportThreshold: 0.35,
+    scrollFraction: 0.3,
+    asymmetric: true,
+    timeout: 0,
+  });
 }
 
 
+// TODO: Rewrite without FileCache dependency.
 async function cleanToggleFoldOnSiblingHeadings(
   editor: Editor,
   view: MarkdownView,
@@ -175,11 +184,16 @@ async function cleanToggleFoldOnSiblingHeadings(
   const refHeadingIndex = getHeadingIndex(fileHeadings, cursorPos.line, true);
   if (refHeadingIndex === -1) return;
 
-  const folds = getToggledSiblingHeadingFolds(view, fileHeadings, refHeadingIndex);
+  const {folds} = getToggledSiblingHeadingFolds(view, fileHeadings, refHeadingIndex);
 
   applyFolds(view, folds);
-  // scrollToCursor(editor, 2);
-  editor.scrollIntoView({from: cursorPos, to: cursorPos}, true /* center */);
+
+  customActiveLineScroll(view, {
+    viewportThreshold: 1,
+    scrollFraction: 0.3,
+    asymmetric: true,
+    // timeout: 0,
+  });
 }
 
 
@@ -187,11 +201,11 @@ function getToggledSiblingHeadingFolds(
   view: MarkdownView,
   fileHeadings: HeadingCache[],
   refHeadingIndex: number,
-): Array<Fold> {
+): {folds: Array<Fold>, unfold: boolean} {
 
   let folds = getFolds(view);
   const unfold = folds.some(
-    (fold: any) => fold.from === fileHeadings[refHeadingIndex].position.start.line
+    (fold: Fold) => fold.from === fileHeadings[refHeadingIndex].position.start.line
   );
 
   // Get sibling section info.
@@ -209,7 +223,7 @@ function getToggledSiblingHeadingFolds(
     folds = [...new Set(folds)]; // Remove duplicates.
   }
 
-  return folds;
+  return {folds, unfold};
 }
 
 
@@ -255,8 +269,9 @@ function getSiblingsInfo(
 }
 
 
-function cleanToggleFold(editor: Editor) {
+function cleanToggleFold(editor: Editor, view: MarkdownView) {
   editor.exec("toggleFold");
+  // In this particular case the built-in scrollIntoView does the job.
   scrollToCursor(editor);
 }
 

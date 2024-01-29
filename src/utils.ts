@@ -1,7 +1,7 @@
 import {
-  App, Vault, Notice,
+  App, Vault, Editor, Setting, Notice,
+  FileView, MarkdownView,
   TAbstractFile, TFolder, TFile,
-  Editor, MarkdownView,
   CachedMetadata, HeadingCache,
   EditorRange, EditorRangeOrCaret,
 } from "obsidian";
@@ -15,6 +15,13 @@ type SettingKey = string;
 
 export function getSetting(setting: SettingKey): any {
   return this.app.plugins.plugins[PLUGIN_ID].settings[setting];
+}
+
+export function shrinkSettingInputField(setting: Setting, selector: string = "input"): void {
+  setting.settingEl.style.display = "grid";
+  setting.settingEl.style.gridTemplateColumns = "3fr 1fr";
+  const inputEl = setting.controlEl.querySelector(selector) as HTMLInputElement;
+  inputEl.style.width = "100%"; // 'display' and 'boxSizing' may also be useful
 }
 
 
@@ -43,7 +50,7 @@ const metadataProperties = [
 ] as const;
 type MetadataProperty = typeof metadataProperties[number];
 
-// TODO: Find a reliable way to ensure that the file is properly indexed 
+// TODO: Find a reliable way to ensure that the file is properly indexed
 //       up to the latest changes before reading the cache.
 export async function getActiveFileCache(property?: MetadataProperty) {
   try {
@@ -92,13 +99,6 @@ export function getHeadingIndex(
 }
 
 
-export function scrollToCursor(editor: Editor, offset: number = 0): void {
-  const cursorPos = editor.getCursor();
-  editor.scrollIntoView({
-    from: {line: cursorPos.line - offset, ch: 0},
-    to: {line: cursorPos.line + offset, ch: 0}
-  }, false);
-}
 
 
 export function handleCursorMovement(
@@ -117,7 +117,7 @@ export function handleCursorMovement(
     to: {line, ch: 0},
   };
 
-  if (this.app.vault.config.vimMode) {
+  if (this.app.vault.getConfig("vimMode")) {
     if (line >= selection.from.line) {
       selection.to.ch = 1;
     }
@@ -129,8 +129,138 @@ export function handleCursorMovement(
 
 
 ////////////////////////////////////////
+// SCROLLING FUNCTIONS
+////////////////////////////////////////
+
+export async function scrollToCursor(editor: Editor, offset: number = 0): Promise<void> {
+  const cursorPos = editor.getCursor();
+  await sleep(0); // This ensures that the scroll works properly.
+  editor.scrollIntoView({
+    from: {line: cursorPos.line - offset, ch: 0},
+    to: {line: cursorPos.line + offset, ch: 0}
+  }, false);
+}
+
+
+export type ScrollOptions = {
+  viewportThreshold: number,
+  scrollFraction?: number,
+  scrollOffsetLines?: number,
+  asymmetric?: boolean,
+  timeout?: number,
+};
+
+export function customActiveLineScroll(view: FileView, options: ScrollOptions): void {
+  if (options.timeout === undefined) activeLineScroll(view, options);
+  else setTimeout(() => activeLineScroll(view, options), options.timeout);
+}
+
+
+function activeLineScroll(view: FileView, options: ScrollOptions): void {
+  const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
+  if (!lineEl) {
+    console.log("No active line HTMLElement found. Please report this issue.");
+    return;
+  }
+  let {inBounds, top} = elemInViewportFraction(lineEl, view, options.viewportThreshold);
+  if (!inBounds) return;
+
+  if (options.scrollOffsetLines === undefined) {
+    const scrollerEl = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
+    if (!scrollerEl) {
+      console.log("No scroller HTMLElement found. Please report this issue.");
+      return;
+    }
+    let scrollFraction = (options.scrollFraction ?? options.viewportThreshold);
+    if (options.asymmetric) top = true;
+    else if (!top) scrollFraction = 1 - scrollFraction;
+    scrollToFraction(lineEl, scrollerEl, scrollFraction, top);
+
+  } else {
+    scrollIntoViewWithOffset(lineEl, options.scrollOffsetLines, top);
+  }
+}
+
+
+function scrollToFraction(elem: HTMLElement, scrollableEl: HTMLElement, fraction: number, top: boolean): void {
+  if (scrollableEl.scrollHeight <= scrollableEl.clientHeight) {
+    console.log("Element is not scrollable:", scrollableEl);
+    console.log("Scroll_Height:", scrollableEl.scrollHeight);
+    console.log("Client_Height:", scrollableEl.clientHeight);
+    return;
+  }
+  const elemRect = elem.getBoundingClientRect();
+  const scrollRect = scrollableEl.getBoundingClientRect();
+  const targetY = scrollRect.top + scrollRect.height * fraction;
+  const scrollY = (elemRect.top + elemRect.bottom) / 2 - targetY;
+  scrollableEl.scrollBy(0, scrollY);
+}
+
+
+function scrollIntoViewWithOffset(elem: HTMLElement, offset: number, top: boolean): void {
+  const nextSibling = top ? (el: HTMLElement) => el.previousElementSibling : (el: HTMLElement) => el.nextElementSibling;
+  const block = top ? "start" : "end";
+  let limitEl = elem;
+  for (let i = 0; i < offset; i++) {
+    const nextEl = nextSibling(limitEl) as HTMLElement;
+    if (nextEl === null) break;
+    limitEl = nextEl;
+  }
+  limitEl.scrollIntoView({block, inline: "nearest", behavior: "instant"});
+}
+
+
+function elemInViewportFraction(elem: HTMLElement, view: FileView, fraction: number): {inBounds: boolean, top: boolean} {
+  const viewRect = view.contentEl.getBoundingClientRect()!;
+  const upperBound = viewRect.top + (viewRect.height * fraction);
+  const lowerBound = viewRect.bottom - (viewRect.height * fraction);
+  const elemRect = elem.getBoundingClientRect();
+  // console.log("Upper Bound:", upperBound, "Lower Bound:", lowerBound);
+
+  if (elemRect.bottom < upperBound) return {inBounds: true, top: true};
+  if (elemRect.top > lowerBound) return {inBounds: true, top: false};
+  return {inBounds: false, top: false};
+}
+
+
+// export async function scrollActiveLineIntoView(view: FileView, offset: number, top: boolean = true): Promise<void> {
+//   await sleep(0);
+//   const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
+//   scrollIntoViewWithOffset(lineEl, offset, top);
+// }
+
+
+// export async function scrollActiveLineToFraction(view: FileView, fraction: number, top: boolean = true): Promise<void> {
+//   await sleep(0);
+//   const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
+//   const scrollerEl = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
+//   scrollToFraction(lineEl, scrollerEl, fraction, top);
+// }
+
+
+// export function printActiveLineInfo(view: FileView, label: string = "Active Line"): void {
+//   const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
+//   const lineRect = lineEl.getBoundingClientRect();
+//   console.log(`${label} => Top:`, lineRect.top, "Bottom:", lineRect.bottom);
+// }
+
+
+// Useful DevTools Snippets for Debugging
+// var viewRect = this.app.workspace.getActiveFileView().contentEl.getBoundingClientRect()
+// var lineRect = this.app.workspace.getActiveFileView().contentEl.querySelector(".cm-content .cm-line.cm-active").getBoundingClientRect()
+
+
+
+
+
+////////////////////////////////////////
 // OTHER UTILITY FUNCTIONS
 ////////////////////////////////////////
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 
 export function wrapAround(value: number, size: number): number {
     return ((value % size) + size) % size;

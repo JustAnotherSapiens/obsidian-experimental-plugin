@@ -1,6 +1,7 @@
 import {
-  App, Vault, Notice, Scope, Editor,
-  FileView, TextFileView, MarkdownView,
+  App, Editor, MarkdownView,
+  Vault, Scope, Notice,
+  Setting, TextComponent,
   TFile, TFolder, TAbstractFile,
   Modal, SuggestModal, FuzzySuggestModal,
   PreparedQuery, prepareQuery, fuzzySearch,
@@ -10,8 +11,11 @@ import BundlePlugin from "main";
 import BundleComponent from "types";
 
 import {
+  getSetting,
   wrapAround,
-  getTFilesFromFolder
+  getTFilesFromFolder,
+  customActiveLineScroll,
+  shrinkSettingInputField,
 } from "utils";
 
 import {
@@ -20,10 +24,13 @@ import {
 } from "components/time";
 
 
+
 export default class SuggestComponent implements BundleComponent {
 
   parent: BundlePlugin;
-  settings: {};
+  settings: {
+    headingSuggestViewportFraction: number,
+  };
   suggestModal: SuggestModal<TFile>;
   fuzzySuggestModal: FuzzySuggestModal<TFile>;
 
@@ -31,6 +38,7 @@ export default class SuggestComponent implements BundleComponent {
   constructor(plugin: BundlePlugin) {
     this.parent = plugin;
     this.settings = {
+      headingSuggestViewportFraction: 0.25,
     };
   }
 
@@ -75,6 +83,25 @@ export default class SuggestComponent implements BundleComponent {
 
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
+
+		containerEl.createEl("h3", {text: "Suggest Settings"});
+
+		containerEl.createEl("h4", {text: "Move To Heading - Suggest"});
+
+    // Heading Suggest Viewport Fraction
+    new Setting(containerEl)
+      .setName("Viewport Fraction on Heading Selection")
+      .setDesc("The fraction of the viewport to scroll when a heading is selected.")
+      .addText((textField: TextComponent) => {
+        textField.inputEl.type = "number";
+        textField.setPlaceholder("scroll_fraction");
+        textField.setValue(String(plugin.settings.scrollFraction));
+        textField.onChange(async (value: string) => {
+          plugin.settings.scrollFraction = Number(value);
+          await plugin.saveSettings();
+        });
+      })
+      .then(shrinkSettingInputField);
   }
 
 
@@ -443,11 +470,9 @@ abstract class CustomSuggest<T> {
     newSelected.addClass(this.selectionClass);
 
     if (newSelected.getBoundingClientRect().bottom > this.resultsEl.getBoundingClientRect().bottom) {
-      newSelected.scrollIntoView({block: "end", inline: "nearest", behavior: "instant"})
-      // newSelected.scrollIntoView(false);
+      newSelected.scrollIntoView(false);
     } else if (newSelected.getBoundingClientRect().top < this.resultsEl.getBoundingClientRect().top) {
-      newSelected.scrollIntoView({block: "start", inline: "nearest", behavior: "instant"})
-      // newSelected.scrollIntoView(true);
+      newSelected.scrollIntoView(true);
     }
   }
 
@@ -682,6 +707,17 @@ class MoveToHeadingSuggest extends CustomSuggest<Heading> {
   async enterAction(result: Heading, evt: MouseEvent | KeyboardEvent): Promise<void> {
     if (this.editor) {
       this.editor.setCursor(result.line, 0);
+      // this.editor.refresh();
+      const viewEl = this.view?.contentEl as HTMLElement;
+      if (!viewEl) return;
+
+      // scrollActiveLineToFraction(this.view!, 0.25);
+      customActiveLineScroll(this.view!, {
+        viewportThreshold: 1,
+        scrollFraction: getSetting("headingSuggestViewportFraction"),
+        asymmetric: true,
+      });
+
     }
     await this.close();
   }
