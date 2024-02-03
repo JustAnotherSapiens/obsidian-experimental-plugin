@@ -163,10 +163,9 @@ async function cleanToggleFoldOnChildrenHeadings(
   applyFolds(view, folds);
 
   customActiveLineScroll(view, {
-    viewportThreshold: 0.35,
+    viewportThreshold: 0.5,
     scrollFraction: 0.3,
     asymmetric: true,
-    timeout: 0,
   });
 }
 
@@ -189,10 +188,9 @@ async function cleanToggleFoldOnSiblingHeadings(
   applyFolds(view, folds);
 
   customActiveLineScroll(view, {
-    viewportThreshold: 1,
+    viewportThreshold: 0.5,
     scrollFraction: 0.3,
     asymmetric: true,
-    // timeout: 0,
   });
 }
 

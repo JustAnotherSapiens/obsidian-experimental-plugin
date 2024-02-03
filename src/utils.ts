@@ -1,11 +1,12 @@
 import {
-  App, Vault, Editor, Setting, Notice,
-  FileView, MarkdownView,
+  App, Vault, Setting, Notice,
+  Editor, FileView, MarkdownView,
   TAbstractFile, TFolder, TFile,
   CachedMetadata, HeadingCache,
-  EditorRange, EditorRangeOrCaret,
+  EditorRange, EditorRangeOrCaret, TextComponent,
 } from "obsidian";
 
+import BundlePlugin from "main";
 
 // This must match the ID at manifest.json
 export const PLUGIN_ID = "experimental-plugin";
@@ -146,40 +147,121 @@ export type ScrollOptions = {
   viewportThreshold: number,
   scrollFraction?: number,
   scrollOffsetLines?: number,
+  // top?: boolean,
   asymmetric?: boolean,
-  timeout?: number,
+  // timeout?: number,
 };
 
 export function customActiveLineScroll(view: FileView, options: ScrollOptions): void {
-  if (options.timeout === undefined) activeLineScroll(view, options);
-  else setTimeout(() => activeLineScroll(view, options), options.timeout);
+  // console.debug("---");
+  let {lineEl, outOfBounds, top} = getLineViewportData(view, options.viewportThreshold);
+  if (!outOfBounds) return;
+
+  try {
+    getScrollFunction(view, options)(lineEl, top);
+  } catch (error) {
+    console.log(`${PLUGIN_ID} - Scroll Error:`, error.message);
+  }
 }
 
 
-function activeLineScroll(view: FileView, options: ScrollOptions): void {
-  const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
-  if (!lineEl) {
-    console.log("No active line HTMLElement found. Please report this issue.");
-    return;
-  }
-  let {inBounds, top} = elemInViewportFraction(lineEl, view, options.viewportThreshold);
-  if (!inBounds) return;
+function getScrollFunction(view: FileView, options: ScrollOptions): (lineEl: HTMLElement, top: boolean) => void {
 
-  if (options.scrollOffsetLines === undefined) {
+  if (options.scrollOffsetLines !== undefined) return (lineEl: HTMLElement, top: boolean) => {
+    scrollIntoViewWithOffset(lineEl, options.scrollOffsetLines!, top);
+    setTimeout(() => {
+      const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
+      if (!lineEl) {
+        console.log(`${PLUGIN_ID} - No active line HTMLElement found after scroll. Please report this issue.`);
+        return;
+      }
+      const limitEl = getOffsetLimitElement(lineEl, options.scrollOffsetLines!, top);
+      const {outOfBounds} = getLineViewportData(view, 0, limitEl);
+      if (outOfBounds) {
+        console.debug(`${PLUGIN_ID} - Additional scroll triggered after offset lines scroll.`);
+        // printActiveLineInfo(view, "Before Offset Lines Scroll", lineEl);
+        scrollIntoViewWithOffset(lineEl, options.scrollOffsetLines!, top);
+        // printActiveLineInfo(view, "After Offset Lines Scroll", lineEl);
+      }
+    });
+  };
+
+  else return (lineEl: HTMLElement, top: boolean) => {
     const scrollerEl = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
     if (!scrollerEl) {
-      console.log("No scroller HTMLElement found. Please report this issue.");
+      console.log(`${PLUGIN_ID} - No scroller HTMLElement found. Please report this issue.`);
       return;
     }
-    let scrollFraction = (options.scrollFraction ?? options.viewportThreshold);
+    let scrollFraction = options.scrollFraction ?? options.viewportThreshold;
+    // options.scrollFraction ??= options.viewportThreshold;
     if (options.asymmetric) top = true;
     else if (!top) scrollFraction = 1 - scrollFraction;
     scrollToFraction(lineEl, scrollerEl, scrollFraction, top);
+    setTimeout(() => {
+      const {lineEl, outOfBounds} = getLineViewportData(view, scrollFraction <= 0.5 ? scrollFraction : 1 - scrollFraction);
+      if (outOfBounds) {
+        console.debug(`${PLUGIN_ID} - Additional scroll triggered after fraction scroll.`);
+        // printActiveLineInfo(view, "Before Fraction Scroll", lineEl);
+        scrollToFraction(lineEl, scrollerEl, options.scrollFraction!, top);
+        // printActiveLineInfo(view, "After Fraction Scroll", lineEl);
+      }
+    });
+  };
 
-  } else {
-    scrollIntoViewWithOffset(lineEl, options.scrollOffsetLines, top);
-  }
 }
+
+
+function getLineViewportData(view: FileView, vieportFraction: number, lineEl?: HTMLElement): {
+  lineEl: HTMLElement, outOfBounds: boolean, top: boolean,
+} {
+  lineEl ??= view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
+  if (!lineEl) {
+    console.log("No active line HTMLElement found. Please report this issue.");
+    return {lineEl, outOfBounds: false, top: false};
+  }
+  const viewRect = view.contentEl.getBoundingClientRect()!;
+  const upperBound = viewRect.top + (viewRect.height * vieportFraction);
+  const lowerBound = viewRect.bottom - (viewRect.height * vieportFraction);
+  const elemRect = lineEl.getBoundingClientRect();
+  // console.log("Upper Bound:", upperBound, "Lower Bound:", lowerBound);
+
+  if (elemRect.bottom < upperBound) return {lineEl, outOfBounds: true, top: true};
+  if (elemRect.top > lowerBound) return {lineEl, outOfBounds: true, top: false};
+  return {lineEl, outOfBounds: false, top: false};
+}
+
+
+export function printActiveLineInfo(view: FileView, label: string = "Active Line", lineEl?: HTMLElement): void {
+  lineEl = lineEl ?? view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
+  const lineRect = lineEl.getBoundingClientRect();
+  console.debug(`${label} => Top:`, lineRect.top, "Bottom:", lineRect.bottom);
+}
+
+
+// function activeLineScroll(view: FileView, options: ScrollOptions): void {
+//   const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
+//   if (!lineEl) {
+//     console.log("No active line HTMLElement found. Please report this issue.");
+//     return;
+//   }
+//   let {inBounds, top} = elemInViewportFraction(lineEl, view, options.viewportThreshold);
+//   if (!inBounds) return;
+
+//   if (options.scrollOffsetLines === undefined) {
+//     const scrollerEl = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
+//     if (!scrollerEl) {
+//       console.log("No scroller HTMLElement found. Please report this issue.");
+//       return;
+//     }
+//     let scrollFraction = (options.scrollFraction ?? options.viewportThreshold);
+//     if (options.asymmetric) top = true;
+//     else if (!top) scrollFraction = 1 - scrollFraction;
+//     scrollToFraction(lineEl, scrollerEl, scrollFraction, top);
+
+//   } else {
+//     scrollIntoViewWithOffset(lineEl, options.scrollOffsetLines, top);
+//   }
+// }
 
 
 function scrollToFraction(elem: HTMLElement, scrollableEl: HTMLElement, fraction: number, top: boolean): void {
@@ -197,16 +279,32 @@ function scrollToFraction(elem: HTMLElement, scrollableEl: HTMLElement, fraction
 }
 
 
+// TO-CONTINUE: use the options object as argument instead of the individual parameters
 function scrollIntoViewWithOffset(elem: HTMLElement, offset: number, top: boolean): void {
+  // const nextSibling = top ? (el: HTMLElement) => el.previousElementSibling : (el: HTMLElement) => el.nextElementSibling;
+  // let limitEl = elem;
+  // for (let i = 0; i < offset; i++) {
+  //   const nextEl = nextSibling(limitEl) as HTMLElement;
+  //   if (nextEl === null) break;
+  //   limitEl = nextEl;
+  // }
+  getOffsetLimitElement(elem, offset, top).scrollIntoView({
+    block: top ? "start" : "end",
+    inline: "nearest",
+    behavior: "auto"
+  });
+}
+
+
+function getOffsetLimitElement(elem: HTMLElement, offset: number, top: boolean): HTMLElement {
   const nextSibling = top ? (el: HTMLElement) => el.previousElementSibling : (el: HTMLElement) => el.nextElementSibling;
-  const block = top ? "start" : "end";
   let limitEl = elem;
   for (let i = 0; i < offset; i++) {
     const nextEl = nextSibling(limitEl) as HTMLElement;
     if (nextEl === null) break;
     limitEl = nextEl;
   }
-  limitEl.scrollIntoView({block, inline: "nearest", behavior: "instant"});
+  return limitEl;
 }
 
 
@@ -215,7 +313,7 @@ function elemInViewportFraction(elem: HTMLElement, view: FileView, fraction: num
   const upperBound = viewRect.top + (viewRect.height * fraction);
   const lowerBound = viewRect.bottom - (viewRect.height * fraction);
   const elemRect = elem.getBoundingClientRect();
-  // console.log("Upper Bound:", upperBound, "Lower Bound:", lowerBound);
+  console.log("Upper Bound:", upperBound, "Lower Bound:", lowerBound);
 
   if (elemRect.bottom < upperBound) return {inBounds: true, top: true};
   if (elemRect.top > lowerBound) return {inBounds: true, top: false};
@@ -238,18 +336,74 @@ function elemInViewportFraction(elem: HTMLElement, view: FileView, fraction: num
 // }
 
 
-// export function printActiveLineInfo(view: FileView, label: string = "Active Line"): void {
-//   const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
-//   const lineRect = lineEl.getBoundingClientRect();
-//   console.log(`${label} => Top:`, lineRect.top, "Bottom:", lineRect.bottom);
-// }
-
-
 // Useful DevTools Snippets for Debugging
 // var viewRect = this.app.workspace.getActiveFileView().contentEl.getBoundingClientRect()
 // var lineRect = this.app.workspace.getActiveFileView().contentEl.querySelector(".cm-content .cm-line.cm-active").getBoundingClientRect()
 
 
+
+////////////////////////////////////////
+// Setting Classes
+////////////////////////////////////////
+
+export class DynamicSetting extends Setting {
+  show(): void { this.settingEl.show(); }
+  hide(): void { this.settingEl.hide(); }
+}
+
+
+export class FloatInputSetting extends DynamicSetting {
+
+  constructor(containerEl: HTMLElement, plugin: BundlePlugin, options: {
+    settingId: string,
+    placeholder: string,
+    min: number,
+    max: number,
+    default?: number | string,
+  }) {
+    super(containerEl);
+
+    if (!(options.settingId in plugin.settings)) {
+      throw new Error(`Setting "${options.settingId}" not found in plugin settings.`);
+    }
+
+    this.addText((textField: TextComponent) => {
+      textField.inputEl.type = "number";
+      textField.inputEl.min = String(options.min);
+      textField.inputEl.max = String(options.max);
+      textField.inputEl.step = "any";
+      textField.setPlaceholder(options.placeholder);
+      textField.setValue(String(plugin.settings[options.settingId]));
+      textField.onChange(async (value: string) => {
+        const newValue = Number(value);
+        if (newValue > options.max || newValue < options.min) {
+          new Notice(`Value should be between ${options.min} and ${options.max}`);
+          let defaultValue = options.default ?? plugin.settings[options.settingId];
+          if (typeof options.default === "string") defaultValue = plugin.settings[options.default];
+          textField.setValue(String(defaultValue));
+        }
+        plugin.settings[options.settingId] = Number(textField.getValue());
+        await plugin.saveSettings();
+      });
+    });
+    this.setTooltip(
+      `Value should be between ${options.min} and ${options.max}`,
+      {placement: "top", delay: 350},
+    );
+    this.then(shrinkSettingInputField);
+  }
+
+  get input(): number {
+    const inputEl = this.controlEl.querySelector("input") as HTMLInputElement;
+    return Number(inputEl.value);
+  }
+
+  set input(value: number) {
+    const inputEl = this.controlEl.querySelector("input") as HTMLInputElement;
+    inputEl.value = String(value);
+  }
+
+}
 
 
 

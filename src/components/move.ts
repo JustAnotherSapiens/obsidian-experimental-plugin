@@ -1,7 +1,7 @@
 import {
   Setting, Notice,
   Editor, MarkdownView, HeadingCache,
-  ToggleComponent, DropdownComponent, TextComponent,
+  ToggleComponent, DropdownComponent, TextComponent, ButtonComponent,
 } from "obsidian";
 
 import BundlePlugin from "main";
@@ -10,16 +10,18 @@ import BundleComponent from "types";
 import {
   getSetting,
   ScrollOptions,
+  DynamicSetting,
+  FloatInputSetting,
   customActiveLineScroll,
   shrinkSettingInputField,
 } from "utils";
 
 
 
-interface DynamicSetting extends Setting {
-  show: () => void,
-  hide: () => void,
-}
+// interface DynamicSetting extends Setting {
+//   show: () => void,
+//   hide: () => void,
+// }
 
 // type LevelZeroBehavior = "snap-contiguous" | "snap-parent" | "on-parent-behavior";
 type SiblingMode = "strictSibling" | "looseSibling";
@@ -40,7 +42,7 @@ export default class MoveComponent implements BundleComponent {
     scrollThreshold: number,
     scrollFraction: number,
     scrollOffsetLines: number,
-    useScrollTimeout: boolean,
+    // useScrollTimeout: boolean,
 
     globalWrapAround: boolean,
     contiguousWrapAround: boolean,
@@ -60,7 +62,7 @@ export default class MoveComponent implements BundleComponent {
       scrollThreshold: 0.25,
       scrollFraction: 0.25,
       scrollOffsetLines: 5,
-      useScrollTimeout: false,
+      // useScrollTimeout: false,
 
       globalWrapAround: false,
       contiguousWrapAround: false,
@@ -251,76 +253,20 @@ export default class MoveComponent implements BundleComponent {
 			});
 
 
+
     /* Scroll Settings */
     containerEl.createEl("h5", {text: "Scroll Settings"});
 
 
-    // Scroll Fraction
-    const setScrollFractionSetting = () => new Setting(containerEl)
-      .setName("Viewport fraction")
-      .then((setting: Setting) => {
-        const fragment = document.createDocumentFragment();
-        fragment.append(
-          "When scrolling, the target line will be placed at this fraction of the viewport.",
-          fragment.createEl("br"),
-          fragment.createEl("b", {text: "Recommended: "}),
-          "Keep this value the same as the trigger threshold."
-        );
-        setting.setDesc(fragment);
-      })
-      .addText((textField: TextComponent) => {
-        textField.inputEl.type = "number";
-        textField.setPlaceholder("scroll_fraction");
-        textField.setValue(String(plugin.settings.scrollFraction));
-        textField.onChange(async (value: string) => {
-          plugin.settings.scrollFraction = Number(value);
-          await plugin.saveSettings();
-        });
-      })
-      .then(shrinkSettingInputField);
+    class ScrollModeSetting extends DynamicSetting {
+      fractionSetting: FloatInputSetting;
+      offsetLinesSetting: DynamicSetting;
 
+      constructor(containerEl: HTMLElement) {
+        super(containerEl);
+        this.setName("Scroll mode");
 
-		// Scroll Offset Lines
-		const setScrollOffsetLinesSetting = () => new Setting(containerEl)
-		  .setName("Offset lines")
-			.setDesc("Minimum number of lines visible above and below the target line.")
-			.addText((textField: TextComponent) => {
-				textField.inputEl.type = "number";
-				textField.setPlaceholder("scroll_offset");
-				textField.setValue(String(plugin.settings.scrollOffsetLines));
-				textField.onChange(async (value: string) => {
-					plugin.settings.scrollOffsetLines = Number(value);
-					await plugin.saveSettings();
-				});
-			})
-      .then(shrinkSettingInputField);
-
-
-    // Scroll Mode
-    // 1. Viewport Fraction
-    // 2. Offset Lines
-    const setScrollModeSetting = () => new Setting(containerEl)
-      .setName("Scroll mode")
-      // .setDesc("How to scroll to a heading.")
-      .then((setting: Setting) => {
-
-        const scrollFraction = setScrollFractionSetting();
-        const scrollOffsetLines = setScrollOffsetLinesSetting();
-
-        const scrollModeSwitch = (value: ScrollMode) => {
-          switch (value) {
-            case "viewportFraction":
-              scrollFraction.settingEl.show();
-              scrollOffsetLines.settingEl.hide();
-              break;
-            case "offsetLines":
-              scrollFraction.settingEl.hide();
-              scrollOffsetLines.settingEl.show();
-              break;
-          }
-        };
-
-        setting.addDropdown((dropdown: DropdownComponent) => {
+        this.addDropdown((dropdown: DropdownComponent) => {
           dropdown.addOptions({
             "viewportFraction": "Viewport fraction",
             "offsetLines":      "Offset lines",
@@ -328,98 +274,72 @@ export default class MoveComponent implements BundleComponent {
           dropdown.setValue(plugin.settings.scrollMode);
           dropdown.onChange(async (value: ScrollMode) => {
             plugin.settings.scrollMode = value;
-            scrollModeSwitch(value);
+            this.switch(value);
             await plugin.saveSettings();
           });
         });
 
-        (setting as DynamicSetting).show = () => {
-          setting.settingEl.show();
-          scrollModeSwitch(plugin.settings.scrollMode);
-        };
+        this.fractionSetting = new FloatInputSetting(containerEl, plugin, {
+          settingId: "scrollFraction",
+          placeholder: "scroll_fraction",
+          min: 0, max: 1, default: "scrollThreshold",
+        })
+          .setName("Viewport fraction")
+          .setDesc("Fraction of the viewport that the target line will be placed at when scrolling.");
 
-        (setting as DynamicSetting).hide = () => {
-          setting.settingEl.hide();
-          scrollFraction.settingEl.hide();
-          scrollOffsetLines.settingEl.hide();
-        };
+        this.offsetLinesSetting = new DynamicSetting(containerEl)
+          .setName("Offset lines")
+          .setDesc("Minimum number of lines visible above and below the target line.")
+          .addText((textField: TextComponent) => {
+            textField.inputEl.type = "number";
+            textField.setPlaceholder("scroll_offset");
+            textField.setValue(String(plugin.settings.scrollOffsetLines));
+            textField.onChange(async (value: string) => {
+              plugin.settings.scrollOffsetLines = Number(value);
+              await plugin.saveSettings();
+            });
+          })
+          .then(shrinkSettingInputField);
+      }
 
-      });
+      switch(mode: ScrollMode) {
+        switch (mode) {
+          case "viewportFraction":
+            this.fractionSetting.show();
+            this.offsetLinesSetting.hide();
+            break;
+          case "offsetLines":
+            this.fractionSetting.hide();
+            this.offsetLinesSetting.show();
+            break;
+        }
+      }
 
+      show() {
+        this.settingEl.show();
+        this.switch(plugin.settings.scrollMode);
+      }
 
-    // Scroll Threshold
-    const setScrollThresholdSetting = () => new Setting(containerEl)
-      .setName("Trigger threshold")
-      .then((setting: Setting) => {
-        const fragment = document.createDocumentFragment();
-        fragment.append(
-          "Fraction of the viewport that the target line must be outside of to trigger scrolling.",
-          fragment.createEl("br"),
-          fragment.createEl("b", {text: "Example: "}),
-          "For a value of 0.25, if the target line is either on the top 25% or bottom 25% of the viewport, scrolling will be triggered."
-        );
-        setting.setDesc(fragment);
-      })
-      .setTooltip("Value should be between 0 and 0.5")
-      .addText((textField: TextComponent) => {
-        textField.inputEl.type = "number";
-        textField.setPlaceholder("scroll_fraction");
-        textField.setValue(String(plugin.settings.scrollThreshold));
-        textField.onChange(async (value: string) => {
-          plugin.settings.scrollThreshold = Number(value);
-          await plugin.saveSettings();
-        });
-      })
-      .then(shrinkSettingInputField);
+      hide() {
+        this.settingEl.hide();
+        this.fractionSetting.hide();
+        this.offsetLinesSetting.hide();
+      }
 
-
-    // Use Scroll Timeout
-    const setUseScrollTimeoutSetting = () => new Setting(containerEl)
-      .setName("Use Scroll timeout")
-      .setDesc("This guarantees expected scroll behavior, but at the cost of some UI flicking.")
-      .addToggle((toggle: ToggleComponent) => {
-        toggle.setValue(plugin.settings.useScrollTimeout);
-        toggle.onChange(async (value: boolean) => {
-          plugin.settings.useScrollTimeout = value;
-          await plugin.saveSettings();
-        });
-      });
+    }
 
 
-    // Scroll Trigger
-    // 1. At threshold
-    // 2. Forced (always)
-    // 3. Built-in (default)
-    new Setting(containerEl)
-      .setName("Scroll trigger")
-      .setDesc("When to trigger the plugin's scroll.")
-      .then((setting: Setting) => {
+    class ScrollTriggerSetting extends Setting {
+      scrollThreshold: FloatInputSetting;
+      scrollMode: ScrollModeSetting;
+      dynamicSettings: DynamicSetting[];
 
-        const scrollThreshold = setScrollThresholdSetting();
-        const scrollMode = setScrollModeSetting() as DynamicSetting;
-        const useScrollTimeout = setUseScrollTimeoutSetting();
+      constructor(containerEl: HTMLElement) {
+        super(containerEl);
+        this.setName("Scroll trigger");
+        this.setDesc("When to trigger the plugin's scroll.");
 
-        const scrollTriggerSwitch = (value: ScrollExecution) => {
-          switch (value) {
-            case "onThreshold":
-              scrollThreshold.settingEl.show();
-              scrollMode.show();
-              useScrollTimeout.settingEl.show();
-              break;
-            case "always":
-              scrollThreshold.settingEl.hide();
-              scrollMode.show();
-              useScrollTimeout.settingEl.show();
-              break;
-            case "never":
-              scrollThreshold.settingEl.hide();
-              scrollMode.hide();
-              useScrollTimeout.settingEl.hide();
-              break;
-          }
-        };
-
-        setting.addDropdown((dropdown: DropdownComponent) => {
+        this.addDropdown((dropdown: DropdownComponent) => {
           dropdown.addOptions({
             "onThreshold": "On threshold",
             "always":      "Always",
@@ -428,12 +348,78 @@ export default class MoveComponent implements BundleComponent {
           dropdown.setValue(plugin.settings.scrollExecution);
           dropdown.onChange(async (value: ScrollExecution) => {
             plugin.settings.scrollExecution = value;
-            scrollTriggerSwitch(value);
+            this.switch(value);
             await plugin.saveSettings();
           });
-          scrollTriggerSwitch(dropdown.getValue() as ScrollExecution);
         });
-      });
+
+        this.scrollThreshold = new FloatInputSetting(containerEl, plugin, {
+          settingId: "scrollThreshold",
+          placeholder: "scroll_fraction",
+          min: 0, max: 0.5, default: 0.25,
+        })
+          .setName("Trigger threshold")
+          .setDesc("Fraction of the viewport (both from the top downwards and from the bottom upwards) that the target line must be within to trigger scrolling.")
+          .then((setting: Setting) => {
+            setting.controlEl.style.display = "flex";
+            setting.controlEl.style.flexDirection = "column";
+            setting.controlEl.style.width = "100%";
+          })
+          .addButton((button: ButtonComponent) => {
+            button.setButtonText("Equalize");
+            button.onClick(async () => {
+              this.scrollMode.fractionSetting.input = plugin.settings.scrollThreshold;
+              plugin.settings.scrollFraction = plugin.settings.scrollThreshold;
+              await plugin.saveSettings();
+            });
+          });
+
+        this.scrollMode = new ScrollModeSetting(containerEl);
+
+        this.dynamicSettings = [
+          this.scrollThreshold,
+          this.scrollMode,
+
+          // // Use Scroll Timeout
+          // new DynamicSetting(containerEl)
+          //   .setName("Use Scroll timeout")
+          //   .setDesc("This guarantees expected scroll behavior, but at the cost of some UI flicking.")
+          //   .addToggle((toggle: ToggleComponent) => {
+          //     toggle.setValue(plugin.settings.useScrollTimeout);
+          //     toggle.onChange(async (value: boolean) => {
+          //       plugin.settings.useScrollTimeout = value;
+          //       await plugin.saveSettings();
+          //     });
+          //   }),
+
+        ];
+
+        this.switch((this.components[0] as DropdownComponent).getValue() as ScrollExecution);
+      }
+
+      showDynamicSettings() { this.dynamicSettings.forEach(setting => setting.show()); }
+      hideDynamicSettings() { this.dynamicSettings.forEach(setting => setting.hide()); }
+
+      switch(value: ScrollExecution) {
+        switch (value) {
+          case "onThreshold":
+            this.showDynamicSettings();
+            break;
+          case "always":
+            this.showDynamicSettings();
+            this.scrollThreshold.hide();
+            break;
+          case "never":
+            this.hideDynamicSettings();
+            break;
+        }
+      }
+
+    }
+
+
+    new ScrollTriggerSetting(containerEl);
+
 
 
 		/* Wrap Around Settings */
@@ -541,11 +527,11 @@ function resolveScroll(view: MarkdownView): void {
   if (scrollExecution === "never") return;
 
   let scrollOptions = {} as ScrollOptions;
-  if (getSetting("useScrollTimeout")) scrollOptions["timeout"] = 0;
+  // if (getSetting("useScrollTimeout")) scrollOptions["timeout"] = 0;
 
   switch (scrollExecution) {
     case "always":
-      scrollOptions["viewportThreshold"] = 1;
+      scrollOptions["viewportThreshold"] = 0.5;
       break;
     case "onThreshold":
       scrollOptions["viewportThreshold"] = getSetting("scrollThreshold");
@@ -761,7 +747,7 @@ function searchStrictSiblingHeading(args: MovementArgs, wrapSearch: boolean = fa
     const {start, end} = getSiblingHeadingSectionBounds(args);
     args.startLine = backwards ? end : start;
     console.log("start:", start, "end:", end);
-    
+
     return searchStrictSiblingHeading(args, true);
   }
 
