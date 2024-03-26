@@ -2,6 +2,7 @@ import {
   Setting, Notice,
   Editor, MarkdownView, HeadingCache,
   ToggleComponent, DropdownComponent, TextComponent, ButtonComponent,
+  SliderComponent,
 } from "obsidian";
 
 import BundlePlugin from "main";
@@ -259,7 +260,7 @@ export default class MoveComponent implements BundleComponent {
 
 
     class ScrollModeSetting extends DynamicSetting {
-      fractionSetting: FloatInputSetting;
+      fractionSetting: DynamicSetting;
       offsetLinesSetting: DynamicSetting;
 
       constructor(containerEl: HTMLElement) {
@@ -279,13 +280,32 @@ export default class MoveComponent implements BundleComponent {
           });
         });
 
-        this.fractionSetting = new FloatInputSetting(containerEl, plugin, {
-          settingId: "scrollFraction",
-          placeholder: "scroll_fraction",
-          min: 0, max: 1, default: "scrollThreshold",
-        })
+        this.fractionSetting = new DynamicSetting(containerEl)
           .setName("Viewport fraction")
-          .setDesc("Fraction of the viewport that the target line will be placed at when scrolling.");
+          .setDesc("Fraction of the viewport that the target line will be placed at when scrolling.")
+          .addSlider((slider: SliderComponent) => {
+            slider.setLimits(0, 0.5, 0.01);
+            slider.setDynamicTooltip();
+            slider.setValue(plugin.settings.scrollFraction);
+            slider.onChange(async (value: number) => {
+              plugin.settings.scrollFraction = value;
+              await plugin.saveSettings();
+            });
+            slider.sliderEl.style.width = "100%";
+          })
+          .then((setting: Setting) => {
+            setting.settingEl.style.display = "grid";
+            setting.settingEl.style.gridTemplateColumns = "2fr 3fr";
+          });
+
+
+        // this.fractionSetting = new FloatInputSetting(containerEl, plugin, {
+        //   settingId: "scrollFraction",
+        //   placeholder: "scroll_fraction",
+        //   min: 0, max: 1, default: "scrollThreshold",
+        // })
+        //   .setName("Viewport fraction")
+        //   .setDesc("Fraction of the viewport that the target line will be placed at when scrolling.");
 
         this.offsetLinesSetting = new DynamicSetting(containerEl)
           .setName("Offset lines")
@@ -368,7 +388,9 @@ export default class MoveComponent implements BundleComponent {
           .addButton((button: ButtonComponent) => {
             button.setButtonText("Equalize");
             button.onClick(async () => {
-              this.scrollMode.fractionSetting.input = plugin.settings.scrollThreshold;
+              const fractionSlider = this.scrollMode.fractionSetting.components[0] as SliderComponent;
+              fractionSlider.setValue(plugin.settings.scrollThreshold);
+              // this.scrollMode.fractionSetting.input = plugin.settings.scrollThreshold;
               plugin.settings.scrollFraction = plugin.settings.scrollThreshold;
               await plugin.saveSettings();
             });

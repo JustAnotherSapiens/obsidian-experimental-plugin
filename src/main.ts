@@ -9,6 +9,7 @@ import FoldComponent from "components/fold";
 import TimeComponent from "components/time";
 import EditComponent from "components/edit";
 import ScriptComponent from "components/script";
+import HeadingsComponent from "components/headings";
 
 
 
@@ -21,6 +22,7 @@ export default class BundlePlugin extends Plugin {
     console.log("Loading Bundle Plugin");
 
     this.components = [
+      new HeadingsComponent(this),
       new HelperComponent(this),
       new SuggestComponent(this),
       new MoveComponent(this),
