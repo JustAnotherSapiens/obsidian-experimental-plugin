@@ -150,9 +150,16 @@ export default class SuggestComponent implements BundleComponent {
 
 class QuickTabOpenSuggest extends BaseAbstractSuggest<TFile> {
 
+  files: TFile[];
+  fileToString = (file: TFile) => {
+    if (file.extension !== "md") return file.path;
+    return file.path.slice(0, -3);
+  };
+
   constructor(app: App) {
     super(app, "quick-tab-open-suggest", { fuzzy: true });
     this.addKeybindings();
+    this.files = getTFilesFromFolder(app, app.vault.getRoot().path);
   }
 
   onOpen(): void {
@@ -186,17 +193,15 @@ class QuickTabOpenSuggest extends BaseAbstractSuggest<TFile> {
   }
 
 
-  getQueriedResults(query?: string): TFile[] {
-    const folder = this.app.vault.getRoot().path;
-    const files = getTFilesFromFolder(this.app, folder);
-    if (!files) return [];
-    return this.resultsFilter(files, (file) => file.basename, query);
+  getFilteredResults(query?: string): TFile[] {
+    if (this.files.length === 0) return [];
+    return this.resultsFilter(this.files, this.fileToString, query);
   }
 
 
   renderResultItem(result: TFile): HTMLElement {
     const resultEl = createEl("div");
-    const text = result.basename;
+    const text = this.fileToString(result);
 
     if (this.query) this.resultItemRenderer(text, resultEl);
     else resultEl.innerText = text;
@@ -217,8 +222,7 @@ class QuickTabOpenSuggest extends BaseAbstractSuggest<TFile> {
 
   async customAction(result: TFile, event: MouseEvent | KeyboardEvent): Promise<void> {
     this.openFileInBackgroudTab(result);
-    this.inputEl.value = "";
-    await this.renderResults();
+    await this.updateInputAndResults("");
   }
 
   openFileInBackgroudTab(result: TFile): void {
