@@ -137,7 +137,7 @@ export class MoveToHeadingSuggest extends ViewAbstractSuggest<Heading> {
   }
 
 
-  getQueriedResults(query?: string): Heading[] {
+  getFilteredResults(query?: string): Heading[] {
     if (!this.editor) return [];
     const results = this.resultsFilter(this.headings!, (heading) => heading.text, query);
     return results;
@@ -292,7 +292,7 @@ export class MoveHeadingSectionSuggest extends ViewAbstractSuggest<Heading> {
   }
 
 
-  getQueriedResults(query?: string): Heading[] {
+  getFilteredResults(query?: string): Heading[] {
     if (!this.editor) return [];
     const results = this.resultsFilter(this.headings!, (heading) => heading.text, query);
     return results;
