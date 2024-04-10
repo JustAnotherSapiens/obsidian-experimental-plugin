@@ -35,7 +35,7 @@ export abstract class BaseAbstractSuggest<T> {
   protected instructionsEl: HTMLElement;
 
   protected fuzzy: boolean;
-  protected query?: string;
+  protected query: string;
   protected preparedQuery?: PreparedQuery | null;
   /**
    * Filter (and sort) the source items based on the query string.
@@ -43,7 +43,7 @@ export abstract class BaseAbstractSuggest<T> {
    */
   protected resultsFilter: (source: T[], itemString: (item: T) => string, query?: string) => T[];
   /**
-   * Render the text of a result item into the result element.
+   * Render the text with the query string highlighted if it matches (fuzzy or simple).
    */
   protected resultItemRenderer: (text: string, resultEl: HTMLElement) => void;
 
@@ -90,8 +90,8 @@ export abstract class BaseAbstractSuggest<T> {
 
     await this.onOpen?.();
     // `onOpen` could potentially modify the behavior of the following lines.
+    await this.renderResults("");
     this.inputEl.focus();
-    await this.renderResults();
     this.app.keymap.pushScope(this.scope);
   }
 
@@ -133,14 +133,14 @@ export abstract class BaseAbstractSuggest<T> {
   }
 
 
-  setResultsFilter(isFuzzy: boolean): void {
+  private setResultsFilter(isFuzzy: boolean): void {
 
     /**
      * Filter and sort the source items based on the query string using
      * a fuzzy search algorithm.
      */
-    function fuzzyFilter(source: T[], itemString: (item: T) => string, query?: string): T[] {
-      this.query = query;
+    function fuzzyFilter(source: T[], itemString: (item: T) => string, query: string): T[] {
+      // this.query = query;
       this.preparedQuery = prepareQuery(query ?? "");
 
       if (!query) return source;
@@ -158,8 +158,8 @@ export abstract class BaseAbstractSuggest<T> {
      * Filter the source items based on whether the item string contains
      * the query string (case-insensitive).
      */
-    function simpleFilter(source: T[], itemString: (item: T) => string, query?: string): T[] {
-      this.query = query;
+    function simpleFilter(source: T[], itemString: (item: T) => string, query: string): T[] {
+      // this.query = query;
       this.preparedQuery = prepareQuery(query ?? "");
 
       if (!query) return source;
@@ -176,7 +176,7 @@ export abstract class BaseAbstractSuggest<T> {
   }
 
 
-  setResultItemRenderer(isFuzzy: boolean): void {
+  private setResultItemRenderer(isFuzzy: boolean): void {
 
     /**
      * Render the text with the query string highlighted using a fuzzy search algorithm.
@@ -358,37 +358,43 @@ export abstract class BaseAbstractSuggest<T> {
         return false;
       }
     });
-    this.scope.register(["Alt"], "f", async (event) => {
+    this.scope.register(["Alt"], "f", (event) => {
       if (!event.isComposing) {
         this.fuzzy = !this.fuzzy;
         this.setResultsFilter(this.fuzzy);
         this.setResultItemRenderer(this.fuzzy);
-        await this.renderResults(this.query);
+        this.inputEl.dispatchEvent(new Event("input"));
         return false;
       }
     });
-    this.scope.register(["Ctrl"], "u", (event) => {
+    this.scope.register(["Ctrl"], "u", async (event) => {
       if (!event.isComposing) {
-        this.inputEl.value = "";
-        this.renderResults();
+        await this.updateInputAndResults("");
         return false;
       }
     });
   }
 
 
+  async updateInputAndResults(value: string): Promise<void> {
+    this.inputEl.value = value;
+    await this.renderResults(value);
+  }
+
+
   /**
    * Render results to the `resultEl` based on the query string provided.
    */
-  async renderResults(query?: string) {
-    this.queriedResults = await this.getQueriedResults(query);
+  async renderResults(query: string, selectionIndex: number = 0) {
+    this.query = query;
+    this.queriedResults = await this.getFilteredResults(query);
     this.resultsEl.empty();
     this.queriedResults.forEach((result) => {
       const resultEl = this.renderResultItem(result);
       resultEl.addClass("suggestion-item");
       this.resultsEl.appendChild(resultEl);
-      this.setSelectedResultEl(0);
     });
+    this.setSelectedResultEl(selectionIndex);
   }
 
   /**
@@ -413,7 +419,7 @@ export abstract class BaseAbstractSuggest<T> {
   /**
    * @abstract
    */
-  abstract getQueriedResults(query?: string): T[] | Promise<T[]>;
+  abstract getFilteredResults(query?: string): T[] | Promise<T[]>;
   /**
    * @abstract
    */
@@ -502,7 +508,7 @@ class QuickSuggest<T> extends BaseAbstractSuggest<T> {
     });
   }
 
-  getQueriedResults(query?: string): T[] {
+  getFilteredResults(query?: string): T[] {
     return this.resultsFilter(this.items, this.itemToString, query);
   }
 
