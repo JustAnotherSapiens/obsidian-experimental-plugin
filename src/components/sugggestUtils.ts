@@ -549,3 +549,89 @@ export async function runQuickSuggest<T>(
 }
 
 
+
+
+class DataNode<T> {
+  data?: T;
+  prev?: DataNode<T>;
+  next?: DataNode<T>;
+  parent?: DataNode<T>;
+  children?: DataNode<T>[];
+
+  constructor(data?: T) {
+    this.data = data;
+  }
+}
+
+
+export abstract class DataNodeSuggest<T> extends BaseAbstractSuggest<DataNode<T>> {
+
+  private parentNode: DataNode<T>;
+  private selectionIndexStack: number[] = [];
+  private selectionQueryStack: string[] = [];
+
+  private nodeToString: (node: DataNode<T>) => string;
+
+  constructor(app: App, nodeToString: (node: DataNode<T>) => string) {
+    super(app, "data-node-suggest", {fuzzy: true});
+    this.parentNode = this.buildDataTree();
+    this.nodeToString = nodeToString;
+  }
+
+  /**
+   * Filter from the root node children based on the query string.
+   */
+  getFilteredResults(query?: string): DataNode<T>[] {
+    const options = this.parentNode.children ?? [];
+    return this.resultsFilter(options, this.nodeToString, query);
+  }
+
+  /**
+   * Simple default single-line render with matched text highlighted.
+   */
+  renderResultItem(result: DataNode<T>): HTMLElement {
+    const resultEl = createEl("div");
+    const text = this.nodeToString(result);
+
+    if (this.query) this.resultItemRenderer(text, resultEl);
+    else resultEl.innerText = text;
+
+    return resultEl;
+  }
+
+  enterAction(result: DataNode<T>, event: MouseEvent | KeyboardEvent): void | Promise<void> {
+    this.stepInto(result);
+
+    // throw new Error("Method not implemented.");
+  }
+
+  clickAction(result: DataNode<T>, event: MouseEvent | KeyboardEvent): void | Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  async stepInto(result: DataNode<T>): Promise<boolean> {
+    if (!result.children) return false;
+    this.selectionIndexStack.push(this.selectionIndex);
+    this.selectionQueryStack.push(this.query);
+    await this.updateInputAndResults("");
+    this.parentNode = result;
+    return true;
+  }
+
+  async stepOut(): Promise<boolean> {
+    if (!this.parentNode.parent) return false;
+    this.selectionIndex = this.selectionIndexStack.pop() ?? 0;
+    await this.updateInputAndResults(this.selectionQueryStack.pop() ?? "");
+    this.parentNode = this.parentNode.parent;
+    return true;
+  }
+
+  /**
+   * Ideally, the data tree should be built upon nodes with multiple children.
+   * @returns The root node of the data tree.
+   * @abstract
+   */
+  abstract buildDataTree(): DataNode<T>;
+
+}
+
