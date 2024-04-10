@@ -4,15 +4,11 @@ import {
   Setting, Notice,
   ToggleComponent, DropdownComponent, TextComponent,
   SearchComponent,
+  BaseComponent,
 } from "obsidian";
 
 import BundlePlugin from "main";
 import BundleComponent from "types";
-
-import {
-  getSetting,
-  DynamicSetting,
-} from "utils";
 
 import {
   runQuickSuggest,
@@ -25,56 +21,33 @@ import {
 // Heading Section Component
 ////////////////////////////////////////////////////////////////////////////////
 
-type TargetFileSelection = "active" | "lastAccessed" | "manualSet";
+type TargetFileMethod = "active" | "lastAccessed" | "manualSet";
 
 
 export default class HeadingsComponent implements BundleComponent {
 
   parent: BundlePlugin;
   settings: {
-    targetFileSelection: TargetFileSelection;
-    manualSetFile: string;
+    targetFileMethod: TargetFileMethod;
+    targetFilePath: string;
   };
   targetFile: TFile | null;
+  targetFileComponent: SearchComponent;
 
 
   constructor(plugin: BundlePlugin) {
     this.parent = plugin;
     this.settings = {
-      targetFileSelection: "active",
-      manualSetFile: "",
+      targetFileMethod: "active",
+      targetFilePath: "",
     };
   }
 
 
-  setTargetFile(): void {
-    const plugin = this.parent;
-
-    switch (this.settings.targetFileSelection) {
-      case "active":
-        this.targetFile = plugin.app.workspace.getActiveFile();
-        break;
-
-      case "lastAccessed":
-        const lastAccessedPath = plugin.app.workspace.getLastOpenFiles()[0];
-        this.targetFile = plugin.app.vault.getAbstractFileByPath(lastAccessedPath) as TFile | null;
-        break;
-
-      case "manualSet":
-        const manualSetPath = getSetting("manualSetFile");
-        if (manualSetPath === "") this.targetFile = null;
-        else this.targetFile = plugin.app.vault.getAbstractFileByPath(manualSetPath) as TFile | null;
-        break;
-
-      default:
-        this.targetFile = null;
-    }
-  }
-
 
   onload(): void {
     this.addCommands();
-    this.setTargetFile();
+    this.resolveTargetFile();
   }
 
   onunload(): void {}
@@ -89,7 +62,7 @@ export default class HeadingsComponent implements BundleComponent {
       name: "Display Target File",
       icon: "target",
       callback: () => {
-        new Notice(`Target file: ${this.targetFile ? this.targetFile.path : "No file set."}`, 3000);
+        new Notice(`Target File: "${plugin.settings.targetFilePath}"`, 3000);
       },
     });
 
@@ -99,22 +72,10 @@ export default class HeadingsComponent implements BundleComponent {
       name: "Set Active File as Target",
       icon: "target",
       callback: async () => {
-        const mdView = plugin.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!mdView) return;
+        const activeFile = plugin.app.workspace.getActiveFile();
+        if (!activeFile) return;
 
-        const activeFile = mdView.file;
-
-        if (!activeFile) {
-          new Notice("No active file.", 3000);
-
-        } else {
-          this.targetFile = activeFile;
-          plugin.settings.targetFileSelection = "manualSet";
-          plugin.settings.manualSetFile = activeFile.path;
-          await plugin.saveSettings();
-
-          new Notice(`Target file set to "${activeFile.path}"`, 3000);
-        }
+        await this.manuallySetTargetFile(activeFile);
       },
 
     });
@@ -135,13 +96,7 @@ export default class HeadingsComponent implements BundleComponent {
         const targetFile = await runQuickSuggest(plugin.app, mdFiles, (file: TFile) => file.basename);
         if (!targetFile) return;
 
-        this.targetFile = targetFile;
-        plugin.settings.targetFileSelection = "manualSet";
-        plugin.settings.manualSetFile = targetFile.path;
-        await plugin.saveSettings();
-
-        new Notice(`Target file set to "${targetFile.path}"`, 3000);
-
+        await this.manuallySetTargetFile(targetFile);
       },
 
     });
@@ -160,17 +115,51 @@ export default class HeadingsComponent implements BundleComponent {
         const targetFile = await runQuickSuggest(plugin.app, vaultFiles, (file: TFile) => file.basename);
         if (!targetFile) return;
 
-        this.targetFile = targetFile;
-        plugin.settings.targetFileSelection = "manualSet";
-        plugin.settings.manualSetFile = targetFile.path;
-        await plugin.saveSettings();
-
-        new Notice(`Target file set to "${targetFile.path}"`, 3000);
-
+        await this.manuallySetTargetFile(targetFile);
       },
+
     });
 
   }
+
+
+  async manuallySetTargetFile(file: TFile): Promise<void> {
+    this.targetFile = file;
+    this.parent.settings.targetFileMethod = "manualSet";
+    this.parent.settings.targetFilePath = file.path;
+    await this.parent.saveSettings();
+    new Notice(`Target File set to: "${file.path}"`, 3000);
+  }
+
+
+  async resolveTargetFile(): Promise<void> {
+    const plugin = this.parent;
+    const getFile = (path: string) => plugin.app.vault.getAbstractFileByPath(path) as TFile | null;
+
+    switch (plugin.settings.targetFileMethod) {
+      case "manualSet":
+        this.targetFile = getFile(plugin.settings.targetFilePath);
+        break;
+      case "lastAccessed":
+        this.targetFile = getFile(plugin.app.workspace.getLastOpenFiles()[0]);
+        break;
+      case "active":
+        this.targetFile = plugin.app.workspace.getActiveFile();
+        break;
+    }
+
+    const filePath = this.targetFile?.path ?? "";
+
+    this.targetFileComponent?.setValue(filePath);
+
+    plugin.settings.targetFilePath = filePath;
+    await plugin.saveSettings();
+
+    const message = `Target File resolved to: "${filePath}"`;
+    console.log(message);
+    new Notice(message, 3000);
+  }
+
 
 
   addRibbonIcons(): void {}
@@ -181,55 +170,53 @@ export default class HeadingsComponent implements BundleComponent {
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
 
-    containerEl.createEl("h2", {text: "Heading Section"});
-
-    const setManualSetFileSetting = () => new DynamicSetting(containerEl)
-      .setName("Manual Set File")
-      .setDesc("Set the file to move the heading section.")
-      .addSearch((search: SearchComponent) => {
-        search
-          .setPlaceholder("Search for a file")
-          .setValue(plugin.settings.manualSetFile)
-          .onChange(async (value: string) => {
-            // Check if the file exists.
-            const file = plugin.app.vault.getAbstractFileByPath(value);
-            if (!file || !(file instanceof TFile)) return;
-            plugin.settings.manualSetFile = value;
-            await plugin.saveSettings();
-          });
-      });
+    containerEl.createEl("h2", {text: "Headings"});
 
     new Setting(containerEl)
-      .setName("Target File Selection")
-      .setDesc("File selection method for moving the heading section.")
-      .then((setting: Setting) => {
-        const manualSetFileSetting = setManualSetFileSetting();
-        const dynamicSwitch = () => {
-          if (plugin.settings.targetFileSelection === "manualSet")
-            manualSetFileSetting.show();
-          else manualSetFileSetting.hide();
-        };
-        dynamicSwitch();
+      .setName("Target File Method")
+      .addDropdown((dropdown: DropdownComponent) => {
+        dropdown
+          .addOptions({
+            active: "Active File",
+            lastAccessed: "Last Accessed File",
+            manualSet: "Manually Set File",
+          })
+          .setValue(plugin.settings.targetFileMethod)
+          .onChange(async (value: TargetFileMethod) => {
+            plugin.settings.targetFileMethod = value;
+            await this.resolveTargetFile();
+          });
+      })
 
-        setting.addDropdown((dropdown: DropdownComponent) => {
-          dropdown
-            .addOptions({
-              active: "Active File",
-              lastAccessed: "Last Accessed File",
-              manualSet: "Manual Set File",
-            })
-            .setValue(plugin.settings.targetFileSelection)
-            .onChange(async (value: TargetFileSelection) => {
-              plugin.settings.targetFileSelection = value;
-              dynamicSwitch();
-              this.setTargetFile();
-              plugin.settings.manualSetFile = this.targetFile ? this.targetFile.path : "";
-              await plugin.saveSettings();
-            });
-        });
-      });
+    new Setting(containerEl)
+      .setName("Target File")
+      .then((setting: Setting) => {
+        const fragment = document.createDocumentFragment();
+        fragment.createEl("b", { text: "NOTE: "});
+        fragment.createEl("span", { text: "It updates every time before any plugin functionality." });
+        setting.setDesc(fragment);
+      })
+      .addSearch((search: SearchComponent) => {
+        this.targetFileComponent = search
+          .setPlaceholder("Search for a file")
+          .setValue(plugin.settings.targetFilePath ?? "")
+          .onChange(async (value: string) => {
+            const file = plugin.app.vault.getAbstractFileByPath(value);
+            if (!file || !(file instanceof TFile)) return;
+            await this.manuallySetTargetFile(file);
+          });
+        // search.inputEl.style.width = "100%";
+      })
+      .then((setting: Setting) => {
+        setting.settingEl.style.display = "flex";
+        setting.settingEl.style.flexDirection = "column";
+        setting.settingEl.style.gap = "5px";
+        // setting.settingEl.style.gridTemplateColumns = "2fr 3fr";
+      })
 
   }
+
+
 
 }
 
