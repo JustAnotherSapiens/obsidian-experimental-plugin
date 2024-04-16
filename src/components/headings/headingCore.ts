@@ -1,19 +1,20 @@
 import {
-  App, TFile, fuzzySearch,
-  Editor, MarkdownView, HeadingCache,
-  Setting, Notice,
-  ToggleComponent, DropdownComponent, TextComponent,
+  App,
+  MarkdownView,
+  Editor,
+  TFile,
+  Setting,
+  Notice,
   SearchComponent,
-  BaseComponent,
+  DropdownComponent,
 } from "obsidian";
 
 import BundlePlugin from "main";
-import BundleComponent from "types";
-
-import {
-  runQuickSuggest,
-} from "components/sugggestUtils";
-
+import { BundleComponent } from "main";
+import { DataNode } from "dataStructures/nodes";
+import { runQuickSuggest } from "components/suggest/sugggestUtils";
+import { Heading } from "components/headings/headingUtils"
+import { HeadingTreeSuggest } from "components/headings/headingSuggests";
 
 
 
@@ -24,7 +25,7 @@ import {
 type TargetFileMethod = "active" | "lastAccessed" | "manualSet";
 
 
-export default class HeadingsComponent implements BundleComponent {
+export default class HeadingComponent implements BundleComponent {
 
   parent: BundlePlugin;
   settings: {
@@ -42,8 +43,6 @@ export default class HeadingsComponent implements BundleComponent {
       targetFilePath: "",
     };
   }
-
-
 
   onload(): void {
     this.addCommands();
@@ -118,6 +117,27 @@ export default class HeadingsComponent implements BundleComponent {
         await this.manuallySetTargetFile(targetFile);
       },
 
+    });
+
+    // DataNodeSuggest for HeadingsTree of Target File
+    plugin.addCommand({
+      id: "suggest-headings-tree",
+      name: "Suggest Headings Tree",
+      icon: "list",
+      callback: async () => {
+
+        await this.resolveTargetFile();
+        if (!this.targetFile) return;
+
+        const headingTreeSuggest = new HeadingTreeSuggest(
+          plugin.app,
+          (node: DataNode<Heading>) => (node.data as Heading).header.text,
+          this.targetFile
+        );
+
+        await headingTreeSuggest.open();
+
+      },
     });
 
   }

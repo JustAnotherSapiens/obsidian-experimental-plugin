@@ -8,15 +8,29 @@ import {
 
 import BundlePlugin from "main";
 
+
+
 // This must match the ID at manifest.json
 export const PLUGIN_ID = "experimental-plugin";
 
 
 type SettingKey = string;
 
+
+export function getOpenMarkdownViews(app: App): MarkdownView[] {
+  return app.workspace
+    .getLeavesOfType("markdown")
+    .map((leaf) => leaf.view as MarkdownView);
+  // const mdFiles = mdViews.map((view) => view.file);
+  // const mdEditors = mdViews.map((view) => view.editor);
+}
+
+
+
 export function getSetting(setting: SettingKey): any {
   return this.app.plugins.plugins[PLUGIN_ID].settings[setting];
 }
+
 
 export function shrinkSettingInputField(setting: Setting, selector: string = "input"): void {
   setting.settingEl.style.display = "grid";

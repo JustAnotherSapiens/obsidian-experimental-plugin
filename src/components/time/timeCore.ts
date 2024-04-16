@@ -1,18 +1,19 @@
 import {
-  Setting, Notice,
-  Editor, MarkdownView, HeadingCache,
-  ToggleComponent, DropdownComponent, TextComponent,
+  App,
+  MarkdownView,
+  Editor,
+  Setting,
+  Notice,
+  HeadingCache,
 } from "obsidian";
 
 import BundlePlugin from "main";
-import BundleComponent from "types";
+import { BundleComponent } from "main";
 
 import {
-  getSetting,
   getActiveFileCache,
   getHeadingIndex,
-  scrollToCursor,
-} from "utils";
+} from "utils/utilsCore";
 
 
 
@@ -260,6 +261,9 @@ export function getMatchedDate(
   console.log(this.moment().format("YYYY-MM-DD HH:mm:ss"), message);
   new Notice(message, 3500);
 }
+
+
+// TODO: Remove the `tp` parameter (from Templater).
 
 
 async function getTransformFormat(tp: any, fromDate: DateFormat) {

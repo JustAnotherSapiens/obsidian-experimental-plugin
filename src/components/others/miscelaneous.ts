@@ -1,13 +1,15 @@
 import {
-  Editor, MarkdownView,
+  App,
+  MarkdownView,
+  Editor,
 } from "obsidian";
 
 import BundlePlugin from "main";
-import BundleComponent from 'types';
+import { BundleComponent } from "main";
 
 
 
-export default class HelperComponent implements BundleComponent {
+export default class MiscelaneousComponent implements BundleComponent {
 
   parent: BundlePlugin;
   settings: {

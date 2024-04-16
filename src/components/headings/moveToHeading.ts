@@ -6,7 +6,7 @@ import {
 } from "obsidian";
 
 import BundlePlugin from "main";
-import BundleComponent from "types";
+import { BundleComponent } from "main";
 
 import {
   getSetting,
@@ -15,7 +15,7 @@ import {
   FloatInputSetting,
   customActiveLineScroll,
   shrinkSettingInputField,
-} from "utils";
+} from "utils/utilsCore";
 
 
 
@@ -31,7 +31,7 @@ type ScrollExecution = "never" | "always" | "onThreshold";
 export type ScrollMode = "viewportFraction" | "offsetLines";
 
 
-export default class MoveComponent implements BundleComponent {
+export default class MoveToHeadingComponent implements BundleComponent {
 
   parent: BundlePlugin;
   settings: {

@@ -1,18 +1,23 @@
 import {
-  Setting, Notice,
-  Editor, MarkdownView, HeadingCache,
-  ToggleComponent, DropdownComponent, TextComponent,
+  App,
+  MarkdownView,
+  Editor,
+  Setting,
+  Notice,
+  TextComponent,
+  ToggleComponent,
+  DropdownComponent,
 } from "obsidian";
 
 import BundlePlugin from "main";
-import BundleComponent from "types";
+import { BundleComponent } from "main";
 
 import {
   getSetting,
   getActiveFileCache,
   getHeadingIndex,
   scrollToCursor,
-} from "utils";
+} from "utils/utilsCore";
 
 
 

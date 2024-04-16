@@ -1,23 +1,14 @@
 import {
-  Setting, Notice,
-  Editor, MarkdownView, HeadingCache,
-  ToggleComponent, DropdownComponent, TextComponent,
+  App,
+  Editor,
 } from "obsidian";
 
 import BundlePlugin from "main";
-import BundleComponent from "types";
-
-import {
-  getSetting,
-  getActiveFileCache,
-  getHeadingIndex,
-  scrollToCursor,
-} from "utils";
+import { BundleComponent } from "main";
 
 
 
-
-export default class EditComponent implements BundleComponent {
+export default class MdEditingComponent implements BundleComponent {
 
   parent: BundlePlugin;
   settings: {
@@ -35,7 +26,7 @@ export default class EditComponent implements BundleComponent {
   }
 
   onunload(): void {
-    this.parent.app.workspace.iterateCodeMirrors(cm => {
+    (this.parent.app.workspace as any).iterateCodeMirrors((cm: any) => {
       cm.removeKeyMap("smart-strikethrough");
     });
   }

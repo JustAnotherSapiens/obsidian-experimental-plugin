@@ -1,11 +1,14 @@
 import {
+  App,
+  MarkdownView,
+  Editor,
   Setting,
   ToggleComponent,
-  Editor, MarkdownView, HeadingCache,
+  HeadingCache,
 } from "obsidian";
 
 import BundlePlugin from "main";
-import BundleComponent from 'types';
+import { BundleComponent } from "main";
 
 import {
   getSetting,
@@ -13,7 +16,7 @@ import {
   getHeadingIndex,
   scrollToCursor,
   customActiveLineScroll,
-} from "utils";
+} from "utils/utilsCore";
 
 
 
@@ -21,7 +24,7 @@ export type Fold = {from: number, to: number};
 
 
 
-export default class FoldComponent implements BundleComponent {
+export default class FoldHeadingsComponent implements BundleComponent {
 
   parent: BundlePlugin;
   settings: {

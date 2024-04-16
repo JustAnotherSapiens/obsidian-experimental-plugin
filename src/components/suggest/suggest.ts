@@ -1,14 +1,17 @@
 import {
-  App, Editor, MarkdownView,
-  Vault, Scope, Notice,
-  Setting, TextComponent,
-  TFile, TFolder, TAbstractFile,
-  Modal, SuggestModal, FuzzySuggestModal,
-  PopoverSuggest,
+  App,
+  Editor,
+  MarkdownView,
+  Setting,
+  TextComponent,
+  TFile,
+  Modal,
+  SuggestModal,
+  FuzzySuggestModal,
 } from "obsidian";
 
 import BundlePlugin from "main";
-import BundleComponent from "types";
+import { BundleComponent } from "main";
 
 import {
   getSetting,
@@ -16,19 +19,20 @@ import {
   getTFilesFromFolder,
   customActiveLineScroll,
   shrinkSettingInputField,
-} from "utils";
+} from "utils/utilsCore";
 
 import {
   BaseAbstractSuggest,
-} from "components/sugggestUtils";
+  registerKeybindings,
+} from "components/suggest/sugggestUtils";
 
 import {
   MoveToHeadingSuggest,
-} from "components/suggestHeadings";
+} from "components/headings/headingSuggests";
 
 import {
-  getHeadings,
-} from "components/headingsUtils";
+  getHeadingsArray,
+} from "components/headings/headingUtils";
 
 
 
@@ -81,7 +85,7 @@ export default class SuggestComponent implements BundleComponent {
       id: "get-headings",
       name: "Get Headings (test)",
       editorCallback: (editor, view) => {
-        const headings = getHeadings(editor.getValue());
+        const headings = getHeadingsArray(editor.getValue());
         console.log(headings);
       }
     });
@@ -141,7 +145,6 @@ export default class SuggestComponent implements BundleComponent {
 		return sampleModal;
 	}
 
-
 }
 
 
@@ -151,14 +154,17 @@ export default class SuggestComponent implements BundleComponent {
 class QuickTabOpenSuggest extends BaseAbstractSuggest<TFile> {
 
   files: TFile[];
-  fileToString = (file: TFile) => {
-    if (file.extension !== "md") return file.path;
-    return file.path.slice(0, -3);
-  };
 
   constructor(app: App) {
     super(app, "quick-tab-open-suggest", { fuzzy: true });
+
+    this.itemToString = (file: TFile) => {
+      if (file.extension !== "md") return file.path;
+      return file.path.slice(0, -3);
+    };
+
     this.addKeybindings();
+
     this.files = getTFilesFromFolder(app, app.vault.getRoot().path);
   }
 
@@ -171,44 +177,17 @@ class QuickTabOpenSuggest extends BaseAbstractSuggest<TFile> {
     ]);
   }
 
+  getSourceItems(): TFile[] {
+    return getTFilesFromFolder(this.app, this.app.vault.getRoot().path);
+  }
+
   addKeybindings(): void {
-    this.scope.register(["Alt"], "l", (event) => {
-      if (!event.isComposing) {
-        this.clickAction(this.queriedResults[this.selectionIndex], event);
-        return false;
-      }
-    });
-    this.scope.register(["Alt"], "h", async (event) => {
-      if (!event.isComposing) {
-        await this.customAction(this.queriedResults[this.selectionIndex], event);
-        return false;
-      }
-    });
-    this.scope.register(["Shift"], "Enter", (event) => {
-      if (!event.isComposing) {
-        this.clickAction(this.queriedResults[this.selectionIndex], event);
-        return false;
-      }
-    });
+    registerKeybindings(this.scope, [
+      [["Shift"], "Enter", (event) => this.clickAction(this.renderedResults[this.selectionIndex], event)],
+      [["Alt"], "l",       (event) => this.clickAction(this.renderedResults[this.selectionIndex], event)],
+      [["Alt"], "h", async (event) => await this.customAction(this.renderedResults[this.selectionIndex], event)],
+    ]);
   }
-
-
-  getFilteredResults(query?: string): TFile[] {
-    if (this.files.length === 0) return [];
-    return this.resultsFilter(this.files, this.fileToString, query);
-  }
-
-
-  renderResultItem(result: TFile): HTMLElement {
-    const resultEl = createEl("div");
-    const text = this.fileToString(result);
-
-    if (this.query) this.resultItemRenderer(text, resultEl);
-    else resultEl.innerText = text;
-
-    return resultEl;
-  }
-
 
   enterAction(result: TFile, evt: MouseEvent | KeyboardEvent): void {
     this.openFileInBackgroudTab(result);

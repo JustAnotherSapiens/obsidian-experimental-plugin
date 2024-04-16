@@ -1,15 +1,28 @@
 import { Plugin, PluginSettingTab, App } from "obsidian";
 
-import BundleComponent from "types";
+import HeadingComponent from "components/headings/headingCore";
+import FoldHeadingsComponent from "components/headings/foldHeadings";
+import MoveToHeadingComponent from "components/headings/moveToHeading";
 
-import HelperComponent from "components/helper";
-import SuggestComponent from "components/suggest";
-import MoveComponent from "components/move";
-import FoldComponent from "components/fold";
-import TimeComponent from "components/time";
-import EditComponent from "components/edit";
-import ScriptComponent from "components/script";
-import HeadingsComponent from "components/headings";
+import SuggestComponent from "components/suggest/suggest";
+import TimeComponent from "components/time/timeCore";
+
+import ScriptRunnerComponent from "components/others/scriptRunner";
+import MdEditingComponent from "components/others/mdEditing";
+import MiscelaneousComponent from "components/others/miscelaneous";
+
+
+export interface BundleComponent {
+  settings: { [key: string]: any };
+  parent: Plugin;
+  onload(): void;
+  onunload(): void;
+  // addCommands(): void;
+  // addRibbonIcons(): void;
+  // addStatusBarItems(): void;
+  // addEventsAndIntervals(): void;
+  addSettings(containerEl: HTMLElement): void;
+}
 
 
 
@@ -22,14 +35,16 @@ export default class BundlePlugin extends Plugin {
     console.log("Loading Bundle Plugin");
 
     this.components = [
-      new HeadingsComponent(this),
-      new HelperComponent(this),
+      new HeadingComponent(this),
+      new FoldHeadingsComponent(this),
+      new MoveToHeadingComponent(this),
+
       new SuggestComponent(this),
-      new MoveComponent(this),
-      new FoldComponent(this),
       new TimeComponent(this),
-      new EditComponent(this),
-      new ScriptComponent(this),
+
+      new ScriptRunnerComponent(this),
+      new MdEditingComponent(this),
+      new MiscelaneousComponent(this),
     ]
 
     await this.loadSettings();

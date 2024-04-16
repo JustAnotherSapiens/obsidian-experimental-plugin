@@ -1,10 +1,13 @@
 import {
-  Setting, Notice,
-  ToggleComponent, DropdownComponent, TextComponent, ButtonComponent,
+  Setting,
+  ToggleComponent,
+	DropdownComponent,
+	TextComponent,
+	ButtonComponent,
 } from "obsidian";
 
 import BundlePlugin from "main";
-import BundleComponent from "types";
+import { BundleComponent } from "main";
 
 
 const scriptComplexityLevels = [
@@ -19,7 +22,7 @@ type ScriptComplexityLevel = typeof scriptComplexityLevels[number];
 
 
 
-export default class ScriptComponent implements BundleComponent {
+export default class DemoScriptComponent implements BundleComponent {
 
   parent: BundlePlugin;
   settings: {
