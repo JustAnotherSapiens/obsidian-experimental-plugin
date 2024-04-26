@@ -18,7 +18,7 @@ import {
   DataNodeSuggest,
   simpleHighlight,
   fuzzyHighlight,
-} from "components/suggest/sugggestUtils";
+} from "components/suggest/suggestUtils";
 
 import {
   Heading,

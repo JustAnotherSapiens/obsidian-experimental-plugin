@@ -1,17 +1,16 @@
 import {
   App,
-  Scope,
   Vault,
   MarkdownView,
   TFile,
   Editor,
-  fuzzySearch,
-  SearchMatches,
-  SearchResult,
-  PreparedQuery,
-  prepareQuery,
+  Scope,
   Modifier,
-  KeymapContext,
+  SearchResult,
+  fuzzySearch,
+  prepareQuery,
+  getIcon,
+  setTooltip,
 } from "obsidian";
 
 import { DataNode } from "dataStructures/generics";
@@ -29,7 +28,7 @@ export function registerKeybinding(
   callback: (event: KeyboardEvent) => void | Promise<void>
 ): void {
   scope.register(modifiers, key,
-    async (event: KeyboardEvent, context: KeymapContext) => {
+    async (event: KeyboardEvent) => {
       if (!event.isComposing) {
         event.preventDefault();
         await callback(event);
@@ -76,9 +75,10 @@ export function scoredText(score: number, text: string): string {
 
 
 type SuggestFlags = {
-  fuzzy?: boolean,
-  strictCase?: boolean,
-  instructions?: boolean,
+  fuzzy: boolean,
+  regex: boolean,
+  strictCase: boolean,
+  instructions: boolean,
 };
 
 type SimpleSearchObject<T> = {
@@ -91,6 +91,79 @@ type FuzzySearchObject<T> = {
   item: T,
   string: string,
   fuzzyResult: SearchResult,
+};
+
+
+
+class IconButton {
+
+  static readonly defaultActiveColor = "var(--text-accent)";
+  static readonly defaultInactiveColor = "var(--text-faint)";
+
+  private iconId: string;
+  private tooltip: string;
+  private isActive: boolean;
+  private activeColor: string;
+  private inactiveColor: string;
+
+  private containerEl?: HTMLElement;
+  private svgEl?: SVGSVGElement;
+
+  constructor(args: {
+    iconId: string,
+    tooltip: string,
+    isActive: boolean,
+    onCssColor?: string,
+    offCssColor?: string,
+    parentEl: HTMLElement
+    clickCallback: (event: MouseEvent) => void,
+  }) {
+    this.iconId = args.iconId;
+    this.tooltip = args.tooltip;
+    this.isActive = args.isActive;
+    this.activeColor = args.onCssColor ?? IconButton.defaultActiveColor;
+    this.inactiveColor = args.offCssColor ?? IconButton.defaultInactiveColor;
+    this.resolveElement(args.parentEl);
+    this.addClickEvent(args.clickCallback);
+  }
+
+  addClickEvent(callback: (event: MouseEvent) => void): void {
+    if (!this.containerEl) return;
+    this.containerEl.on("click", ".icon-container", (event) => {
+      callback(event);
+    }, {capture: true});
+  }
+
+  resolveElement(parentEl?: HTMLElement): void {
+    this.svgEl = getIcon(this.iconId) as SVGSVGElement;
+    if (!this.svgEl) return;
+    this.svgEl.style.width = "auto";
+    this.svgEl.style.height = "auto";
+    this.resolveColor();
+
+    this.containerEl = createEl("div", { cls: "icon-container" });
+    this.containerEl.appendChild(this.svgEl);
+    setTooltip(this.containerEl, this.tooltip, {placement: "top", delay: 200});
+    parentEl?.appendChild(this.containerEl);
+  }
+
+  toggle(value?: boolean): void {
+    this.isActive = value ?? !this.isActive;
+    this.resolveColor();
+  }
+
+  resolveColor(): void {
+    if (this.svgEl) {
+      this.svgEl.style.color = this.isActive ? this.activeColor : this.inactiveColor;
+    }
+  }
+
+  setColor(activeColor: string, inactiveColor?: string): void {
+    this.activeColor = activeColor;
+    this.inactiveColor = inactiveColor ?? this.inactiveColor;
+    this.resolveColor();
+  }
+
 };
 
 
@@ -123,7 +196,18 @@ export abstract class BaseAbstractSuggest<T> {
    */
   onClose?(): void | Promise<void>;
 
-  public id: string;
+
+  protected itemToString: (item: T) => string;
+
+  protected defaultResultDisplay: (resultEl: HTMLElement, item: T) => void;
+  protected simpleResultDisplay: (resultEl: HTMLElement, object: SimpleSearchObject<T>) => void;
+  protected fuzzyResultDisplay: (resultEl: HTMLElement, object: FuzzySearchObject<T>) => void;
+
+  private searchDisplay: (items: T[], query: string) => void;
+
+
+  public readonly id: string;
+
   protected app: App;
   protected scope: Scope;
 
@@ -133,29 +217,86 @@ export abstract class BaseAbstractSuggest<T> {
   protected resultsEl: HTMLElement;
   protected instructionsEl: HTMLElement;
 
+  protected placeholder: string;
+  protected instructions: {command: string, purpose: string}[];
+
   protected flags: SuggestFlags;
+  protected iconButtons: {[Key in keyof SuggestFlags]?: IconButton};
 
   protected sourceItems: T[];
-  protected itemToString: (item: T) => string;
+  protected renderedResults: T[];
 
   protected query: string;
-  private searchDisplay: (items: T[], query: string) => void;
-
-  protected renderedResults: T[];
   protected selectionIndex: number;
 
-  protected defaultResultDisplay: (resultEl: HTMLElement, item: T) => void;
-  protected simpleResultDisplay: (resultEl: HTMLElement, object: SimpleSearchObject<T>) => void;
-  protected fuzzyResultDisplay: (resultEl: HTMLElement, object: FuzzySearchObject<T>) => void;
 
-  constructor(app: App, modalId: string, flags?: SuggestFlags) {
+  constructor(app: App, modalId: string, flags?: {[Key in keyof SuggestFlags]?: boolean}) {
     this.app = app;
     this.id = modalId;
-    this.flags = Object.assign({fuzzy: true, strictCase: false, instructions: true}, flags);
+
+    this.flags = Object.assign({
+      fuzzy: true,
+      regex: false,
+      strictCase: false,
+      instructions: true
+    }, flags);
+
+    this.placeholder = "Enter text here...";
+    this.instructions = [
+      {command: "<A-f>", purpose: "fuzzy toggle"},
+      {command: "<A-j/k>", purpose: "to navigate"},
+      {command: "<CR>", purpose: "to choose"},
+      {command: "<Esc>", purpose: "to dismiss"},
+    ];
 
     this.registerKeymapEvents();
     this.setResultDisplayFunctions();
-    this.setSearchDisplay();
+    this.setSearchDisplayFunction();
+
+  }
+
+
+  addSearchToggleIcons(): void {
+    const inputContainer = this.inputEl.parentElement as HTMLElement;
+    inputContainer.style.display = "flex";
+    inputContainer.style.direction = "row";
+    inputContainer.style.alignItems = "center";
+    // inputContainer.style.justifyContent = "space-between";
+    inputContainer.style.paddingRight = "12px";
+
+    const iconContainer = createEl("div", { cls: "prompt-input-icon-container" });
+    this.inputEl.style.flex = "6";
+    iconContainer.style.flex = "1";
+    iconContainer.style.display = "flex";
+    iconContainer.style.flexDirection = "row";
+    iconContainer.style.alignItems = "center";
+    iconContainer.style.justifyContent = "space-evenly";
+    inputContainer.appendChild(iconContainer);
+
+    this.iconButtons = {
+      "regex": new IconButton({
+        parentEl: iconContainer,
+        iconId: "regex",
+        tooltip: "Toggle Regular Expression",
+        isActive: this.flags.regex,
+        clickCallback: () => this.toggleRegexSearch(),
+      }),
+      "fuzzy": new IconButton({
+        parentEl: iconContainer,
+        iconId: "search-code",
+        tooltip: "Toggle Fuzzy Search",
+        isActive: this.flags.fuzzy,
+        clickCallback: () => this.toggleFuzzySearch(),
+      }),
+      "strictCase": new IconButton({
+        parentEl: iconContainer,
+        iconId: "case-sensitive",
+        tooltip: "Toggle Case Sensitivity",
+        isActive: this.flags.strictCase,
+        clickCallback: () => this.toggleStrictCase(),
+      }),
+    };
+
   }
 
 
@@ -164,14 +305,14 @@ export abstract class BaseAbstractSuggest<T> {
 
     registerKeybindings(this.scope, [
       // DEFAULT
-      [[],  "Escape", async () => await this.close()],
-      [[],   "Enter", async (event) => await this.enterAction(this.renderedResults[this.selectionIndex], event)],
+      [[], "Escape", async () => await this.close()],
+      [[], "Enter", async (event) => await this.enterAction(this.renderedResults[this.selectionIndex], event)],
       [[], "ArrowDown", () => this.setSelectedResultEl(this.selectionIndex + 1)],
       [[],   "ArrowUp", () => this.setSelectedResultEl(this.selectionIndex - 1)],
       // CUSTOM
-      [["Alt"],  "j", () => this.setSelectedResultEl(this.selectionIndex + 1)],
-      [["Alt"],  "k", () => this.setSelectedResultEl(this.selectionIndex - 1)],
-      [["Alt"],  "f", () => this.toggleFuzzySearch()],
+      [["Alt"], "j", () => this.setSelectedResultEl(this.selectionIndex + 1)],
+      [["Alt"], "k", () => this.setSelectedResultEl(this.selectionIndex - 1)],
+      [["Alt"], "f", () => this.toggleFuzzySearch()],
       [["Ctrl"], "u", async () => await this.updateInputAndResults("")],
       // TODO: <A-d> and <A-u> to scroll down and up by one page.
     ]);
@@ -191,7 +332,7 @@ export abstract class BaseAbstractSuggest<T> {
   }
 
 
-  private setSearchDisplay(): void {
+  private setSearchDisplayFunction(): void {
     this.searchDisplay = this.flags.fuzzy ? this.fuzzySearchDisplay : this.simpleSearchDisplay;
   }
 
@@ -291,42 +432,63 @@ export abstract class BaseAbstractSuggest<T> {
 
   toggleFuzzySearch(): void {
     this.flags.fuzzy = !this.flags.fuzzy;
-    this.setSearchDisplay();
+    this.iconButtons.fuzzy?.toggle(this.flags.fuzzy);
+    this.setSearchDisplayFunction();
     this.inputEl.dispatchEvent(new Event("input"));
+    this.inputEl.focus();
   }
 
+
+  /**
+   * TODO: Implement this functionality.
+   */
+  toggleRegexSearch(): void {
+    this.flags.regex = !this.flags.regex;
+    this.iconButtons.regex?.toggle(this.flags.regex);
+    this.inputEl.dispatchEvent(new Event("input"));
+    this.inputEl.focus();
+  }
+
+
+  toggleStrictCase(): void {
+    this.flags.strictCase = !this.flags.strictCase;
+    this.iconButtons.strictCase?.toggle(this.flags.strictCase);
+    this.inputEl.dispatchEvent(new Event("input"));
+    this.inputEl.focus();
+  }
 
 
   private createSuggestModalElements(): void {
 
-    // Prompt Input Container
-    const promptInputContainerEl = createEl("div", { cls: "prompt-input-container" });
-    promptInputContainerEl.appendChild(createEl("input", {
+    // Input Container
+    const inputContainer = createEl("div", { cls: "prompt-input-container" });
+    this.inputEl = createEl("input", {
       cls: "prompt-input",
       attr: { id: `${this.id}-input`, enterkeyhint: "done", type: "text" },
-    }));
-    promptInputContainerEl.appendChild(createEl("div", { cls: "prompt-input-cta" }));
+    });
+    inputContainer.appendChild(this.inputEl);
+    this.addSearchToggleIcons();
 
     // Prompt Results Container
-    const promptResultsEl = createEl("div", {
+    this.resultsEl = createEl("div", {
       cls: "prompt-results",
       attr: { id: `${this.id}-results`, style: "overflow-y: auto;" },
     });
 
     // Prompt Instructions Container
-    const instructionsEl = createEl("div", {
+    this.instructionsEl = createEl("div", {
       cls: "prompt-instructions",
       attr: { id: `${this.id}-instructions` }
     });
 
     // Prompt Container
-    const promptEl = createEl("div", {
+    this.promptEl = createEl("div", {
       cls: "prompt",
       attr: { id: `${this.id}-prompt` },
     });
-    promptEl.appendChild(promptInputContainerEl);
-    promptEl.appendChild(promptResultsEl);
-    promptEl.appendChild(instructionsEl);
+    this.promptEl.appendChild(inputContainer);
+    this.promptEl.appendChild(this.resultsEl);
+    this.promptEl.appendChild(this.instructionsEl);
 
     // Modal Background
     const modalBgEl = createEl("div", {
@@ -335,22 +497,22 @@ export abstract class BaseAbstractSuggest<T> {
     });
 
     // Modal Container
-    const containerEl = createEl("div", {
+    this.containerEl = createEl("div", {
       cls: "modal-container mod-dim",
       attr: { id: `${this.id}-container` },
     });
-    containerEl.appendChild(modalBgEl);
-    containerEl.appendChild(promptEl);
+    this.containerEl.appendChild(modalBgEl);
+    this.containerEl.appendChild(this.promptEl);
 
     // Append to body
-    document.body.appendChild(containerEl);
+    document.body.appendChild(this.containerEl);
 
     // Assign Elements
-    this.containerEl = document.getElementById(`${this.id}-container`) as HTMLElement;
-    this.promptEl = document.getElementById(`${this.id}-prompt`) as HTMLElement;
-    this.inputEl = document.getElementById(`${this.id}-input`) as HTMLInputElement;
-    this.resultsEl = document.getElementById(`${this.id}-results`) as HTMLElement;
-    this.instructionsEl = document.getElementById(`${this.id}-instructions`) as HTMLElement;
+    // this.containerEl = document.getElementById(`${this.id}-container`) as HTMLElement;
+    // this.promptEl = document.getElementById(`${this.id}-prompt`) as HTMLElement;
+    // this.inputEl = document.getElementById(`${this.id}-input`) as HTMLInputElement;
+    // this.resultsEl = document.getElementById(`${this.id}-results`) as HTMLElement;
+    // this.instructionsEl = document.getElementById(`${this.id}-instructions`) as HTMLElement;
   }
 
 
@@ -386,15 +548,13 @@ export abstract class BaseAbstractSuggest<T> {
   }
 
 
-  setPlaceholder(placeholder: string): void {
-    this.inputEl.setAttribute("placeholder", placeholder);
-  }
-
-
-  setInstructions(instructions: Array<{command: string, purpose: string}>): void {
+  setInstructions(): void {
     this.instructionsEl.empty();
-    instructions.forEach((instruction) => {
+    if (!this.flags.instructions) return;
+
+    this.instructions.forEach((instruction) => {
       const instructionEl = createEl("div", { cls: "prompt-instruction" });
+
       instructionEl.createEl("span", {
         cls: "prompt-instruction-command",
         text: instruction.command,
@@ -403,6 +563,7 @@ export abstract class BaseAbstractSuggest<T> {
         cls: "prompt-instruction-purpose",
         text: instruction.purpose,
       });
+
       this.instructionsEl.appendChild(instructionEl);
     });
   }
@@ -423,17 +584,12 @@ export abstract class BaseAbstractSuggest<T> {
     this.createSuggestModalElements();
     this.addCoreInteractionEvents();
 
-    this.setPlaceholder("Enter text here...");
+    this.inputEl.setAttribute("placeholder", this.placeholder);
     // TODO:
     // - Set toggleable default instructions.
     // - Function to append custom instructions.
     // - Method to remove some or all instructions.
-    this.setInstructions([
-      {command: "<A-f>", purpose: "fuzzy toggle"},
-      {command: "<A-j/k>", purpose: "to navigate"},
-      {command: "<CR>", purpose: "to choose"},
-      {command: "<Esc>", purpose: "to dismiss"},
-    ]);
+    this.setInstructions();
 
     await this.onOpen?.();
     // `onOpen` could potentially modify the behavior of the following lines.
@@ -476,7 +632,7 @@ export abstract class DataNodeSuggest<T> extends BaseAbstractSuggest<DataNode<T>
    */
   abstract buildDataTree(): Promise<DataNode<T>>;
 
-  protected parentNode: DataNode<T>;
+  protected referenceNode: DataNode<T>;
   private selectionIndexStack: number[] = [];
   private selectionQueryStack: string[] = [];
 
@@ -490,12 +646,12 @@ export abstract class DataNodeSuggest<T> extends BaseAbstractSuggest<DataNode<T>
       [["Alt"],  "l", async () => await this.stepInto(this.renderedResults[this.selectionIndex])],
       [["Alt"],  "h", async () => await this.stepOut()],
     ]);
-    this.parentNode = await this.buildDataTree();
+    this.referenceNode = await this.buildDataTree();
   }
 
   async stepInto(result: DataNode<T>): Promise<boolean> {
     if (result.children.length === 0) return false;
-    this.parentNode = result;
+    this.referenceNode = result;
     this.selectionIndexStack.push(this.selectionIndex);
     this.selectionQueryStack.push(this.query);
     await this.updateInputAndResults("");
@@ -503,8 +659,8 @@ export abstract class DataNodeSuggest<T> extends BaseAbstractSuggest<DataNode<T>
   }
 
   async stepOut(): Promise<boolean> {
-    if (!this.parentNode.parent) return false;
-    this.parentNode = this.parentNode.parent;
+    if (!this.referenceNode.parent) return false;
+    this.referenceNode = this.referenceNode.parent;
     await this.updateInputAndResults(
       this.selectionQueryStack.pop()!,
       this.selectionIndexStack.pop()!
@@ -513,7 +669,7 @@ export abstract class DataNodeSuggest<T> extends BaseAbstractSuggest<DataNode<T>
   }
 
   getSourceItems(): DataNode<T>[] {
-    return this.parentNode.children;
+    return this.referenceNode.children;
   }
 
   enterAction(result: DataNode<T>, event: MouseEvent | KeyboardEvent): void | Promise<void> {
@@ -613,6 +769,4 @@ export async function runQuickSuggest<T>(
   await quickSuggest.open();
   return await quickSuggest.waitForSelection();
 }
-
-
 

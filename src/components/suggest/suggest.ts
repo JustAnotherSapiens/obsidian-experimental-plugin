@@ -24,7 +24,7 @@ import {
 import {
   BaseAbstractSuggest,
   registerKeybindings,
-} from "components/suggest/sugggestUtils";
+} from "components/suggest/suggestUtils";
 
 import {
   MoveToHeadingSuggest,
@@ -153,8 +153,6 @@ export default class SuggestComponent implements BundleComponent {
 
 class QuickTabOpenSuggest extends BaseAbstractSuggest<TFile> {
 
-  files: TFile[];
-
   constructor(app: App) {
     super(app, "quick-tab-open-suggest", { fuzzy: true });
 
@@ -163,30 +161,25 @@ class QuickTabOpenSuggest extends BaseAbstractSuggest<TFile> {
       return file.path.slice(0, -3);
     };
 
-    this.addKeybindings();
-
-    this.files = getTFilesFromFolder(app, app.vault.getRoot().path);
-  }
-
-  onOpen(): void {
-    this.setInstructions([
-      {command: "<A-f>", purpose: "fuzzy toggle"},
-      {command: "<A-j/k>", purpose: "to navigate"},
-      {command: "<A-l>", purpose: "choose without closing"},
-      {command: "<CR>", purpose: "choose and close"},
-    ]);
-  }
-
-  getSourceItems(): TFile[] {
-    return getTFilesFromFolder(this.app, this.app.vault.getRoot().path);
-  }
-
-  addKeybindings(): void {
     registerKeybindings(this.scope, [
       [["Shift"], "Enter", (event) => this.clickAction(this.renderedResults[this.selectionIndex], event)],
       [["Alt"], "l",       (event) => this.clickAction(this.renderedResults[this.selectionIndex], event)],
       [["Alt"], "h", async (event) => await this.customAction(this.renderedResults[this.selectionIndex], event)],
     ]);
+
+    this.instructions = [
+      {command: "Action:", purpose: "Open File in Background Tab"},
+      {command: "<A-l>", purpose: "Action"},
+      {command: "<A-h>", purpose: "Action & Clear Input"},
+      {command: "<CR>", purpose: "Action & Close Prompt"},
+      {command: "<A-f>", purpose: "Toggle Fuzzy Search"},
+      {command: "<A-j/k>", purpose: "Navigate Down/Up"},
+      {command: "<Esc>", purpose: "Close Prompt"},
+    ];
+  }
+
+  getSourceItems(): TFile[] {
+    return getTFilesFromFolder(this.app, this.app.vault.getRoot().path);
   }
 
   enterAction(result: TFile, evt: MouseEvent | KeyboardEvent): void {

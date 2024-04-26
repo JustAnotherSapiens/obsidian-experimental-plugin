@@ -26,7 +26,7 @@ import {
   registerKeybindings,
   simpleHighlight,
   fuzzyHighlight,
-} from "components/suggest/sugggestUtils";
+} from "components/suggest/suggestUtils";
 
 
 
