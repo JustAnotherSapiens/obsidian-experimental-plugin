@@ -12,7 +12,7 @@ import {
 
 import BundlePlugin from "main";
 import { BundleComponent } from "main";
-import { DataNode } from "dataStructures/nodes";
+import { DataNode } from "dataStructures/generics";
 import { runQuickSuggest } from "components/suggest/sugggestUtils";
 import { Heading } from "components/headings/headingUtils"
 import { HeadingTreeSuggest } from "components/headings/headingSuggests";

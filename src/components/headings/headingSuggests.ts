@@ -6,7 +6,7 @@ import {
   WorkspaceLeaf,
 } from "obsidian";
 
-import { DataNode } from "dataStructures/nodes";
+import { DataNode } from "dataStructures/generics";
 
 import {
   getSetting,
@@ -35,15 +35,17 @@ export class HeadingTreeSuggest extends DataNodeSuggest<Heading> {
   constructor(app: App, nodeToString: (node: DataNode<Heading>) => string, targetFile: TFile) {
     super(app, nodeToString);
     this.targetFile = targetFile;
+    this.setDisplayFunctions();
+  }
 
+
+  setDisplayFunctions() {
     const definerHTML = (headingLevel: number) =>
       `<b style="color: var(--h${headingLevel}-color); font-size: 1em;">${"#".repeat(headingLevel)}</b> `;
-
     const childCountHTML = (childCount: number) => {
       if (childCount === 0) return '';
       return `<span style="color: var(--text-muted); font-size: var(--font-smaller);"> (${childCount})</span>`;
     };
-
 
     this.defaultResultDisplay = (resultEl, node) => {
       resultEl.innerHTML = definerHTML(node.data.level.bySyntax)
@@ -62,7 +64,6 @@ export class HeadingTreeSuggest extends DataNodeSuggest<Heading> {
                          + fuzzyHighlight(object.item.data.header.text, object.fuzzyResult.matches)
                          + childCountHTML(object.item.children.length);
     };
-
   }
 
   async buildDataTree(): Promise<DataNode<Heading>> {
@@ -92,10 +93,13 @@ export class MoveToHeadingSuggest extends ViewAbstractSuggest<FlatHeading> {
   constructor(app: App) {
     super(app, "move-to-heading-suggest", { fuzzy: true });
     this.itemToString = (item) => item.text;
+    this.setDisplayFunctions();
+  }
 
+
+  setDisplayFunctions() {
     const definerHTML = (headingLevel: number) =>
       `<b style="color: var(--h${headingLevel}-color); font-size: 1em;">${"#".repeat(headingLevel)}</b> `;
-
     const timestampHTML = (timestamp: string) =>
       `<div><span style="color: var(--text-muted); font-size: var(--font-smaller);">${timestamp}</span></div>`;
 
@@ -130,7 +134,6 @@ export class MoveToHeadingSuggest extends ViewAbstractSuggest<FlatHeading> {
         resultEl.innerHTML += timeMatches.length > 0 ? timestampHTML(fuzzyHighlight(heading.timestamp!, timeMatches)) : '';
       }
     };
-
   }
 
 

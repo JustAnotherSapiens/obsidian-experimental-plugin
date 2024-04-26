@@ -7,11 +7,11 @@ import {
   getMatchedDate,
 } from "components/time/timeCore";
 
-import { DataNode } from "dataStructures/nodes";
+import { DataNode } from "dataStructures/generics";
 
 
 
-function isCodeBlockEnd(line: string): boolean {
+export function isCodeBlockEnd(line: string): boolean {
   return line.trimStart().startsWith('```');
 }
 

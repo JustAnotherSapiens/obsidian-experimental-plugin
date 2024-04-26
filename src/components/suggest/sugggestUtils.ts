@@ -14,7 +14,7 @@ import {
   KeymapContext,
 } from "obsidian";
 
-import { DataNode } from "dataStructures/nodes";
+import { DataNode } from "dataStructures/generics";
 
 import {
   wrapAround

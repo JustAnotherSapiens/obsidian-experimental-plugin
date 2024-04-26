@@ -1,4 +1,26 @@
 
+
+export abstract class BaseNode {
+  parent?: BaseNode;
+  next?: BaseNode;
+  prev?: BaseNode;
+
+  addNext(node: BaseNode) {
+    this.next = node;
+    node.prev = this;
+    node.parent = this.parent;
+  }
+
+  addPrev(node: BaseNode) {
+    this.prev = node;
+    node.next = this;
+    node.parent = this.parent;
+  }
+
+}
+
+
+
 export class DataNode<T> {
   data: T;
   children: DataNode<T>[];
@@ -103,3 +125,49 @@ export class DataNode<T> {
   }
 
 }
+
+
+export abstract class Tree<T> {
+
+  abstract traverse(callback: (node: T) => void): void;
+
+  protected root: T;
+
+
+  constructor(rootNode: T) {
+    this.root = rootNode;
+  }
+
+  flatten(): T[] {
+    let nodes: T[] = [];
+    this.traverse(node => nodes.push(node));
+    return nodes;
+  }
+
+  find(callback: (node: T) => boolean): T | undefined {
+    let found: T | undefined;
+    try {
+      this.traverse(node => {
+        if (callback(node)) {
+          found = node;
+          throw new Error('Node found!');
+        }
+      });
+    } catch (error) {
+      if (error.message !== 'Node found!') throw error;
+    }
+    return found;
+  }
+
+  findMany(callback: (node: T) => boolean): T[] {
+    let found: T[] = [];
+    this.traverse(node => {
+      if (callback(node)) {
+        found.push(node);
+      }
+    });
+    return found;
+  }
+
+}
+
