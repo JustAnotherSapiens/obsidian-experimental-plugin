@@ -1,6 +1,6 @@
 import { Plugin, PluginSettingTab, App } from "obsidian";
 
-import HeadingComponent from "components/headings/headingCore";
+import HeadingComponent from "components/headings/headingComponent";
 import FoldHeadingsComponent from "components/headings/foldHeadings";
 import MoveToHeadingComponent from "components/headings/moveToHeading";
 
