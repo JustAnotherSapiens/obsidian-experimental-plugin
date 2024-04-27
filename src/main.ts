@@ -97,7 +97,7 @@ class BundleSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Bundle Settings" });
+    containerEl.createEl("h1", { text: "Bundle Settings" });
 
     this.plugin.components.forEach((component) => {
       component.addSettings(containerEl);

@@ -17,6 +17,10 @@ import { runQuickSuggest } from "components/suggest/suggestUtils";
 import { Heading } from "components/headings/headingUtils"
 import { HeadingTreeSuggest } from "components/headings/headingSuggests";
 
+import {
+  HeadingExtractor,
+} from "dataStructures/mdHeadings";
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -131,6 +135,18 @@ export default class HeadingComponent implements BundleComponent {
         );
 
         await headingTreeSuggest.open();
+      },
+    });
+
+    // Extract Heading at Cursor Position
+    plugin.addCommand({
+      id: "extract-heading-at-cursor",
+      name: "Extract Heading at Cursor",
+      icon: "list",
+      editorCallback: async (editor: Editor) => {
+        const extractor = new HeadingExtractor(editor);
+        const extraction = extractor.extractHeadingAtCursor();
+        console.log(extraction);
       },
     });
 

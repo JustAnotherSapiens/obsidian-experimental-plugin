@@ -174,6 +174,9 @@ export function getHeadingsArray(fileText: string): FlatHeading[] {
         const timestamp = dateMatch[0];
         const text = textLine.slice(match[0].length).trim();
         const title = textLine.slice(match[0].length + timestamp.length).trim();
+        // if (text === title || text === timestamp)
+        //   console.log("Simple Display");
+        // else console.log("Complex Display");
         headings.push({raw, line, level, timestamp, text, title});
         continue;
       }

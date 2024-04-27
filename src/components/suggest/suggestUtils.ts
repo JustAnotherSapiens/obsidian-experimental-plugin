@@ -19,6 +19,10 @@ import {
   wrapAround
 } from "utils/utilsCore";
 
+import {
+  setDisplayFunctionsAsDefault,
+} from "components/suggest/suggestDisplay";
+
 
 
 export function registerKeybinding(
@@ -53,26 +57,6 @@ export function registerKeybindings(
 }
 
 
-export function simpleHighlight(text: string, match: [number, number]): string {
-  const leadStr = text.slice(0, match[0]);
-  const matchStr = text.slice(match[0], match[1]);
-  const tailStr = text.slice(match[1]);
-  return `${leadStr}<b style="color: var(--text-accent);">${matchStr}</b>${tailStr}`;
-}
-
-
-export function fuzzyHighlight(text: string, matches: [number, number][]): string {
-  for (let i = matches.length - 1; i >= 0; i--)
-    text = simpleHighlight(text, matches[i]);
-  return text;
-}
-
-
-export function scoredText(score: number, text: string): string {
-  return `<span style="color: var(--color-red);">${score.toFixed(4)}</span>  ${text}`;
-}
-
-
 
 type SuggestFlags = {
   fuzzy: boolean,
@@ -92,6 +76,17 @@ type FuzzySearchObject<T> = {
   string: string,
   fuzzyResult: SearchResult,
 };
+
+
+interface SuggestModal {
+  containerEl: HTMLElement;
+  promptEl: HTMLElement;
+  inputEl: HTMLInputElement;
+  resultsEl: HTMLElement;
+  instructionsEl: HTMLElement;
+  open(): void;
+  close(): void;
+}
 
 
 
@@ -173,7 +168,7 @@ class IconButton {
  * suggestions.
  * @abstract
  */
-export abstract class BaseAbstractSuggest<T> {
+export abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
   abstract getSourceItems(): T[] | Promise<T[]>;
   /**
@@ -208,14 +203,14 @@ export abstract class BaseAbstractSuggest<T> {
 
   public readonly id: string;
 
+  public containerEl: HTMLElement;
+  public promptEl: HTMLElement;
+  public inputEl: HTMLInputElement;
+  public resultsEl: HTMLElement;
+  public instructionsEl: HTMLElement;
+
   protected app: App;
   protected scope: Scope;
-
-  protected containerEl: HTMLElement;
-  protected promptEl: HTMLElement;
-  protected inputEl: HTMLInputElement;
-  protected resultsEl: HTMLElement;
-  protected instructionsEl: HTMLElement;
 
   protected placeholder: string;
   protected instructions: {command: string, purpose: string}[];
@@ -250,13 +245,13 @@ export abstract class BaseAbstractSuggest<T> {
     ];
 
     this.registerKeymapEvents();
-    this.setResultDisplayFunctions();
-    this.setSearchDisplayFunction();
 
+    setDisplayFunctionsAsDefault.bind(this)();
+    this.resolveSearchDisplay();
   }
 
 
-  addSearchToggleIcons(): void {
+  private addSearchToggleIcons(): void {
     const inputContainer = this.inputEl.parentElement as HTMLElement;
     inputContainer.style.display = "flex";
     inputContainer.style.direction = "row";
@@ -319,20 +314,20 @@ export abstract class BaseAbstractSuggest<T> {
   }
 
 
-  private setResultDisplayFunctions(): void {
-    this.defaultResultDisplay = (resultEl, item) => {
-      resultEl.innerText = this.itemToString(item);
-    };
-    this.simpleResultDisplay = (resultEl, object) => {
-      resultEl.innerHTML = simpleHighlight(object.string, object.match);
-    };
-    this.fuzzyResultDisplay = (resultEl, object) => {
-      resultEl.innerHTML = fuzzyHighlight(object.string, object.fuzzyResult.matches);
-    };
-  }
+  // private setDisplayFunctionsAsDefault() {
+  //   this.defaultResultDisplay = (resultEl, item) => {
+  //     resultEl.innerText = this.itemToString(item);
+  //   };
+  //   this.simpleResultDisplay = (resultEl, object) => {
+  //     resultEl.innerText = simpleHighlight(object.match, object.string);
+  //   };
+  //   this.fuzzyResultDisplay = (resultEl, object) => {
+  //     resultEl.innerText = fuzzyHighlight(object.fuzzyResult.matches, object.string);
+  //   };
+  // }
 
 
-  private setSearchDisplayFunction(): void {
+  private resolveSearchDisplay(): void {
     this.searchDisplay = this.flags.fuzzy ? this.fuzzySearchDisplay : this.simpleSearchDisplay;
   }
 
@@ -393,13 +388,13 @@ export abstract class BaseAbstractSuggest<T> {
   }
 
 
-  async updateInputAndResults(value: string, selectionIndex = 0): Promise<void> {
+  protected async updateInputAndResults(value: string, selectionIndex = 0): Promise<void> {
     this.inputEl.value = value;
     await this.refreshResults(value, selectionIndex);
   }
 
 
-  async refreshResults(query: string, selectionIndex = 0) {
+  protected async refreshResults(query: string, selectionIndex = 0) {
     this.sourceItems = await this.getSourceItems();
     this.query = query;
 
@@ -414,7 +409,7 @@ export abstract class BaseAbstractSuggest<T> {
   /**
    * Set the result element at the given index as selected and scroll it into view if necessary.
    */
-  setSelectedResultEl(index: number) {
+  protected setSelectedResultEl(index: number) {
     if (this.renderedResults.length === 0) return;
     this.selectionIndex = wrapAround(index, this.renderedResults.length);
     const resultEl = this.resultsEl.children[this.selectionIndex] as HTMLElement;
@@ -430,10 +425,10 @@ export abstract class BaseAbstractSuggest<T> {
   }
 
 
-  toggleFuzzySearch(): void {
+  protected toggleFuzzySearch(): void {
     this.flags.fuzzy = !this.flags.fuzzy;
     this.iconButtons.fuzzy?.toggle(this.flags.fuzzy);
-    this.setSearchDisplayFunction();
+    this.resolveSearchDisplay();
     this.inputEl.dispatchEvent(new Event("input"));
     this.inputEl.focus();
   }
@@ -442,7 +437,7 @@ export abstract class BaseAbstractSuggest<T> {
   /**
    * TODO: Implement this functionality.
    */
-  toggleRegexSearch(): void {
+  protected toggleRegexSearch(): void {
     this.flags.regex = !this.flags.regex;
     this.iconButtons.regex?.toggle(this.flags.regex);
     this.inputEl.dispatchEvent(new Event("input"));
@@ -450,7 +445,7 @@ export abstract class BaseAbstractSuggest<T> {
   }
 
 
-  toggleStrictCase(): void {
+  protected toggleStrictCase(): void {
     this.flags.strictCase = !this.flags.strictCase;
     this.iconButtons.strictCase?.toggle(this.flags.strictCase);
     this.inputEl.dispatchEvent(new Event("input"));
@@ -548,7 +543,7 @@ export abstract class BaseAbstractSuggest<T> {
   }
 
 
-  setInstructions(): void {
+  protected setInstructions(): void {
     this.instructionsEl.empty();
     if (!this.flags.instructions) return;
 
@@ -580,7 +575,7 @@ export abstract class BaseAbstractSuggest<T> {
    * - Renders the results based on the query string.
    * - Pushes the modal scope to the keymap.
    */
-  async open() {
+  public async open() {
     this.createSuggestModalElements();
     this.addCoreInteractionEvents();
 
@@ -606,7 +601,7 @@ export abstract class BaseAbstractSuggest<T> {
    * - Pops the modal scope from the keymap.
    * - Focuses the editor of the active MarkdownView.
    */
-  async close() {
+  public async close() {
     await this.onClose?.();
     this.containerEl.remove();
     this.app.keymap.popScope(this.scope);

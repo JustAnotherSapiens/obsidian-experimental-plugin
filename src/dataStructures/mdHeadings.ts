@@ -24,10 +24,11 @@ import {
 import {
   BaseAbstractSuggest,
   registerKeybindings,
-  simpleHighlight,
-  fuzzyHighlight,
 } from "components/suggest/suggestUtils";
 
+import {
+  setDisplayFunctionAsHeadingNode,
+} from "components/headings/headingDisplay";
 
 
 type MarkdownLevel = 1 | 2 | 3 | 4 | 5 | 6;
@@ -384,35 +385,7 @@ export abstract class HeadingTreeSuggest extends BaseAbstractSuggest<HeadingNode
     this.editor = sources.editor;
     this.markdownText = sources.markdownText;
     this.itemToString = (node: HeadingNode) => node.heading.header.text;
-    this.setDisplayFunctions();
-  }
-
-
-  setDisplayFunctions() {
-    const definerHTML = (headingLevel: number) =>
-      `<b style="color: var(--h${headingLevel}-color); font-size: 1em;">${"#".repeat(headingLevel)}</b> `;
-    const childCountHTML = (childCount: number) => {
-      if (childCount === 0) return '';
-      return `<span style="color: var(--text-muted); font-size: var(--font-smaller);"> (${childCount})</span>`;
-    };
-
-    this.defaultResultDisplay = (resultEl, node) => {
-      resultEl.innerHTML = definerHTML(node.heading.level.bySyntax)
-                         + node.heading.header.text
-                         + childCountHTML(node.children.length);
-    };
-
-    this.simpleResultDisplay = (resultEl, object) => {
-      resultEl.innerHTML = definerHTML(object.item.heading.level.bySyntax)
-                         + simpleHighlight(object.item.heading.header.text, object.match)
-                         + childCountHTML(object.item.children.length);
-    };
-
-    this.fuzzyResultDisplay = (resultEl, object) => {
-      resultEl.innerHTML = definerHTML(object.item.heading.level.bySyntax)
-                         + fuzzyHighlight(object.item.heading.header.text, object.fuzzyResult.matches)
-                         + childCountHTML(object.item.children.length);
-    };
+    setDisplayFunctionAsHeadingNode.bind(this)();
   }
 
 

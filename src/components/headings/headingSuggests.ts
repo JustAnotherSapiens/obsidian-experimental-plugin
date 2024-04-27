@@ -16,8 +16,6 @@ import {
 import {
   ViewAbstractSuggest,
   DataNodeSuggest,
-  simpleHighlight,
-  fuzzyHighlight,
 } from "components/suggest/suggestUtils";
 
 import {
@@ -27,6 +25,11 @@ import {
   getHeadingsTree,
 } from "components/headings/headingUtils";
 
+import {
+  setDisplayFunctionsAsFadedTimeHeading,
+  setDisplayFunctionAsHeadingDataNode,
+} from "components/headings/headingDisplay";
+
 
 
 export class HeadingTreeSuggest extends DataNodeSuggest<Heading> {
@@ -35,35 +38,7 @@ export class HeadingTreeSuggest extends DataNodeSuggest<Heading> {
   constructor(app: App, nodeToString: (node: DataNode<Heading>) => string, targetFile: TFile) {
     super(app, nodeToString);
     this.targetFile = targetFile;
-    this.setDisplayFunctions();
-  }
-
-
-  setDisplayFunctions() {
-    const definerHTML = (headingLevel: number) =>
-      `<b style="color: var(--h${headingLevel}-color); font-size: 1em;">${"#".repeat(headingLevel)}</b> `;
-    const childCountHTML = (childCount: number) => {
-      if (childCount === 0) return '';
-      return `<span style="color: var(--text-muted); font-size: var(--font-smaller);"> (${childCount})</span>`;
-    };
-
-    this.defaultResultDisplay = (resultEl, node) => {
-      resultEl.innerHTML = definerHTML(node.data.level.bySyntax)
-                         + node.data.header.text
-                         + childCountHTML(node.children.length);
-    };
-
-    this.simpleResultDisplay = (resultEl, object) => {
-      resultEl.innerHTML = definerHTML(object.item.data.level.bySyntax)
-                         + simpleHighlight(object.item.data.header.text, object.match)
-                         + childCountHTML(object.item.children.length);
-    };
-
-    this.fuzzyResultDisplay = (resultEl, object) => {
-      resultEl.innerHTML = definerHTML(object.item.data.level.bySyntax)
-                         + fuzzyHighlight(object.item.data.header.text, object.fuzzyResult.matches)
-                         + childCountHTML(object.item.children.length);
-    };
+    setDisplayFunctionAsHeadingDataNode.bind(this)();
   }
 
   async buildDataTree(): Promise<DataNode<Heading>> {
@@ -91,114 +66,40 @@ export class HeadingTreeSuggest extends DataNodeSuggest<Heading> {
 export class MoveToHeadingSuggest extends ViewAbstractSuggest<FlatHeading> {
 
   constructor(app: App) {
-    super(app, "move-to-heading-suggest", { fuzzy: true });
+    super(app, "move-to-heading-suggest");
     this.itemToString = (item) => item.text;
-    this.setDisplayFunctions();
+    setDisplayFunctionsAsFadedTimeHeading.bind(this)();
   }
-
-
-  setDisplayFunctions() {
-    const definerHTML = (headingLevel: number) =>
-      `<b style="color: var(--h${headingLevel}-color); font-size: 1em;">${"#".repeat(headingLevel)}</b> `;
-    const timestampHTML = (timestamp: string) =>
-      `<div><span style="color: var(--text-muted); font-size: var(--font-smaller);">${timestamp}</span></div>`;
-
-    this.defaultResultDisplay = (resultEl, item) => {
-      resultEl.innerHTML = definerHTML(item.level) + item.text;
-    };
-
-    this.simpleResultDisplay = (resultEl, object) => {
-      const match = object.match;
-      const heading = object.item;
-      resultEl.innerHTML = definerHTML(heading.level);
-
-      if (heading.text === heading.title || heading.text === heading.timestamp) {
-        resultEl.innerHTML += simpleHighlight(heading.text, match);
-      } else {
-        const [timeMatch, titleMatch] = this.unambiguateHeaderMatch(match, heading.timestamp!.length);
-        resultEl.innerHTML += titleMatch ? simpleHighlight(heading.title, titleMatch) : heading.title;
-        resultEl.innerHTML += timeMatch ? timestampHTML(simpleHighlight(heading.timestamp!, timeMatch)) : '';
-      }
-    };
-
-    this.fuzzyResultDisplay = (resultEl, object) => {
-      const matches = object.fuzzyResult.matches;
-      const heading = object.item;
-      resultEl.innerHTML = definerHTML(heading.level);
-
-      if (heading.text === heading.title || heading.text === heading.timestamp) {
-        resultEl.innerHTML += fuzzyHighlight(heading.text, matches);
-      } else {
-        const [timeMatches, titleMatches] = this.unambiguateHeaderMatches(matches, heading.timestamp!.length);
-        resultEl.innerHTML += titleMatches.length > 0 ? fuzzyHighlight(heading.title, titleMatches) : heading.title;
-        resultEl.innerHTML += timeMatches.length > 0 ? timestampHTML(fuzzyHighlight(heading.timestamp!, timeMatches)) : '';
-      }
-    };
-  }
-
-
-  unambiguateHeaderMatch(
-    match: [number, number],
-    timestampLength: number,
-  ) {
-    let timeMatch: [number, number] | undefined;
-    let titleMatch: [number, number] | undefined;
-    const titleOffset = timestampLength + 1;
-    let [matchStart, matchEnd] = match;
-
-    if (matchStart < timestampLength) {
-      if (matchEnd < titleOffset) // Clean time match.
-        timeMatch = match;
-      else { // Distribute the match between time and title.
-        timeMatch = [matchStart, timestampLength];
-        titleMatch = [0, matchEnd - titleOffset];
-      }
-    }
-    else if (matchStart > timestampLength) // Clean title match.
-      titleMatch = [matchStart - titleOffset, matchEnd - titleOffset];
-    else // Skip the space between timestamp and title.
-      titleMatch = [matchStart + 1 - titleOffset, matchEnd - titleOffset];
-
-    return [timeMatch, titleMatch];
-  }
-
-  unambiguateHeaderMatches(
-    matches: [number, number][],
-    timestampLength: number,
-  ) {
-    let timeMatches: [number, number][] = [];
-    let titleMatches: [number, number][] = [];
-    const titleOffset = timestampLength + 1;
-
-    for (let i = 0; i < matches.length; i++) {
-      let [matchStart, matchEnd] = matches[i];
-
-      if (matchStart < timestampLength) {
-        if (matchEnd < titleOffset) // Clean time match.
-          timeMatches.push(matches[i]);
-        else { // Distribute the match between time and title.
-          timeMatches.push([matchStart, timestampLength]);
-          titleMatches.push([0, matchEnd - titleOffset]);
-        }
-      }
-      else if (matchStart > timestampLength) // Clean title match.
-        titleMatches.push([matchStart - titleOffset, matchEnd - titleOffset]);
-      else // Skip the space between timestamp and title.
-        titleMatches.push([matchStart + 1 - titleOffset, matchEnd - titleOffset]);
-    }
-
-    return [timeMatches, titleMatches];
-  }
-
 
   getSourceItems(): FlatHeading[] {
     return this.editor ? getHeadingsArray(this.editor.getValue()) : [];
   }
 
+  async clickAction(result: FlatHeading, evt: MouseEvent | KeyboardEvent): Promise<void> {
+    this.enterAction(result, evt);
+  }
 
   async enterAction(result: FlatHeading, evt: MouseEvent | KeyboardEvent): Promise<void> {
     if (this.editor) {
       this.editor.setCursor(result.line, 0);
+
+      if (!this.view?.contentEl) return;
+      customActiveLineScroll(this.view!, {
+        viewportThreshold: 1,
+        scrollFraction: getSetting("headingSelectionViewportFraction"),
+        asymmetric: true,
+      });
+    }
+    await this.close();
+  }
+
+}
+
+
+
+// CODE CEMENTERY
+
+// MoveToHeadingSuggest > enterAction :: Failed Attempt to add to Jump List
 
       // const cm = (this.editor as any).cm.cm;
       // const oldCur = cm.getCursor('head');
@@ -216,21 +117,3 @@ export class MoveToHeadingSuggest extends ViewAbstractSuggest<FlatHeading> {
       // } else {
       //   jumpList.add(cm, oldCur, oldCur);
       // }
-
-      if (!this.view?.contentEl) return;
-      // scrollActiveLineToFraction(this.view!, 0.25);
-      customActiveLineScroll(this.view!, {
-        viewportThreshold: 1,
-        scrollFraction: getSetting("headingSelectionViewportFraction"),
-        asymmetric: true,
-      });
-
-    }
-    await this.close();
-  }
-
-  async clickAction(result: FlatHeading, evt: MouseEvent | KeyboardEvent): Promise<void> {
-    this.enterAction(result, evt);
-  }
-}
-
