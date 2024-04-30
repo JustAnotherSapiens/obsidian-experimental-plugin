@@ -152,7 +152,7 @@ export class HeadingNode {
 
 
 type HeadingLevelIndex = {
-  [level in MarkdownLevel]: HeadingNode[];
+  [Level in MarkdownLevel]: HeadingNode[];
 };
 
 
@@ -160,17 +160,17 @@ export class HeadingTree {
 
   public root: HeadingNode;
   public lineCount: number;
-  private thresholdMdLevel: MarkdownLevel;
+  private mdLevelLimit: MarkdownLevel;
   private levelIndex: HeadingLevelIndex;
 
 
-  constructor(markdownText: string, thresholdMdLevel?: MarkdownLevel) {
+  constructor(markdownText: string, mdLevelLimit?: MarkdownLevel) {
     this.root = new HeadingNode(-1, '');
 
     this.levelIndex = {} as HeadingLevelIndex;
     for (let i = 1; i <= 6; i++) this.levelIndex[i as MarkdownLevel] = [];
 
-    this.thresholdMdLevel = thresholdMdLevel ?? 6;
+    this.mdLevelLimit = mdLevelLimit ?? 6;
 
     this.parseMarkdownText(markdownText);
   }
@@ -180,7 +180,7 @@ export class HeadingTree {
     const lines = text.split("\n");
     this.lineCount = lines.length;
 
-    const regex = new RegExp(`^#{1,${this.thresholdMdLevel}} `);
+    const regex = new RegExp(`^#{1,${this.mdLevelLimit}} `);
 
     let inCodeBlock = false;
     let depthCount = 0;
@@ -224,9 +224,10 @@ export class HeadingTree {
   }
 
 
-  traverse(callback: (node: HeadingNode) => void) {
-    if (this.root.children.length === 0) return;
-    let current = this.root.children[0];
+  traverse(callback: (node: HeadingNode) => void, topNode?: HeadingNode) {
+    if (!topNode) topNode = this.root;
+    if (topNode.children.length === 0) return;
+    let current = topNode.children[0];
     while (current) {
       callback(current);
       if (current.children.length !== 0) {
@@ -241,35 +242,35 @@ export class HeadingTree {
   }
 
 
-  find(match: (node: HeadingNode) => boolean): HeadingNode | undefined {
+  find(match: (node: HeadingNode) => boolean, topNode?: HeadingNode): HeadingNode | undefined {
     let found: HeadingNode | undefined;
     try {
       this.traverse(node => {
         if (!match(node)) return;
         found = node;
         throw 'BREAK';
-      });
+      }, topNode);
     } catch (error) {
       if (error !== 'BREAK') throw error;
     }
     return found;
   }
 
-  findLast(callback: (node: HeadingNode) => boolean): HeadingNode | undefined {
+  findLast(callback: (node: HeadingNode) => boolean, topNode?: HeadingNode): HeadingNode | undefined {
     let found: HeadingNode | undefined;
     this.traverse(node => {
       if (callback(node)) found = node;
-    });
+    }, topNode);
     return found;
   }
 
-  findLastContiguous(match: (node: HeadingNode) => boolean): HeadingNode | undefined {
+  findLastContiguous(match: (node: HeadingNode) => boolean, topNode?: HeadingNode): HeadingNode | undefined {
     let foundNode: HeadingNode | undefined;
     try {
       this.traverse(node => {
         if (!match(node)) throw 'BREAK';
         foundNode = node;
-      });
+      }, topNode);
     } catch (error) {
       if (error !== 'BREAK') throw error;
     }
@@ -282,9 +283,10 @@ export class HeadingTree {
    *
    * From benchmarks, it is from 5 to 30 times faster than its linear version.
    */
-  searchLastContiguous(match: (node: HeadingNode) => boolean): HeadingNode | undefined {
-    if (this.root.children.length === 0) return;
-    let refNode = this.root;
+  searchLastContiguous(match: (node: HeadingNode) => boolean, topNode?: HeadingNode): HeadingNode | undefined {
+    if (!topNode) topNode = this.root;
+    if (topNode.children.length === 0) return;
+    let refNode = topNode;
     let foundNode: HeadingNode | undefined;
     while (true) {
       for (const node of refNode.children) {
@@ -362,6 +364,13 @@ export class HeadingExtractor {
 
 
 
+type MdTextSources = {
+  file?: TFile;
+  editor?: Editor;
+  markdownText?: string;
+};
+
+
 /**
  * An abstract suggest class that builds a data tree and allows the user to navigate it.
  *
@@ -374,16 +383,18 @@ export abstract class HeadingTreeSuggest extends BaseAbstractSuggest<HeadingNode
   protected editor?: Editor;
   protected markdownText?: string;
 
+  private mdLevelLimit: MarkdownLevel;
   private referenceNode: HeadingNode;
   private selectionIndexStack: number[] = [];
   private selectionQueryStack: string[] = [];
 
 
-  constructor(app: App, sources: { file?: TFile, editor?: Editor, markdownText?: string }) {
+  constructor(app: App, sources: MdTextSources, mdLevelLimit?: MarkdownLevel) {
     super(app, "heading-tree-suggest");
     this.file = sources.file;
     this.editor = sources.editor;
     this.markdownText = sources.markdownText;
+    this.mdLevelLimit = mdLevelLimit ?? 6;
     this.itemToString = (node: HeadingNode) => node.heading.header.text;
     setDisplayFunctionAsHeadingNode.bind(this)();
   }
@@ -438,7 +449,7 @@ export abstract class HeadingTreeSuggest extends BaseAbstractSuggest<HeadingNode
   async buildTree(): Promise<void> {
     await this.setMarkdownText();
     if (!this.markdownText) return;
-    this.tree = new HeadingTree(this.markdownText);
+    this.tree = new HeadingTree(this.markdownText, this.mdLevelLimit);
     this.referenceNode = this.tree.root;
   }
 
@@ -498,3 +509,84 @@ export class HeadingSelectorSuggest extends HeadingTreeSuggest {
 
 }
 
+
+
+type HeadingInsertionInfo = {
+  node: HeadingNode;
+  top: boolean;
+  pos: EditorPosition;
+};
+
+export class HeadingInsertionInfoSuggest extends HeadingTreeSuggest {
+    private insertionInfo: HeadingInsertionInfo;
+    private mdLevel: MarkdownLevel;
+
+    constructor(app: App, sources: MdTextSources, mdLevel: MarkdownLevel) {
+      super(app, sources, mdLevel);
+      this.mdLevel = mdLevel;
+    }
+
+    async waitForSelection(): Promise<HeadingInsertionInfo | undefined> {
+      await this.open();
+      return new Promise((resolve) => {
+        this.onClose = () => resolve(this.insertionInfo ?? undefined);
+      });
+    }
+
+    async onOpen(): Promise<void> {
+      await super.onOpen();
+      // NOTE: Enter and Click actions are defined separately by default.
+      // Add Shift + Enter and Right Click actions to insert the selected heading at the top.
+      registerKeybindings(this.scope, [
+        [["Shift"], "Enter", () => this.setInsertionInfo(this.renderedResults[this.selectionIndex], true)],
+      ]);
+      this.resultsEl.on("contextmenu", ".suggestion-item", (event, element) => {
+        const clickedIndex = this.resultsEl.indexOf(element);
+        this.setSelectedResultEl(clickedIndex);
+        this.setInsertionInfo(this.renderedResults[clickedIndex], true);
+      }, {capture: true});
+    }
+
+    enterAction(result: HeadingNode, event: MouseEvent | KeyboardEvent): void | Promise<void> {
+      this.clickAction(result, event);
+    }
+
+    clickAction(result: HeadingNode, event: MouseEvent | KeyboardEvent): void | Promise<void> {
+      this.setInsertionInfo(result, false);
+    }
+
+    setInsertionInfo(targetNode: HeadingNode, top: boolean) {
+      let insertionPos: EditorPosition;
+
+      if (targetNode.heading.level.bySyntax === this.mdLevel) {
+        if (!top) {
+          targetNode.calculateHeadingLineEnd(this.tree.lineCount);
+          insertionPos = {line: targetNode.heading.range.to!.line, ch: 0};
+        } else {
+          insertionPos = {line: targetNode.heading.range.from.line, ch: 0};
+        }
+      }
+
+      else {
+        const findNode = top ? this.tree.find : this.tree.findLast;
+        const subtargetNode = findNode.bind(this.tree)(
+          (node: HeadingNode) => node.heading.level.bySyntax >= this.mdLevel, targetNode
+        );
+        if (!subtargetNode) {
+          targetNode.calculateHeadingLineEnd(this.tree.lineCount);
+          insertionPos = {line: targetNode.heading.range.to!.line, ch: 0};
+        }
+        else if (!top) {
+          subtargetNode.calculateHeadingLineEnd(this.tree.lineCount);
+          insertionPos = {line: subtargetNode.heading.range.to!.line, ch: 0};
+        }
+        else {
+          insertionPos = {line: subtargetNode.heading.range.from.line, ch: 0};
+        }
+      }
+
+      this.insertionInfo = { node: targetNode, top, pos: insertionPos };
+      this.close();
+    }
+
+}
