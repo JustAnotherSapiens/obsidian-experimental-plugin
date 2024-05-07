@@ -1,9 +1,20 @@
 import {
-  App, Vault, Setting, Notice,
-  Editor, FileView, MarkdownView,
-  TAbstractFile, TFolder, TFile,
-  CachedMetadata, HeadingCache,
-  EditorRange, EditorRangeOrCaret, TextComponent,
+  App,
+  Vault,
+  Setting,
+  Notice,
+  Editor,
+  FileView,
+  MarkdownView,
+  TAbstractFile,
+  TFolder,
+  TFile,
+  CachedMetadata,
+  HeadingCache,
+  EditorPosition,
+  EditorRange,
+  EditorRangeOrCaret,
+  TextComponent,
 } from "obsidian";
 
 import BundlePlugin from "main";
@@ -473,3 +484,28 @@ export function getTFilesFromFolder(app: App, folderStr: string): Array<TFile> {
 
   return files;
 }
+
+
+export function idxToPos(str: string, idx: number): EditorPosition {
+  let line = 0, ch = 0;
+  for (let i = 0; i < idx; i++) {
+    if (str[i] === '\n') { line++; ch = 0; }
+    else ch++;
+  }
+  return {line, ch};
+}
+
+export function posToIdx(str: string, pos: EditorPosition): number {
+  let {line, ch} = pos;
+  for (let idx = 0; idx < str.length; idx++) {
+    if (line !== 0) {
+      if (str[idx] === '\n') line--;
+      continue;
+    }
+    if (ch !== 0) { ch--; continue; }
+    return idx;
+  }
+  return str.length;
+}
+
+
