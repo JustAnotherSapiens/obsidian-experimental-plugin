@@ -53,13 +53,13 @@ export function scoredText(score: number, text: string): string {
 
 export function setDisplayFunctionsAsDefault<T>(this: BaseAbstractSuggest<T>) {
   this.defaultResultDisplay = (resultEl, item) => {
-    resultEl.innerText = this.itemToString(item);
+    resultEl.innerHTML = this.itemToString(item);
   };
   this.simpleResultDisplay = (resultEl, object) => {
-    resultEl.innerText = simpleHighlight(object.match, object.string);
+    resultEl.innerHTML = simpleHighlight(object.match, object.string);
   };
   this.fuzzyResultDisplay = (resultEl, object) => {
-    resultEl.innerText = fuzzyHighlight(object.fuzzyResult.matches, object.string);
+    resultEl.innerHTML = fuzzyHighlight(object.fuzzyResult.matches, object.string);
   };
 }
 
