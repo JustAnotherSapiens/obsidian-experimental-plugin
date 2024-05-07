@@ -8,6 +8,7 @@ import {
   SearchComponent,
   DropdownComponent,
   ButtonComponent,
+  MarkdownFileInfo,
 } from "obsidian";
 
 import BundlePlugin from "main";
@@ -143,10 +144,16 @@ export default class HeadingComponent implements BundleComponent {
       id: "extract-heading-at-cursor",
       name: "Extract Heading at Cursor",
       icon: "list",
-      editorCallback: async (editor: Editor) => {
-        const extractor = new HeadingExtractor(editor);
-        const extraction = extractor.extractHeadingAtCursor();
-        console.log(extraction);
+      editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
+        await this.resolveTargetFile();
+        if (!this.targetFile) return;
+
+        const extractor = new HeadingExtractor(this.parent.app, ctx);
+        await extractor.extractAndInsertHeading(this.targetFile, {
+          extractAtCursor: true,
+          endAtInsertion: false,
+        });
+
       },
     });
 
@@ -281,8 +288,5 @@ export default class HeadingComponent implements BundleComponent {
 
   }
 
-
-
 }
-
 
