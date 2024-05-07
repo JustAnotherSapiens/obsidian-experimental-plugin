@@ -314,19 +314,6 @@ export abstract class BaseAbstractSuggest<T> implements SuggestModal {
   }
 
 
-  // private setDisplayFunctionsAsDefault() {
-  //   this.defaultResultDisplay = (resultEl, item) => {
-  //     resultEl.innerText = this.itemToString(item);
-  //   };
-  //   this.simpleResultDisplay = (resultEl, object) => {
-  //     resultEl.innerText = simpleHighlight(object.match, object.string);
-  //   };
-  //   this.fuzzyResultDisplay = (resultEl, object) => {
-  //     resultEl.innerText = fuzzyHighlight(object.fuzzyResult.matches, object.string);
-  //   };
-  // }
-
-
   private resolveSearchDisplay(): void {
     this.searchDisplay = this.flags.fuzzy ? this.fuzzySearchDisplay : this.simpleSearchDisplay;
   }
@@ -564,6 +551,11 @@ export abstract class BaseAbstractSuggest<T> implements SuggestModal {
   }
 
 
+  public setPlaceholder(placeholder: string): void {
+    this.placeholder = placeholder;
+  }
+
+
   /**
    * This function runs the following setup tasks:
    * - Creates the modal elements.
@@ -758,9 +750,11 @@ class QuickSuggest<T> extends BaseAbstractSuggest<T> {
 export async function runQuickSuggest<T>(
   app: App,
   items: T[],
-  itemToText: (item: T) => string
+  itemToText: (item: T) => string,
+  placeholder?: string
 ): Promise<T | null> {
   const quickSuggest = new QuickSuggest(app, items, itemToText);
+  if (placeholder) quickSuggest.setPlaceholder(placeholder);
   await quickSuggest.open();
   return await quickSuggest.waitForSelection();
 }
