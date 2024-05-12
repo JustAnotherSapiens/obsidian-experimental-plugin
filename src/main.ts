@@ -1,6 +1,15 @@
+
+// REFERENCES
+// - Project Page: https://github.com/JustAnotherSapiens/obsidian-experimental-plugin
+// - Sample Plugin: https://github.com/obsidianmd/obsidian-sample-plugin
+// - Obsidian Docs: https://docs.obsidian.md/Home
+// - Lucide Icons: https://lucide.dev/
+
+
+
 import { Plugin, PluginSettingTab, App } from "obsidian";
 
-import HeadingComponent from "components/headings/headingComponent";
+import HeadingExtractorComponent from "components/headings/headingComponent";
 import FoldHeadingsComponent from "components/headings/foldHeadings";
 import MoveToHeadingComponent from "components/headings/moveToHeading";
 
@@ -12,15 +21,12 @@ import MdEditingComponent from "components/others/mdEditing";
 import MiscelaneousComponent from "components/others/miscelaneous";
 
 
+
 export interface BundleComponent {
   settings: { [key: string]: any };
   parent: Plugin;
   onload(): void | Promise<void>;
   onunload(): void | Promise<void>;
-  // addCommands(): void;
-  // addRibbonIcons(): void;
-  // addStatusBarItems(): void;
-  // addEventsAndIntervals(): void;
   addSettings(containerEl: HTMLElement): void;
 }
 
@@ -35,7 +41,7 @@ export default class BundlePlugin extends Plugin {
     console.log("Loading Bundle Plugin");
 
     this.components = [
-      new HeadingComponent(this),
+      new HeadingExtractorComponent(this),
       new FoldHeadingsComponent(this),
       new MoveToHeadingComponent(this),
 
@@ -45,7 +51,7 @@ export default class BundlePlugin extends Plugin {
       new ScriptRunnerComponent(this),
       new MdEditingComponent(this),
       new MiscelaneousComponent(this),
-    ]
+    ];
 
     await this.loadSettings();
 
@@ -98,8 +104,9 @@ class BundleSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     containerEl.createEl("h1", { text: "Bundle Settings" });
+		containerEl.createEl("br");
 
-    this.plugin.components.forEach((component) => {
+    this.plugin.components.forEach((component: BundleComponent) => {
       component.addSettings(containerEl);
       containerEl.createEl("br");
     });
@@ -120,5 +127,3 @@ class BundleSettingTab extends PluginSettingTab {
 
 }
 
-
-// Find icons on: https://lucide.dev/

@@ -10,17 +10,14 @@ import {
   EditorRange,
   EditorRangeOrCaret,
   EditorChange,
-  EditorTransaction,
 } from 'obsidian';
 
 import {
-  idxToPos,
   posToIdx,
 } from "utils/utilsCore";
 
 import {
   isCodeBlockEnd,
-  getHeadingsTree,
 } from 'components/headings/headingUtils';
 
 import {
@@ -47,18 +44,15 @@ type HeadingLevel = {
   byDepth?: MarkdownLevel;
 }
 
+type HeadingRange = EditorRangeOrCaret;
+
 type HeadingHeader = {
   raw: string;
   definer: string;
   text: string;
   timestamp?: string;
   title: string;
-  // getLevelBySyntax(): number;
-  // getDisplayTitle(): string;
 }
-
-type HeadingRange = EditorRangeOrCaret;
-
 
 
 export class MdHeading {
@@ -99,8 +93,6 @@ export class MdHeading {
     return editor.getRange(this.range.from, this.range.to!);
   }
 
-  // getChildHeadings(): Heading[];
-  // getChildNodes(): HeadingNode[];
 }
 
 
@@ -318,14 +310,19 @@ export class HeadingTree {
   }
 
 
-  flatten(): HeadingNode[] {
+  flatten(filter?: (node: HeadingNode) => boolean): HeadingNode[] {
     let nodes: HeadingNode[] = [];
-    this.traverse(node => nodes.push(node));
+    if (!filter) {
+      this.traverse(node => nodes.push(node));
+    } else {
+      this.traverse(node => {
+        if (filter(node)) nodes.push(node);
+      });
+    }
     return nodes;
   }
 
 }
-
 
 
 
@@ -338,7 +335,6 @@ type MdTextSources = {
 type HeadingTreeArgs = {
   sources: MdTextSources;
   mdLevelLimit?: MarkdownLevel;
-  startFlat?: boolean;
 };
 
 
@@ -496,6 +492,11 @@ export class HeadingSelectorSuggest extends HeadingTreeSuggest {
 
 
 
+type HeadingInsertionArgs = HeadingTreeArgs & {
+  startFlat?: boolean;
+  skewUpwards?: boolean;
+};
+
 type Insertion = {
   pos: EditorPosition;
   ref?: {
@@ -517,14 +518,19 @@ type Extraction = {
 
 export class HeadingInsertionSuggest extends HeadingTreeSuggest {
   private insertion: Insertion;
+
   private mdLevel: MarkdownLevel;
   private startFlat: boolean;
+  private skewUpwards: boolean;
+
   private resultsFilter: (node: HeadingNode) => boolean;
 
-  constructor(app: App, args: HeadingTreeArgs) {
+
+  constructor(app: App, args: HeadingInsertionArgs) {
     super(app, args);
     this.mdLevel = args.mdLevelLimit ?? 6;
     this.startFlat = args.startFlat ?? false;
+    this.skewUpwards = args.skewUpwards ?? false;
     this.resultsFilter = (node: HeadingNode) => node.heading.level.bySyntax <= this.mdLevel;
     this.instructions = [
       {command: "<A-j/k>", purpose: "Navigate"},
@@ -539,10 +545,11 @@ export class HeadingInsertionSuggest extends HeadingTreeSuggest {
 
   getSourceItems(): HeadingNode[] {
     if (this.startFlat && this.referenceNode === this.tree.root) {
-      return this.tree.flatten().filter(this.resultsFilter);
+      return this.tree.flatten(this.resultsFilter);
     }
     return super.getSourceItems(this.referenceNode, this.resultsFilter);
   }
+
 
   async stepInto(node: HeadingNode): Promise<boolean> {
     if (!this.areEnoughResults(node)) return false;
@@ -656,27 +663,32 @@ export class HeadingInsertionSuggest extends HeadingTreeSuggest {
     });
   }
 
+
   async onOpen(): Promise<void> {
     await super.onOpen();
     // NOTE: Enter and Click actions are defined separately by default.
-    // Add Shift + Enter and Right Click actions to insert the selected heading at the top.
     registerKeybindings(this.scope, [
-      [["Shift"], "Enter", () => this.setInsertionAndClose(this.renderedResults[this.selectionIndex], true)],
+      [["Shift"], "Enter",() => this.setInsertionAndClose(
+        this.renderedResults[this.selectionIndex], !this.skewUpwards
+      )],
     ]);
     this.resultsEl.on("contextmenu", ".suggestion-item", (event, element) => {
       const clickedIndex = this.resultsEl.indexOf(element);
       this.setSelectedResultEl(clickedIndex);
-      this.setInsertionAndClose(this.renderedResults[clickedIndex], true);
+      this.setInsertionAndClose(this.renderedResults[clickedIndex], !this.skewUpwards);
     }, {capture: true});
   }
 
+
   enterAction(result: HeadingNode, event: MouseEvent | KeyboardEvent): void | Promise<void> {
-    this.setInsertionAndClose(result, false);
+    this.setInsertionAndClose(result, this.skewUpwards);
   }
+
 
   clickAction(result: HeadingNode, event: MouseEvent | KeyboardEvent): void | Promise<void> {
     this.enterAction(result, event);
   }
+
 
   setInsertionAndClose(targetNode: HeadingNode, top: boolean) {
     console.debug("Result Heading:", [targetNode.heading.header.text]);
@@ -734,10 +746,12 @@ export class HeadingInsertionSuggest extends HeadingTreeSuggest {
 }
 
 
-type ExtractionFlags = {
+
+type ExtractorFlags = {
   extractAtCursor: boolean;
   endAtInsertion: boolean;
   startFlat?: boolean;
+  skewUpwards?: boolean;
 };
 
 
@@ -758,7 +772,7 @@ export class HeadingExtractor {
   }
 
 
-  async extractAndInsertHeading(file: TFile, flags: ExtractionFlags): Promise<void> {
+  async extractAndInsertHeading(file: TFile, flags: ExtractorFlags): Promise<void> {
     console.debug("--- EXTRACT AND INSERT HEADING ---");
     await this.setExtractionNode(flags);
     if (!this.extractionNode) return;
@@ -789,6 +803,7 @@ export class HeadingExtractor {
         sources: {file},
         mdLevelLimit: this.extractionNode.heading.level.bySyntax,
         startFlat: flags.startFlat,
+        skewUpwards: flags.skewUpwards,
       }
     );
 
@@ -813,10 +828,11 @@ export class HeadingExtractor {
       console.debug("- Insertion unsuccessful");
     }
 
+    console.debug("--- EXTRACT AND INSERT HEADING END ---");
   }
 
 
-  async setExtractionNode(flags: ExtractionFlags): Promise<void> {
+  async setExtractionNode(flags: ExtractorFlags): Promise<void> {
     let headingNode: HeadingNode | undefined;
     if (flags.extractAtCursor) headingNode = this.getHeadingNodeAtCursor();
     else headingNode = await this.getHeadingNodeSuggest(this.app);

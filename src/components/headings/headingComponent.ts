@@ -1,44 +1,36 @@
 import {
-  App,
-  MarkdownView,
-  Editor,
-  TFile,
   Setting,
-  Notice,
-  SearchComponent,
-  DropdownComponent,
   ButtonComponent,
-  MarkdownFileInfo,
+  SearchComponent,
   ToggleComponent,
+  DropdownComponent,
+  Notice,
+  MarkdownView,
+  MarkdownFileInfo,
+  TFile,
+  Editor,
 } from "obsidian";
 
 import BundlePlugin from "main";
 import { BundleComponent } from "main";
-import { DataNode } from "dataStructures/generics";
+
+import { HeadingExtractor } from "dataStructures/mdHeadings";
 import { runQuickSuggest } from "components/suggest/suggestUtils";
-import { Heading } from "components/headings/headingUtils"
-import { HeadingTreeSuggest } from "components/headings/headingSuggests";
-
-import {
-  HeadingExtractor,
-} from "dataStructures/mdHeadings";
 
 
-
-////////////////////////////////////////////////////////////////////////////////
-// Heading Section Component
-////////////////////////////////////////////////////////////////////////////////
 
 type TargetFileMethod = "active" | "lastAccessed" | "manualSet";
 
 
-export default class HeadingComponent implements BundleComponent {
+
+export default class HeadingExtractorComponent implements BundleComponent {
 
   parent: BundlePlugin;
   settings: {
     targetFileMethod: TargetFileMethod;
     targetFilePath: string;
     suggestStartFlat: boolean;
+    insertionSkewedUpwards: boolean;
   };
   targetFile: TFile | null;
   targetFileComponent: SearchComponent;
@@ -50,6 +42,7 @@ export default class HeadingComponent implements BundleComponent {
       targetFileMethod: "active",
       targetFilePath: "",
       suggestStartFlat: true,
+      insertionSkewedUpwards: false,
     };
   }
 
@@ -63,6 +56,18 @@ export default class HeadingComponent implements BundleComponent {
 
   addCommands(): void {
     const plugin = this.parent;
+
+    // Toggle Insertion Skew Direction
+    plugin.addCommand({
+      id: "toggle-insertion-skew-direction",
+      name: "Toggle Insertion Skew Direction",
+      callback: async () => {
+        const newSkew = !plugin.settings.insertionSkewedUpwards;
+        plugin.settings.insertionSkewedUpwards = newSkew;
+        new Notice(`Insertion skewed ${newSkew ? "upwards" : "downwards"}`, 2000);
+        await plugin.saveSettings();
+      },
+    });
 
     // Set Active File as Target
     plugin.addCommand({
@@ -90,28 +95,6 @@ export default class HeadingComponent implements BundleComponent {
 
     });
 
-    // DataNodeSuggest for HeadingsTree of Target File
-    plugin.addCommand({
-      id: "suggest-headings-tree",
-      name: "Suggest Headings Tree",
-      icon: "list",
-      callback: async () => {
-        await this.resolveTargetFile();
-        if (!this.targetFile) {
-          new Notice("No target file selected.");
-          return;
-        }
-
-        const headingTreeSuggest = new HeadingTreeSuggest(
-          plugin.app,
-          (node: DataNode<Heading>) => (node.data as Heading).header.text,
-          this.targetFile
-        );
-
-        await headingTreeSuggest.open();
-      },
-    });
-
     // Extract Heading at Cursor Position
     plugin.addCommand({
       id: "extract-heading-at-cursor",
@@ -129,6 +112,7 @@ export default class HeadingComponent implements BundleComponent {
           extractAtCursor: true,
           endAtInsertion: false,
           startFlat: plugin.settings.suggestStartFlat,
+          skewUpwards: plugin.settings.insertionSkewedUpwards,
         });
 
       },
@@ -209,18 +193,18 @@ export default class HeadingComponent implements BundleComponent {
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
 
-    containerEl.createEl("h2", {text: "Headings"});
+    containerEl.createEl("h3", {text: "Heading Extractor"});
 
     new Setting(containerEl)
-      .setName("Suggest Start Flat")
+      .setName("Heading selector start flat")
       .then((setting: Setting) => {
         const fragment = document.createDocumentFragment();
         fragment.createEl("span", {
-          text: "When opening a Heading Tree Suggest it will start with a flat list of headings."
+          text: "When opening a heading selector, the immediate list of results will be all the headings at the Target File."
         });
         fragment.createEl("br");
         fragment.createEl("span", {
-          text: "If this is disabled, it will start with a tree structure."
+          text: "If this setting is off, the immediate list of results will be the top-level headings of the Target File."
         });
         fragment.createEl("br");
         fragment.createEl("br");
@@ -233,6 +217,33 @@ export default class HeadingComponent implements BundleComponent {
         toggle.setValue(plugin.settings.suggestStartFlat);
         toggle.onChange(async (value: boolean) => {
           plugin.settings.suggestStartFlat = value;
+          await plugin.saveSettings();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName("Insertion skewed upwards")
+      .then((setting: Setting) => {
+        const fragment = document.createDocumentFragment();
+        fragment.createEl("span", {
+          text: "With respect to the extracted heading level, the insertion position will be determined as follows:",
+        });
+        const list = fragment.createEl("ul");
+        list.innerHTML = `
+          <li>If a higher-in-hierarchy heading is selected, the insertion will be at the upmost available position within this heading section.</li>
+          <li>If a heading at the same level is selected, the insertion will be directly above it.</li>
+          <li>It is not possible to select lower-in-hierarchy headings for insertion.</li>
+        `;
+        fragment.createEl("br");
+        fragment.createEl("span", {
+          text: "If this setting is off, the behavior is analogous, but downwards."
+        });
+        setting.setDesc(fragment);
+      })
+      .addToggle((toggle: ToggleComponent) => {
+        toggle.setValue(plugin.settings.insertionSkewedUpwards);
+        toggle.onChange(async (value: boolean) => {
+          plugin.settings.insertionSkewedUpwards = value;
           await plugin.saveSettings();
         });
       });
