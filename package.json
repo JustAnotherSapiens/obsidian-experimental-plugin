@@ -1,13 +1,13 @@
 {
 	"name": "experimental-plugin",
-	"version": "1.0.0",
-	"description": "An experimental bundle plugin for Obsidian focused on exploring the capabilities of the Obsidian API.",
+	"version": "1.0.1",
+	"description": "Miscellaneous experimental features for Obsidian.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"test": "node esbuild.config.mjs test",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json"
+		"bump": "node project-bump.mjs && git add package.json manifest.json versions.json"
 	},
 	"keywords": [],
 	"author": "JustAnotherSapiens",
