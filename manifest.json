@@ -1,6 +1,6 @@
 {
 	"id": "experimental-plugin",
-	"name": "experimental-plugin",
+	"name": "Experimental Features",
 	"version": "1.0.1",
 	"minAppVersion": "1.5.12",
 	"description": "Miscellaneous experimental features for Obsidian.",

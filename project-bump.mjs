@@ -27,7 +27,7 @@ console.log(`${name} v${version} - ${description}`);
 // Update manifest.json with package.json values
 const manifest = JSON.parse(readFileSync("manifest.json", "utf8"));
 const { minAppVersion } = manifest;
-manifest.name = packageJson.name;
+manifest.id = packageJson.name;
 manifest.version = packageJson.version;
 manifest.description = packageJson.description;
 writeFileSync("manifest.json", JSON.stringify(manifest, null, "\t"));
