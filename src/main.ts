@@ -15,8 +15,8 @@ import MiscelaneousComponent from "components/others/miscelaneous";
 export interface BundleComponent {
   settings: { [key: string]: any };
   parent: Plugin;
-  onload(): void;
-  onunload(): void;
+  onload(): void | Promise<void>;
+  onunload(): void | Promise<void>;
   // addCommands(): void;
   // addRibbonIcons(): void;
   // addStatusBarItems(): void;
@@ -49,8 +49,8 @@ export default class BundlePlugin extends Plugin {
 
     await this.loadSettings();
 
-    this.components.forEach((component: BundleComponent) => {
-      component.onload();
+    this.components.forEach(async (component: BundleComponent) => {
+      await component.onload();
     });
 
     this.addSettingTab(new BundleSettingTab(this.app, this));
@@ -60,8 +60,8 @@ export default class BundlePlugin extends Plugin {
   async onunload() {
     console.log("Unloading Bundle Plugin");
 
-    this.components.forEach((component: BundleComponent) => {
-      component.onunload();
+    this.components.forEach(async (component: BundleComponent) => {
+      await component.onunload();
     });
   }
 
