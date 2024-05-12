@@ -9,6 +9,7 @@ import {
   DropdownComponent,
   ButtonComponent,
   MarkdownFileInfo,
+  ToggleComponent,
 } from "obsidian";
 
 import BundlePlugin from "main";
@@ -37,6 +38,7 @@ export default class HeadingComponent implements BundleComponent {
   settings: {
     targetFileMethod: TargetFileMethod;
     targetFilePath: string;
+    suggestStartFlat: boolean;
   };
   targetFile: TFile | null;
   targetFileComponent: SearchComponent;
@@ -47,48 +49,16 @@ export default class HeadingComponent implements BundleComponent {
     this.settings = {
       targetFileMethod: "active",
       targetFilePath: "",
+      suggestStartFlat: true,
     };
   }
 
-  onload(): void {
+  async onload(): Promise<void> {
     this.addCommands();
-    this.resolveTargetFile();
+    await this.resolveTargetFile();
   }
 
   onunload(): void {}
-
-
-  async setActiveFileAsTarget(): Promise<void> {
-    const activeFile = this.parent.app.workspace.getActiveFile();
-    if (!activeFile) return;
-    await this.manuallySetTargetFile(activeFile);
-  }
-
-  async setTargetFileFromOpenedFiles(): Promise<void> {
-    const mdLeaves = this.parent.app.workspace.getLeavesOfType("markdown");
-    if (mdLeaves.length === 0) return;
-
-    const mdFiles = mdLeaves.map((leaf) => (leaf.view as MarkdownView).file);
-    const targetFile = await runQuickSuggest(this.parent.app, mdFiles,
-      (file: TFile) => file.path.slice(0, -3)
-    );
-    if (!targetFile) return;
-
-    await this.manuallySetTargetFile(targetFile);
-  }
-
-  async setTargetFileFromVaultFiles(): Promise<void> {
-    const vaultFiles = this.parent.app.vault.getMarkdownFiles();
-    if (vaultFiles.length === 0) return;
-
-    vaultFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
-    const targetFile = await runQuickSuggest(this.parent.app, vaultFiles,
-      (file: TFile) => file.path.slice(0, -3)
-    );
-    if (!targetFile) return;
-
-    await this.manuallySetTargetFile(targetFile);
-  }
 
 
   addCommands(): void {
@@ -127,7 +97,10 @@ export default class HeadingComponent implements BundleComponent {
       icon: "list",
       callback: async () => {
         await this.resolveTargetFile();
-        if (!this.targetFile) return;
+        if (!this.targetFile) {
+          new Notice("No target file selected.");
+          return;
+        }
 
         const headingTreeSuggest = new HeadingTreeSuggest(
           plugin.app,
@@ -146,26 +119,21 @@ export default class HeadingComponent implements BundleComponent {
       icon: "list",
       editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
         await this.resolveTargetFile();
-        if (!this.targetFile) return;
+        if (!this.targetFile) {
+          new Notice("No target file selected.");
+          return;
+        }
 
         const extractor = new HeadingExtractor(this.parent.app, ctx);
         await extractor.extractAndInsertHeading(this.targetFile, {
           extractAtCursor: true,
           endAtInsertion: false,
+          startFlat: plugin.settings.suggestStartFlat,
         });
 
       },
     });
 
-  }
-
-
-  async manuallySetTargetFile(file: TFile): Promise<void> {
-    this.targetFile = file;
-    this.parent.settings.targetFileMethod = "manualSet";
-    this.parent.settings.targetFilePath = file.path;
-    this.targetFileComponent?.setValue(file.path);
-    await this.parent.saveSettings();
   }
 
 
@@ -194,16 +162,80 @@ export default class HeadingComponent implements BundleComponent {
   }
 
 
+  async manuallySetTargetFile(file: TFile): Promise<void> {
+    this.targetFile = file;
+    this.parent.settings.targetFileMethod = "manualSet";
+    this.parent.settings.targetFilePath = file.path;
+    this.targetFileComponent?.setValue(file.path);
+    await this.parent.saveSettings();
+  }
 
-  addRibbonIcons(): void {}
-  addStatusBarItems(): void {}
-  addEventsAndIntervals(): void {}
+
+  async setActiveFileAsTarget(): Promise<void> {
+    const activeFile = this.parent.app.workspace.getActiveFile();
+    if (!activeFile) return;
+    await this.manuallySetTargetFile(activeFile);
+  }
+
+
+  async setTargetFileFromOpenedFiles(): Promise<void> {
+    const mdLeaves = this.parent.app.workspace.getLeavesOfType("markdown");
+    if (mdLeaves.length === 0) return;
+
+    const mdFiles = mdLeaves.map((leaf) => (leaf.view as MarkdownView).file);
+    const targetFile = await runQuickSuggest(this.parent.app, mdFiles,
+      (file: TFile) => file.path.slice(0, -3)
+    );
+    if (!targetFile) return;
+
+    await this.manuallySetTargetFile(targetFile);
+  }
+
+
+  async setTargetFileFromVaultFiles(): Promise<void> {
+    const vaultFiles = this.parent.app.vault.getMarkdownFiles();
+    if (vaultFiles.length === 0) return;
+
+    vaultFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+    const targetFile = await runQuickSuggest(this.parent.app, vaultFiles,
+      (file: TFile) => file.path.slice(0, -3)
+    );
+    if (!targetFile) return;
+
+    await this.manuallySetTargetFile(targetFile);
+  }
 
 
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
 
     containerEl.createEl("h2", {text: "Headings"});
+
+    new Setting(containerEl)
+      .setName("Suggest Start Flat")
+      .then((setting: Setting) => {
+        const fragment = document.createDocumentFragment();
+        fragment.createEl("span", {
+          text: "When opening a Heading Tree Suggest it will start with a flat list of headings."
+        });
+        fragment.createEl("br");
+        fragment.createEl("span", {
+          text: "If this is disabled, it will start with a tree structure."
+        });
+        fragment.createEl("br");
+        fragment.createEl("br");
+        const noteSpan = fragment.createEl("span");
+        const noteHTML = `<b>NOTE:</b> Use the navigation hotkeys <kbd>Alt + h/l</kbd> to step in and out of a heading (similar to the standard Vim navigation keys h/j/k/l but while pressing the Alt key).`;
+        noteSpan.innerHTML = noteHTML;
+        setting.setDesc(fragment);
+      })
+      .addToggle((toggle: ToggleComponent) => {
+        toggle.setValue(plugin.settings.suggestStartFlat);
+        toggle.onChange(async (value: boolean) => {
+          plugin.settings.suggestStartFlat = value;
+          await plugin.saveSettings();
+        });
+      });
 
     const setTargetFileSetter = () => new Setting(containerEl)
       .setName("Set Target File from:")

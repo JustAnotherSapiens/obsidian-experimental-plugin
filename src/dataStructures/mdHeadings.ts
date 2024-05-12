@@ -335,6 +335,12 @@ type MdTextSources = {
   markdownText?: string;
 };
 
+type HeadingTreeArgs = {
+  sources: MdTextSources;
+  mdLevelLimit?: MarkdownLevel;
+  startFlat?: boolean;
+};
+
 
 /**
  * An abstract suggest class that builds a data tree and allows the user to navigate it.
@@ -353,15 +359,16 @@ export abstract class HeadingTreeSuggest extends BaseAbstractSuggest<HeadingNode
   private mdLevelLimit: MarkdownLevel;
   private selectionIndexStack: number[] = [];
   private selectionQueryStack: string[] = [];
+  private referenceNodeStack: HeadingNode[] = [];
 
 
-  constructor(app: App, sources: MdTextSources, mdLevelLimit?: MarkdownLevel) {
+  constructor(app: App, args: HeadingTreeArgs) {
     super(app, "heading-tree-suggest");
     this.setPlaceholder("Select a Heading...");
-    this.file = sources.file;
-    this.editor = sources.editor;
-    this.markdownText = sources.markdownText;
-    this.mdLevelLimit = mdLevelLimit ?? 6;
+    this.file = args.sources.file;
+    this.editor = args.sources.editor;
+    this.markdownText = args.sources.markdownText;
+    this.mdLevelLimit = args.mdLevelLimit ?? 6;
     this.itemToString = (node: HeadingNode) => node.heading.header.text;
     setDisplayFunctionAsHeadingNode.bind(this)();
   }
@@ -438,6 +445,7 @@ export abstract class HeadingTreeSuggest extends BaseAbstractSuggest<HeadingNode
 
   async stepInto(result: HeadingNode): Promise<boolean> {
     if (result.children.length === 0) return false;
+    this.referenceNodeStack.push(this.referenceNode);
     this.referenceNode = result;
     this.selectionIndexStack.push(this.selectionIndex);
     this.selectionQueryStack.push(this.query);
@@ -447,8 +455,8 @@ export abstract class HeadingTreeSuggest extends BaseAbstractSuggest<HeadingNode
 
 
   async stepOut(): Promise<boolean> {
-    if (!this.referenceNode.parent) return false;
-    this.referenceNode = this.referenceNode.parent;
+    if (this.referenceNodeStack.length === 0) return false;
+    this.referenceNode = this.referenceNodeStack.pop()!;
     await this.updateInputAndResults(
       this.selectionQueryStack.pop()!,
       this.selectionIndexStack.pop()!
@@ -464,8 +472,8 @@ export class HeadingSelectorSuggest extends HeadingTreeSuggest {
 
     private selectedNode: HeadingNode;
 
-    constructor(app: App, sources: MdTextSources, mdLevelLimit?: MarkdownLevel) {
-      super(app, sources, mdLevelLimit);
+    constructor(app: App, args: HeadingTreeArgs) {
+      super(app, args);
     }
 
     async waitForSelection(): Promise<HeadingNode | undefined> {
@@ -510,11 +518,13 @@ type Extraction = {
 export class HeadingInsertionSuggest extends HeadingTreeSuggest {
   private insertion: Insertion;
   private mdLevel: MarkdownLevel;
+  private startFlat: boolean;
   private resultsFilter: (node: HeadingNode) => boolean;
 
-  constructor(app: App, sources: MdTextSources, mdLevel: MarkdownLevel) {
-    super(app, sources, mdLevel);
-    this.mdLevel = mdLevel;
+  constructor(app: App, args: HeadingTreeArgs) {
+    super(app, args);
+    this.mdLevel = args.mdLevelLimit ?? 6;
+    this.startFlat = args.startFlat ?? false;
     this.resultsFilter = (node: HeadingNode) => node.heading.level.bySyntax <= this.mdLevel;
     this.instructions = [
       {command: "<A-j/k>", purpose: "Navigate"},
@@ -528,6 +538,9 @@ export class HeadingInsertionSuggest extends HeadingTreeSuggest {
 
 
   getSourceItems(): HeadingNode[] {
+    if (this.startFlat && this.referenceNode === this.tree.root) {
+      return this.tree.flatten().filter(this.resultsFilter);
+    }
     return super.getSourceItems(this.referenceNode, this.resultsFilter);
   }
 
@@ -724,6 +737,7 @@ export class HeadingInsertionSuggest extends HeadingTreeSuggest {
 type ExtractionFlags = {
   extractAtCursor: boolean;
   endAtInsertion: boolean;
+  startFlat?: boolean;
 };
 
 
@@ -771,7 +785,11 @@ export class HeadingExtractor {
     changes.push({text: '', ...extractionRange});
 
     const insertSuggest = new HeadingInsertionSuggest(
-      this.app, {file}, this.extractionNode.heading.level.bySyntax
+      this.app, {
+        sources: {file},
+        mdLevelLimit: this.extractionNode.heading.level.bySyntax,
+        startFlat: flags.startFlat,
+      }
     );
 
     // Same File Extraction and Insertion
@@ -813,7 +831,7 @@ export class HeadingExtractor {
 
 
   async getHeadingNodeSuggest(app: App): Promise<HeadingNode | undefined> {
-    const suggest = new HeadingSelectorSuggest(app, {editor: this.editor});
+    const suggest = new HeadingSelectorSuggest(app, { sources: {editor: this.editor} });
     suggest.setTree(this.tree);
     const selectedNode = await suggest.waitForSelection();
     return selectedNode;
