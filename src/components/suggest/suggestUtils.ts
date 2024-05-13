@@ -104,6 +104,7 @@ class IconButton {
   private containerEl?: HTMLElement;
   private svgEl?: SVGSVGElement;
 
+
   constructor(args: {
     iconId: string,
     tooltip: string,
@@ -122,12 +123,14 @@ class IconButton {
     this.addClickEvent(args.clickCallback);
   }
 
+
   addClickEvent(callback: (event: MouseEvent) => void): void {
     if (!this.containerEl) return;
     this.containerEl.on("click", ".icon-container", (event) => {
       callback(event);
     }, {capture: true});
   }
+
 
   resolveElement(parentEl?: HTMLElement): void {
     this.svgEl = getIcon(this.iconId) as SVGSVGElement;
@@ -142,16 +145,19 @@ class IconButton {
     parentEl?.appendChild(this.containerEl);
   }
 
+
   toggle(value?: boolean): void {
     this.isActive = value ?? !this.isActive;
     this.resolveColor();
   }
+
 
   resolveColor(): void {
     if (this.svgEl) {
       this.svgEl.style.color = this.isActive ? this.activeColor : this.inactiveColor;
     }
   }
+
 
   setColor(activeColor: string, inactiveColor?: string): void {
     this.activeColor = activeColor;
@@ -160,6 +166,7 @@ class IconButton {
   }
 
 };
+
 
 
 /**
@@ -268,14 +275,15 @@ export abstract class BaseAbstractSuggest<T> implements SuggestModal {
     iconContainer.style.justifyContent = "space-evenly";
     inputContainer.appendChild(iconContainer);
 
+    // TODO: Implement regex search.
     this.iconButtons = {
-      "regex": new IconButton({
-        parentEl: iconContainer,
-        iconId: "regex",
-        tooltip: "Toggle Regular Expression",
-        isActive: this.flags.regex,
-        clickCallback: () => this.toggleRegexSearch(),
-      }),
+      // "regex": new IconButton({
+      //   parentEl: iconContainer,
+      //   iconId: "regex",
+      //   tooltip: "Toggle Regular Expression",
+      //   isActive: this.flags.regex,
+      //   clickCallback: () => this.toggleRegexSearch(),
+      // }),
       "fuzzy": new IconButton({
         parentEl: iconContainer,
         iconId: "search-code",
@@ -300,15 +308,20 @@ export abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
     registerKeybindings(this.scope, [
       // DEFAULT
-      [[], "Escape", async () => await this.close()],
-      [[], "Enter", async (event) => await this.enterAction(this.renderedResults[this.selectionIndex], event)],
+      [[], "Escape", async () => {
+        if (this.inputEl.value === "") await this.close();
+        else await this.updateInputAndResults("");
+      }],
+      [[], "Enter", async (event) => {
+        if (this.renderedResults.length === 0) return;
+        await this.enterAction(this.renderedResults[this.selectionIndex], event);
+      }],
       [[], "ArrowDown", () => this.setSelectedResultEl(this.selectionIndex + 1)],
       [[],   "ArrowUp", () => this.setSelectedResultEl(this.selectionIndex - 1)],
       // CUSTOM
       [["Alt"], "j", () => this.setSelectedResultEl(this.selectionIndex + 1)],
       [["Alt"], "k", () => this.setSelectedResultEl(this.selectionIndex - 1)],
       [["Alt"], "f", () => this.toggleFuzzySearch()],
-      [["Ctrl"], "u", async () => await this.updateInputAndResults("")],
       // TODO: <A-d> and <A-u> to scroll down and up by one page.
     ]);
   }
@@ -488,13 +501,6 @@ export abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
     // Append to body
     document.body.appendChild(this.containerEl);
-
-    // Assign Elements
-    // this.containerEl = document.getElementById(`${this.id}-container`) as HTMLElement;
-    // this.promptEl = document.getElementById(`${this.id}-prompt`) as HTMLElement;
-    // this.inputEl = document.getElementById(`${this.id}-input`) as HTMLInputElement;
-    // this.resultsEl = document.getElementById(`${this.id}-results`) as HTMLElement;
-    // this.instructionsEl = document.getElementById(`${this.id}-instructions`) as HTMLElement;
   }
 
 
@@ -702,16 +708,18 @@ export abstract class ViewAbstractSuggest<T> extends BaseAbstractSuggest<T> {
 /**
  * A simple Suggest class to be used internally for the 'runQuickSuggest' function.
  */
-class QuickSuggest<T> extends BaseAbstractSuggest<T> {
+export class QuickSuggest<T> extends BaseAbstractSuggest<T> {
   private selectedItem?: T;
 
-  constructor(app: App, items: T[], itemToString: (item: T) => string) {
+  constructor(app: App, items: T[], itemToString: (item: T) => string, placeholder?: string) {
     super(app, "quick-suggest", {fuzzy: true});
     this.sourceItems = items;
     this.itemToString = itemToString;
+    if (placeholder) this.placeholder = placeholder;
   }
 
-  waitForSelection(): Promise<T | null> {
+  async waitForSelection(): Promise<T | null> {
+    await this.open();
     if (this.selectedItem){
       return new Promise((resolve) => resolve(this.selectedItem!));
       // Since the 'async' keyword implies that the function will return
@@ -753,9 +761,7 @@ export async function runQuickSuggest<T>(
   itemToText: (item: T) => string,
   placeholder?: string
 ): Promise<T | null> {
-  const quickSuggest = new QuickSuggest(app, items, itemToText);
-  if (placeholder) quickSuggest.setPlaceholder(placeholder);
-  await quickSuggest.open();
+  const quickSuggest = new QuickSuggest(app, items, itemToText, placeholder);
   return await quickSuggest.waitForSelection();
 }
 
