@@ -5,9 +5,12 @@ import {
 } from "components/suggest/suggestUtils";
 
 import {
+  createStyledEl,
+} from "utils/display";
+
+import {
   simpleHighlight,
   fuzzyHighlight,
-  createStyledEl,
 } from "components/suggest/suggestDisplay";
 
 import {

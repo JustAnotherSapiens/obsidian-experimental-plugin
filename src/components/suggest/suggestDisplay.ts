@@ -1,33 +1,12 @@
 
 import {
   BaseAbstractSuggest,
-  DataNodeSuggest,
 } from "components/suggest/suggestUtils";
 
-
-const ACCENT_COLOR = "var(--text-accent)";
-const DEBUG_COLOR = "var(--color-red)";
-
-
-type StyleProperties = {
-  [key: string]: string | number;
-}
-
-
-function getInlineStyleString(args: StyleProperties): string {
-  return Object.entries(args).map(([key, value]) => `${key}: ${value};`).join(" ");
-}
-
-
-export function createStyledEl(tag: keyof HTMLElementTagNameMap, text: string, style?: StyleProperties) {
-  const el = createEl(tag, {text,
-    attr: {
-      class: "suggestion-text",
-      style: style ? getInlineStyleString(style) : "",
-    },
-  });
-  return el;
-}
+import {
+  ACCENT_COLOR,
+  DEBUG_COLOR,
+} from "utils/display";
 
 
 export function simpleHighlight(match: [number, number], text: string): string {

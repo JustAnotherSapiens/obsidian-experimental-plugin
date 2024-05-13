@@ -17,6 +17,10 @@ import {
 } from "utils/utilsCore";
 
 import {
+  breadcrumHTML,
+} from "utils/display";
+
+import {
   isCodeBlockEnd,
 } from 'components/headings/headingUtils';
 
@@ -27,6 +31,7 @@ import {
 
 import {
   BaseAbstractSuggest,
+  QuickSuggest,
   runQuickSuggest,
   registerKeybindings,
 } from "components/suggest/suggestUtils";
@@ -571,11 +576,13 @@ export class HeadingInsertionSuggest extends HeadingTreeSuggest {
         this.onClose = this.resolveExtractionInsertion.bind(this, extraction, resolve);
       } else {
         this.close();
-        const topLevelInsertion = await runQuickSuggest(this.app,
-          [true, false],
-          (v: boolean) => v ? "Yes" : "No",
-          "Insert at Top Level?",
+
+        const quickSuggest = new QuickSuggest(this.app,
+          [true, false], (v: boolean) => v ? "Yes" : "No", "Insert at Top Level?"
         );
+        quickSuggest.onOpen = async () => this.addTargetFileBanner(quickSuggest);
+        const topLevelInsertion = await quickSuggest.waitForSelection();
+
         if (topLevelInsertion) {
           this.insertion = { pos: {line: this.tree.lineCount, ch: 0} };
           await this.resolveExtractionInsertion(extraction, resolve);
@@ -664,14 +671,39 @@ export class HeadingInsertionSuggest extends HeadingTreeSuggest {
   }
 
 
+  addTargetFileBanner<T>(suggest: BaseAbstractSuggest<T>) {
+    if (!this.file) return;
+    const bannerEl = document.createElement("div");
+    bannerEl.style.width = "100%";
+    bannerEl.style.padding = "var(--size-4-3) calc(var(--size-4-3) * 2) 0";
+    bannerEl.style.display = "flex";
+    bannerEl.style.flexDirection = "row";
+    bannerEl.style.alignItems = "center";
+
+    const fileEl = document.createElement("div");
+    fileEl.innerHTML = breadcrumHTML(this.file.path.slice(0, -3));
+
+    bannerEl.appendChild(fileEl);
+
+    suggest.promptEl.insertBefore(bannerEl, suggest.resultsEl);
+    // suggest.promptEl.insertBefore(bannerEl, suggest.inputEl.parentElement!);
+  }
+
+
   async onOpen(): Promise<void> {
     await super.onOpen();
+    this.addTargetFileBanner(this);
     // NOTE: Enter and Click actions are defined separately by default.
+
     registerKeybindings(this.scope, [
-      [["Shift"], "Enter",() => this.setInsertionAndClose(
-        this.renderedResults[this.selectionIndex], !this.skewUpwards
-      )],
+      [["Shift"], "Enter", () => {
+        if (this.renderedResults.length === 0) return;
+        this.setInsertionAndClose(
+          this.renderedResults[this.selectionIndex], !this.skewUpwards
+        );
+      }],
     ]);
+
     this.resultsEl.on("contextmenu", ".suggestion-item", (event, element) => {
       const clickedIndex = this.resultsEl.indexOf(element);
       this.setSelectedResultEl(clickedIndex);
