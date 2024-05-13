@@ -74,7 +74,9 @@ export default class HeadingExtractorComponent implements BundleComponent {
       id: "set-active-file-as-target",
       name: "Set Active File as Target",
       icon: "target",
-      callback: this.setActiveFileAsTarget.bind(this),
+      callback: async () => {
+        this.targetFileAssertion(await this.setActiveFileAsTarget());
+      },
     });
 
     // Set Target File from opened files
@@ -82,7 +84,9 @@ export default class HeadingExtractorComponent implements BundleComponent {
       id: "set-target-file-from-opened-files",
       name: "Set Target File from Opened Files",
       icon: "crosshair",
-      callback: this.setTargetFileFromOpenedFiles.bind(this),
+      callback: async () => {
+        this.targetFileAssertion(await this.setTargetFileFromOpenedFiles());
+      },
     });
 
     // Set Target File (from Vault files)
@@ -91,7 +95,9 @@ export default class HeadingExtractorComponent implements BundleComponent {
       id: "set-target-file-from-vault-files",
       name: "Set Target File from Vault Files",
       icon: "crosshair",
-      callback: this.setTargetFileFromVaultFiles.bind(this),
+      callback: async () => {
+        this.targetFileAssertion(await this.setTargetFileFromVaultFiles());
+      },
 
     });
 
@@ -118,6 +124,23 @@ export default class HeadingExtractorComponent implements BundleComponent {
       },
     });
 
+  }
+
+
+  targetFileAssertion(targetFileSet: boolean) {
+    if (!targetFileSet) {
+      console.debug("Unable to set Target File.");
+    } else {
+      if (!this.targetFile) {
+        console.error("Critical Error: Target File not set after assertion.");
+      } else {
+        new Notice(`Target File: ${this.targetFile.path}`, 3500);
+      }
+    }
+  }
+
+  targetFileNotice(): void {
+    new Notice(`Target File: ${this.parent.settings.targetFilePath}`, 3000);
   }
 
 
@@ -155,38 +178,41 @@ export default class HeadingExtractorComponent implements BundleComponent {
   }
 
 
-  async setActiveFileAsTarget(): Promise<void> {
+  async setActiveFileAsTarget(): Promise<boolean> {
     const activeFile = this.parent.app.workspace.getActiveFile();
-    if (!activeFile) return;
+    if (!activeFile) return false;
     await this.manuallySetTargetFile(activeFile);
+    return true;
   }
 
 
-  async setTargetFileFromOpenedFiles(): Promise<void> {
+  async setTargetFileFromOpenedFiles(): Promise<boolean> {
     const mdLeaves = this.parent.app.workspace.getLeavesOfType("markdown");
-    if (mdLeaves.length === 0) return;
+    if (mdLeaves.length === 0) return false;
 
     const mdFiles = mdLeaves.map((leaf) => (leaf.view as MarkdownView).file);
     const targetFile = await runQuickSuggest(this.parent.app, mdFiles,
       (file: TFile) => file.path.slice(0, -3)
     );
-    if (!targetFile) return;
+    if (!targetFile) return false;
 
     await this.manuallySetTargetFile(targetFile);
+    return true;
   }
 
 
-  async setTargetFileFromVaultFiles(): Promise<void> {
+  async setTargetFileFromVaultFiles(): Promise<boolean> {
     const vaultFiles = this.parent.app.vault.getMarkdownFiles();
-    if (vaultFiles.length === 0) return;
+    if (vaultFiles.length === 0) return false;
 
     vaultFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
     const targetFile = await runQuickSuggest(this.parent.app, vaultFiles,
       (file: TFile) => file.path.slice(0, -3)
     );
-    if (!targetFile) return;
+    if (!targetFile) return false;
 
     await this.manuallySetTargetFile(targetFile);
+    return true;
   }
 
 
