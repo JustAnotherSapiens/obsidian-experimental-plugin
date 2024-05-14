@@ -24,15 +24,15 @@ import {
 import {
   BaseAbstractSuggest,
   registerKeybindings,
-} from "components/suggest/suggestUtils";
+} from "utils/suggest/suggestUtils";
 
 import {
   MoveToHeadingSuggest,
-} from "components/headings/headingSuggests";
+} from "utils/headings/headingSuggests";
 
 import {
   getHeadingsArray,
-} from "components/headings/headingUtils";
+} from "utils/headings/headingUtils";
 
 
 

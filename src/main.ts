@@ -9,16 +9,16 @@
 
 import { Plugin, PluginSettingTab, App } from "obsidian";
 
-import HeadingExtractorComponent from "components/headings/headingComponent";
-import FoldHeadingsComponent from "components/headings/foldHeadings";
-import MoveToHeadingComponent from "components/headings/moveToHeading";
+import HeadingExtractorComponent from "components/headingExtractor/headingComponent";
+import FoldHeadingsComponent from "components/foldHeadings/foldHeadings";
+import MoveToHeadingComponent from "components/moveToHeading/moveToHeading";
 
 import SuggestComponent from "components/suggest/suggest";
 import TimeComponent from "components/time/timeCore";
 
-import ScriptRunnerComponent from "components/others/scriptRunner";
-import MdEditingComponent from "components/others/mdEditing";
-import MiscelaneousComponent from "components/others/miscelaneous";
+import ScriptRunnerComponent from "components/scriptRunner/scriptRunner";
+import MdEditingComponent from "components/mdEditing/mdEditing";
+import MiscelaneousComponent from "components/miscellaneous/miscelaneous";
 
 
 

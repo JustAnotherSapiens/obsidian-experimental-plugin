@@ -6,7 +6,7 @@ import {
   WorkspaceLeaf,
 } from "obsidian";
 
-import { DataNode } from "dataStructures/generics";
+import { DataNode } from "utils/dataStructures/generics";
 
 import {
   getSetting,
@@ -16,19 +16,19 @@ import {
 import {
   ViewAbstractSuggest,
   DataNodeSuggest,
-} from "components/suggest/suggestUtils";
+} from "utils/suggest/suggestUtils";
 
 import {
   Heading,
   FlatHeading,
   getHeadingsArray,
   getHeadingsTree,
-} from "components/headings/headingUtils";
+} from "utils/headings/headingUtils";
 
 import {
   setDisplayFunctionsAsFadedTimeHeading,
   setDisplayFunctionAsHeadingDataNode,
-} from "components/headings/headingDisplay";
+} from "utils/headings/headingDisplay";
 
 
 

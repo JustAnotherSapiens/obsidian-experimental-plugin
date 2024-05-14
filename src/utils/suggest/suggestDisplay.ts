@@ -1,7 +1,7 @@
 
 import {
   BaseAbstractSuggest,
-} from "components/suggest/suggestUtils";
+} from "utils/suggest/suggestUtils";
 
 import {
   ACCENT_COLOR,

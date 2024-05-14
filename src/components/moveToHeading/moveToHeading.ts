@@ -19,11 +19,6 @@ import {
 
 
 
-// interface DynamicSetting extends Setting {
-//   show: () => void,
-//   hide: () => void,
-// }
-
 // type LevelZeroBehavior = "snap-contiguous" | "snap-parent" | "on-parent-behavior";
 type SiblingMode = "strictSibling" | "looseSibling";
 
@@ -216,9 +211,6 @@ export default class MoveToHeadingComponent implements BundleComponent {
 
   }
 
-  addRibbonIcons(): void {}
-  addStatusBarItems(): void {}
-  addEventsAndIntervals(): void {}
 
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
@@ -296,14 +288,6 @@ export default class MoveToHeadingComponent implements BundleComponent {
             setting.settingEl.addClass("scroll-fraction-setting");
           });
 
-
-        // this.fractionSetting = new FloatInputSetting(containerEl, plugin, {
-        //   settingId: "scrollFraction",
-        //   placeholder: "scroll_fraction",
-        //   min: 0, max: 1, default: "scrollThreshold",
-        // })
-        //   .setName("Viewport fraction")
-        //   .setDesc("Fraction of the viewport that the target line will be placed at when scrolling.");
 
         this.offsetLinesSetting = new DynamicSetting(containerEl)
           .setName("Offset lines")

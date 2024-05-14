@@ -7,7 +7,7 @@ import {
   getMatchedDate,
 } from "components/time/timeCore";
 
-import { DataNode } from "dataStructures/generics";
+import { DataNode } from "utils/dataStructures/generics";
 
 
 
@@ -32,8 +32,6 @@ type HeadingHeader = {
     text: string;
     timestamp?: string;
     title: string;
-    // getLevelBySyntax(): number;
-    // getDisplayTitle(): string;
 }
 
 
@@ -73,8 +71,6 @@ export class Heading {
     );
   }
 
-  // getChildHeadings(): Heading[];
-  // getChildNodes(): Node<Heading>[];
 }
 
 

@@ -13,7 +13,7 @@ import {
   setTooltip,
 } from "obsidian";
 
-import { DataNode } from "dataStructures/generics";
+import { DataNode } from "utils/dataStructures/generics";
 
 import {
   wrapAround
@@ -21,7 +21,7 @@ import {
 
 import {
   setDisplayFunctionsAsDefault,
-} from "components/suggest/suggestDisplay";
+} from "utils/suggest/suggestDisplay";
 
 
 

@@ -22,7 +22,7 @@ import {
 
 import {
   isCodeBlockEnd,
-} from 'components/headings/headingUtils';
+} from 'utils/headings/headingUtils';
 
 import {
   DateFormat,
@@ -34,11 +34,11 @@ import {
   QuickSuggest,
   runQuickSuggest,
   registerKeybindings,
-} from "components/suggest/suggestUtils";
+} from "utils/suggest/suggestUtils";
 
 import {
   setDisplayFunctionAsHeadingNode,
-} from "components/headings/headingDisplay";
+} from "utils/headings/headingDisplay";
 
 
 

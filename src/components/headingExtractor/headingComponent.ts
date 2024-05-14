@@ -14,8 +14,8 @@ import {
 import BundlePlugin from "main";
 import { BundleComponent } from "main";
 
-import { HeadingExtractor } from "dataStructures/mdHeadings";
-import { runQuickSuggest } from "components/suggest/suggestUtils";
+import { HeadingExtractor } from "utils/headings/mdHeadings";
+import { runQuickSuggest } from "utils/suggest/suggestUtils";
 import { hotkeyHTML } from "utils/display";
 
 

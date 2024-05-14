@@ -2,7 +2,7 @@
 import {
   BaseAbstractSuggest,
   DataNodeSuggest,
-} from "components/suggest/suggestUtils";
+} from "utils/suggest/suggestUtils";
 
 import {
   createStyledEl,
@@ -11,16 +11,16 @@ import {
 import {
   simpleHighlight,
   fuzzyHighlight,
-} from "components/suggest/suggestDisplay";
+} from "utils/suggest/suggestDisplay";
 
 import {
   Heading,
   FlatHeading,
-} from "components/headings/headingUtils";
+} from "utils/headings/headingUtils";
 
 import {
   HeadingNode,
-} from "dataStructures/mdHeadings";
+} from "utils/headings/mdHeadings";
 
 
 const getHeadingColor = (n: number) => `var(--h${n}-color)`;
