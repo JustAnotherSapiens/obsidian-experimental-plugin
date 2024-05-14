@@ -6,7 +6,7 @@ import {
 } from "obsidian";
 
 import BundlePlugin from "main";
-import { BundleComponent } from "main";
+import { BundlePluginComponent } from "main";
 
 
 
@@ -77,7 +77,7 @@ const defaultSurroundPairs: SurroundPair[] = [
 
 
 
-export default class MdEditingComponent implements BundleComponent {
+export default class MdEditingComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
   settings: {

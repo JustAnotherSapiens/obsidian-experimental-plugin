@@ -9,20 +9,20 @@
 
 import { Plugin, PluginSettingTab, App } from "obsidian";
 
-import HeadingExtractorComponent from "components/headingExtractor/headingComponent";
-import FoldHeadingsComponent from "components/foldHeadings/foldHeadings";
-import MoveToHeadingComponent from "components/moveToHeading/moveToHeading";
+import HeadingExtractorComponent from "components/headingExtractor/core";
+import FoldHeadingsComponent from "components/foldHeadings/core";
+import MoveToHeadingComponent from "components/moveToHeading/core";
 
-import SuggestComponent from "components/suggest/suggest";
-import TimeComponent from "components/time/timeCore";
+import SuggestComponent from "components/suggest/core";
+import TimeComponent from "components/time/core";
 
-import ScriptRunnerComponent from "components/scriptRunner/scriptRunner";
-import MdEditingComponent from "components/mdEditing/mdEditing";
-import MiscelaneousComponent from "components/miscellaneous/miscelaneous";
+import ScriptRunnerComponent from "components/scriptRunner/core";
+import MdEditingComponent from "components/mdEditing/core";
+import MiscellaneousComponent from "components/miscellaneous/core";
 
 
 
-export interface BundleComponent {
+export interface BundlePluginComponent {
   settings: { [key: string]: any };
   parent: Plugin;
   onload(): void | Promise<void>;
@@ -34,7 +34,7 @@ export interface BundleComponent {
 
 export default class BundlePlugin extends Plugin {
   settings: { [key: string]: any };
-  components: BundleComponent[];
+  components: BundlePluginComponent[];
 
 
   async onload() {
@@ -50,12 +50,12 @@ export default class BundlePlugin extends Plugin {
 
       new ScriptRunnerComponent(this),
       new MdEditingComponent(this),
-      new MiscelaneousComponent(this),
+      new MiscellaneousComponent(this),
     ];
 
     await this.loadSettings();
 
-    this.components.forEach(async (component: BundleComponent) => {
+    this.components.forEach(async (component: BundlePluginComponent) => {
       await component.onload();
     });
 
@@ -66,7 +66,7 @@ export default class BundlePlugin extends Plugin {
   async onunload() {
     console.log("Unloading Bundle Plugin");
 
-    this.components.forEach(async (component: BundleComponent) => {
+    this.components.forEach(async (component: BundlePluginComponent) => {
       await component.onunload();
     });
   }
@@ -74,7 +74,7 @@ export default class BundlePlugin extends Plugin {
 
   async loadSettings() {
     let bundleSettings: {[key: string]: any} = {};
-    this.components.forEach((component: BundleComponent) => {
+    this.components.forEach((component: BundlePluginComponent) => {
       bundleSettings = { ...bundleSettings, ...component.settings };
     });
     this.settings = Object.assign({}, bundleSettings, await this.loadData());
@@ -106,7 +106,7 @@ class BundleSettingTab extends PluginSettingTab {
     containerEl.createEl("h1", { text: "Bundle Settings" });
 		containerEl.createEl("br");
 
-    this.plugin.components.forEach((component: BundleComponent) => {
+    this.plugin.components.forEach((component: BundlePluginComponent) => {
       component.addSettings(containerEl);
       containerEl.createEl("br");
     });

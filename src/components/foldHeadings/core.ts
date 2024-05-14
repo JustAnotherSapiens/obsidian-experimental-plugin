@@ -8,7 +8,7 @@ import {
 } from "obsidian";
 
 import BundlePlugin from "main";
-import { BundleComponent } from "main";
+import { BundlePluginComponent } from "main";
 
 import {
   getSetting,
@@ -24,7 +24,7 @@ export type Fold = {from: number, to: number};
 
 
 
-export default class FoldHeadingsComponent implements BundleComponent {
+export default class FoldHeadingsComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
   settings: {

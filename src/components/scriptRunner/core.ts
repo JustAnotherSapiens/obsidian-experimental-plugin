@@ -7,7 +7,7 @@ import {
 } from "obsidian";
 
 import BundlePlugin from "main";
-import { BundleComponent } from "main";
+import { BundlePluginComponent } from "main";
 
 
 const scriptComplexityLevels = [
@@ -22,7 +22,7 @@ type ScriptComplexityLevel = typeof scriptComplexityLevels[number];
 
 
 
-export default class DemoScriptComponent implements BundleComponent {
+export default class DemoScriptComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
   settings: {

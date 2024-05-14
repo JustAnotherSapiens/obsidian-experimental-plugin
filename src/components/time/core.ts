@@ -8,7 +8,7 @@ import {
 } from "obsidian";
 
 import BundlePlugin from "main";
-import { BundleComponent } from "main";
+import { BundlePluginComponent } from "main";
 
 import {
   getActiveFileCache,
@@ -18,7 +18,7 @@ import {
 
 
 
-export default class TimeComponent implements BundleComponent {
+export default class TimeComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
   settings: {
@@ -65,7 +65,7 @@ export default class TimeComponent implements BundleComponent {
 		ribbonIconEl.addClass("experimental-plugin-ribbon-icon");
   }
 
-  // Do not work on mobile apps.
+  // Not working on mobile apps.
   addStatusBarItems(): void {
     const plugin = this.parent;
 

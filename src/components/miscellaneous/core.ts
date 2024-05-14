@@ -5,11 +5,11 @@ import {
 } from "obsidian";
 
 import BundlePlugin from "main";
-import { BundleComponent } from "main";
+import { BundlePluginComponent } from "main";
 
 
 
-export default class MiscelaneousComponent implements BundleComponent {
+export default class MiscellaneousComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
   settings: {

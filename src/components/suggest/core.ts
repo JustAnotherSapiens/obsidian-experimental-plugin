@@ -11,7 +11,7 @@ import {
 } from "obsidian";
 
 import BundlePlugin from "main";
-import { BundleComponent } from "main";
+import { BundlePluginComponent } from "main";
 
 import {
   getSetting,
@@ -36,7 +36,7 @@ import {
 
 
 
-export default class SuggestComponent implements BundleComponent {
+export default class SuggestComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
   settings: {

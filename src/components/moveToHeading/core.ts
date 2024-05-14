@@ -6,7 +6,7 @@ import {
 } from "obsidian";
 
 import BundlePlugin from "main";
-import { BundleComponent } from "main";
+import { BundlePluginComponent } from "main";
 
 import {
   getSetting,
@@ -26,7 +26,7 @@ type ScrollExecution = "never" | "always" | "onThreshold";
 export type ScrollMode = "viewportFraction" | "offsetLines";
 
 
-export default class MoveToHeadingComponent implements BundleComponent {
+export default class MoveToHeadingComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
   settings: {

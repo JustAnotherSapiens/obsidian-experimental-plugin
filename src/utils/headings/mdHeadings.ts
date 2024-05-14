@@ -27,7 +27,7 @@ import {
 import {
   DateFormat,
   getMatchedDate,
-} from "components/time/timeCore";
+} from "components/time/core";
 
 import {
   BaseAbstractSuggest,
