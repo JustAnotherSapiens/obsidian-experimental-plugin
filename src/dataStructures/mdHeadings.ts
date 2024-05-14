@@ -17,7 +17,7 @@ import {
 } from "utils/utilsCore";
 
 import {
-  breadcrumHTML,
+  breadcrumbsHTML,
 } from "utils/display";
 
 import {
@@ -673,20 +673,14 @@ export class HeadingInsertionSuggest extends HeadingTreeSuggest {
 
   addTargetFileBanner<T>(suggest: BaseAbstractSuggest<T>) {
     if (!this.file) return;
-    const bannerEl = document.createElement("div");
-    bannerEl.style.width = "100%";
-    bannerEl.style.padding = "var(--size-4-3) calc(var(--size-4-3) * 2) 0";
-    bannerEl.style.display = "flex";
-    bannerEl.style.flexDirection = "row";
-    bannerEl.style.alignItems = "center";
+    const bannerEl = createDiv("target-file-container");
 
-    const fileEl = document.createElement("div");
-    fileEl.innerHTML = breadcrumHTML(this.file.path.slice(0, -3));
+    createDiv({ cls: "target-file-display", parent: bannerEl }, (el) => {
+      el.innerHTML = breadcrumbsHTML(this.file!.path.slice(0, -3));
+    });
 
-    bannerEl.appendChild(fileEl);
-
-    suggest.promptEl.insertBefore(bannerEl, suggest.resultsEl);
-    // suggest.promptEl.insertBefore(bannerEl, suggest.inputEl.parentElement!);
+    suggest.promptEl.insertBefore(bannerEl, suggest.inputEl.parentElement!);
+    // suggest.promptEl.insertBefore(bannerEl, suggest.resultsEl);
   }
 
 

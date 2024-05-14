@@ -27,9 +27,13 @@ export function createStyledEl(tag: keyof HTMLElementTagNameMap, text: string, s
 }
 
 
-export function breadcrumHTML(filePath: string): string {
+export function breadcrumbsHTML(filePath: string): string {
   const parts = filePath.split("/");
-  const pathDivider = `<span style="color: ${FADE_COLOR}; font-weight: bold;"> / </span>`;
-  const pathPart = (part: string) => `<span style="color: ${FADE_COLOR};">${part}</span>`;
-  return `<span style="font-size: ${SMALL_FONT_SIZE};">${parts.map(pathPart).join(pathDivider)}</span>`;
+  const pathDivider = `<span class="breadcrumbs-divider"> / </span>`;
+  const pathPart = (part: string) => `<span class="breadcrumbs-part">${part}</span>`;
+  return `<span class="breadcrumbs">${parts.map(pathPart).join(pathDivider)}</span>`;
+}
+
+export function hotkeyHTML(...keys: string[]): string {
+  return `<span class="hotkey">${keys.map((key) => `<kbd>${key}</kbd>`).join(" + ")}</span>`;
 }

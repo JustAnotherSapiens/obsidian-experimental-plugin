@@ -32,8 +32,6 @@ export function getOpenMarkdownViews(app: App): MarkdownView[] {
   return app.workspace
     .getLeavesOfType("markdown")
     .map((leaf) => leaf.view as MarkdownView);
-  // const mdFiles = mdViews.map((view) => view.file);
-  // const mdEditors = mdViews.map((view) => view.editor);
 }
 
 
@@ -43,11 +41,8 @@ export function getSetting(setting: SettingKey): any {
 }
 
 
-export function shrinkSettingInputField(setting: Setting, selector: string = "input"): void {
-  setting.settingEl.style.display = "grid";
-  setting.settingEl.style.gridTemplateColumns = "3fr 1fr";
-  const inputEl = setting.controlEl.querySelector(selector) as HTMLInputElement;
-  inputEl.style.width = "100%"; // 'display' and 'boxSizing' may also be useful
+export function shrinkSettingInputField(setting: Setting): void {
+  setting.settingEl.addClass("shrink-input-setting");
 }
 
 

@@ -126,7 +126,8 @@ class IconButton {
 
   addClickEvent(callback: (event: MouseEvent) => void): void {
     if (!this.containerEl) return;
-    this.containerEl.on("click", ".icon-container", (event) => {
+    this.containerEl.on("click", ".icon-button-container", (event) => {
+      event.preventDefault();
       callback(event);
     }, {capture: true});
   }
@@ -135,14 +136,15 @@ class IconButton {
   resolveElement(parentEl?: HTMLElement): void {
     this.svgEl = getIcon(this.iconId) as SVGSVGElement;
     if (!this.svgEl) return;
-    this.svgEl.style.width = "auto";
-    this.svgEl.style.height = "auto";
-    this.resolveColor();
+    this.svgEl.addClass("icon-button-svg");
 
-    this.containerEl = createEl("div", { cls: "icon-container" });
-    this.containerEl.appendChild(this.svgEl);
-    setTooltip(this.containerEl, this.tooltip, {placement: "top", delay: 200});
+    this.containerEl = createDiv("icon-button-container", (el) => {
+      el.appendChild(this.svgEl!);
+      setTooltip(el, this.tooltip, {placement: "top", delay: 200});
+    });
     parentEl?.appendChild(this.containerEl);
+
+    this.resolveColor();
   }
 
 
@@ -153,9 +155,8 @@ class IconButton {
 
 
   resolveColor(): void {
-    if (this.svgEl) {
-      this.svgEl.style.color = this.isActive ? this.activeColor : this.inactiveColor;
-    }
+    if (!this.svgEl || !this.containerEl) return;
+    this.svgEl.style.color = this.isActive ? this.activeColor : this.inactiveColor;
   }
 
 
@@ -260,19 +261,10 @@ export abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
   private addSearchToggleIcons(): void {
     const inputContainer = this.inputEl.parentElement as HTMLElement;
-    inputContainer.style.display = "flex";
-    inputContainer.style.direction = "row";
-    inputContainer.style.alignItems = "center";
-    // inputContainer.style.justifyContent = "space-between";
-    inputContainer.style.paddingRight = "12px";
+    inputContainer.addClass("suggest-input-container");
 
-    const iconContainer = createEl("div", { cls: "prompt-input-icon-container" });
-    this.inputEl.style.flex = "6";
-    iconContainer.style.flex = "1";
-    iconContainer.style.display = "flex";
-    iconContainer.style.flexDirection = "row";
-    iconContainer.style.alignItems = "center";
-    iconContainer.style.justifyContent = "space-evenly";
+    const iconContainer = createEl("div", { cls: "suggest-icon-container" });
+    this.inputEl.addClass("suggest-input");
     inputContainer.appendChild(iconContainer);
 
     // TODO: Implement regex search.
@@ -458,7 +450,7 @@ export abstract class BaseAbstractSuggest<T> implements SuggestModal {
     // Input Container
     const inputContainer = createEl("div", { cls: "prompt-input-container" });
     this.inputEl = createEl("input", {
-      cls: "prompt-input",
+      cls: "prompt-input suggest-prompt-input",
       attr: { id: `${this.id}-input`, enterkeyhint: "done", type: "text" },
     });
     inputContainer.appendChild(this.inputEl);

@@ -291,11 +291,9 @@ export default class MoveToHeadingComponent implements BundleComponent {
               plugin.settings.scrollFraction = value;
               await plugin.saveSettings();
             });
-            slider.sliderEl.style.width = "100%";
           })
           .then((setting: Setting) => {
-            setting.settingEl.style.display = "grid";
-            setting.settingEl.style.gridTemplateColumns = "2fr 3fr";
+            setting.settingEl.addClass("scroll-fraction-setting");
           });
 
 
@@ -381,9 +379,7 @@ export default class MoveToHeadingComponent implements BundleComponent {
           .setName("Trigger threshold")
           .setDesc("Fraction of the viewport (both from the top downwards and from the bottom upwards) that the target line must be within to trigger scrolling.")
           .then((setting: Setting) => {
-            setting.controlEl.style.display = "flex";
-            setting.controlEl.style.flexDirection = "column";
-            setting.controlEl.style.width = "100%";
+            setting.controlEl.addClass("scroll-threshold-setting-control");
           })
           .addButton((button: ButtonComponent) => {
             button.setButtonText("Equalize");

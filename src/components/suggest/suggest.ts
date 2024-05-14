@@ -276,6 +276,7 @@ class QuickPopoverSuggest<T> {
     const yPos = lineRect.bottom;
     const width = lineRect.width / 3;
 
+    // TODO: Popover positioning with CSS.
     this.resultsEl = document.getElementById("quick-popover-suggest") as HTMLElement;
     this.resultsEl.style.position = "absolute";
     this.resultsEl.style.top = `${yPos}px`;

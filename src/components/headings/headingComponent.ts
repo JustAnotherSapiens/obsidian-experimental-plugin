@@ -16,6 +16,7 @@ import { BundleComponent } from "main";
 
 import { HeadingExtractor } from "dataStructures/mdHeadings";
 import { runQuickSuggest } from "components/suggest/suggestUtils";
+import { hotkeyHTML } from "utils/display";
 
 
 
@@ -224,20 +225,22 @@ export default class HeadingExtractorComponent implements BundleComponent {
     new Setting(containerEl)
       .setName("Heading selector start flat")
       .then((setting: Setting) => {
-        const fragment = document.createDocumentFragment();
-        fragment.createEl("span", {
-          text: "When opening a heading selector, the immediate list of results will be all the headings at the Target File."
-        });
-        fragment.createEl("br");
-        fragment.createEl("span", {
-          text: "If this setting is off, the immediate list of results will be the top-level headings of the Target File."
-        });
-        fragment.createEl("br");
-        fragment.createEl("br");
-        const noteSpan = fragment.createEl("span");
-        const noteHTML = `<b>NOTE:</b> Use the navigation hotkeys <kbd>Alt + h/l</kbd> to step in and out of a heading (similar to the standard Vim navigation keys h/j/k/l but while pressing the Alt key).`;
-        noteSpan.innerHTML = noteHTML;
-        setting.setDesc(fragment);
+        setting.setDesc(createFragment((el) => {
+          el.createSpan({text:
+            "When opening a heading selector, the immediate list of results will be all the headings at the Target File."
+          });
+          el.createEl("br");
+          el.createSpan({text:
+            "If this setting is off, the immediate list of results will be the top-level headings of the Target File."
+          });
+          el.createEl("br");
+          el.createEl("br");
+          el.createSpan("", (el) => {
+            el.createEl("b", {text: "NOTE: "});
+            const kb = (...keys: string[]) => hotkeyHTML(...keys);
+            el.innerHTML = `Use ${kb("Alt", "l")} to step into a heading and ${kb("Alt", "h")} to step out of a heading.<br><br>${kb("Alt", "j")} and ${kb("Alt", "k")} can be used to navigate the results; just as ${kb("ArrowUp")} and ${kb("ArrowDown")}.`;
+          });
+        }));
       })
       .addToggle((toggle: ToggleComponent) => {
         toggle.setValue(plugin.settings.suggestStartFlat);
@@ -250,21 +253,20 @@ export default class HeadingExtractorComponent implements BundleComponent {
     new Setting(containerEl)
       .setName("Insertion skewed upwards")
       .then((setting: Setting) => {
-        const fragment = document.createDocumentFragment();
-        fragment.createEl("span", {
-          text: "With respect to the extracted heading level, the insertion position will be determined as follows:",
-        });
-        const list = fragment.createEl("ul");
-        list.innerHTML = `
-          <li>If a higher-in-hierarchy heading is selected, the insertion will be at the upmost available position within this heading section.</li>
-          <li>If a heading at the same level is selected, the insertion will be directly above it.</li>
-          <li>It is not possible to select lower-in-hierarchy headings for insertion.</li>
-        `;
-        fragment.createEl("br");
-        fragment.createEl("span", {
-          text: "If this setting is off, the behavior is analogous, but downwards."
-        });
-        setting.setDesc(fragment);
+        setting.setDesc(createFragment((el) => {
+          el.createSpan({ text:
+            "With respect to the extracted heading level, the insertion position will be determined as follows:"
+          });
+          el.createEl("ul", "", (ul) => { ul.innerHTML = `
+            <li>If a higher-in-hierarchy heading is selected, the insertion will be at the upmost available position within this heading section.</li>
+            <li>If a heading at the same level is selected, the insertion will be directly above it.</li>
+            <li>It is not possible to select lower-in-hierarchy headings for insertion.</li>
+          `;});
+          el.createEl("br");
+          el.createSpan({ text:
+            "If this setting is off, the behavior is analogous, but downwards."
+          });
+        }));
       })
       .addToggle((toggle: ToggleComponent) => {
         toggle.setValue(plugin.settings.insertionSkewedUpwards);
@@ -276,6 +278,9 @@ export default class HeadingExtractorComponent implements BundleComponent {
 
     const setTargetFileSetter = () => new Setting(containerEl)
       .setName("Set Target File from:")
+      .then((setting: Setting) => {
+        setting.controlEl.addClass("target-file-setter-setting-control");
+      })
       .addButton((button: ButtonComponent) => {
         button
           .setButtonText("Active File")
@@ -290,15 +295,6 @@ export default class HeadingExtractorComponent implements BundleComponent {
         button
           .setButtonText("Vault Files")
           .onClick(this.setTargetFileFromVaultFiles.bind(this));
-      })
-      .then((setting: Setting) => {
-        setting.controlEl.style.display = "flex";
-        setting.controlEl.style.flexDirection = "row";
-        setting.controlEl.style.flexWrap = "wrap";
-        for (let i = 0; i < setting.controlEl.children.length; i++) {
-          const button = setting.controlEl.children[i] as HTMLElement;
-          button.style.flex = "1";
-        }
       });
 
     new Setting(containerEl)
@@ -328,10 +324,11 @@ export default class HeadingExtractorComponent implements BundleComponent {
     new Setting(containerEl)
       .setName("Target File")
       .then((setting: Setting) => {
-        const fragment = document.createDocumentFragment();
-        fragment.createEl("b", { text: "NOTE: "});
-        fragment.createEl("span", { text: "It updates every time before any plugin functionality." });
-        setting.setDesc(fragment);
+        setting.settingEl.addClass("target-file-setting");
+        setting.setDesc(createFragment((el) => {
+          el.createEl("b", {text: "NOTE: "});
+          el.createSpan({text: "It updates every time before any plugin functionality."});
+        }));
       })
       .addSearch((search: SearchComponent) => {
         this.targetFileComponent = search
@@ -342,17 +339,6 @@ export default class HeadingExtractorComponent implements BundleComponent {
             if (!file || !(file instanceof TFile)) return;
             await this.manuallySetTargetFile(file);
           });
-      })
-      .then((setting: Setting) => {
-        setting.settingEl.style.display = "flex";
-        setting.settingEl.style.flexDirection = "column";
-        setting.settingEl.style.alignItems = "start";
-        setting.settingEl.style.gap = "10px";
-
-        setting.infoEl.style.marginRight = "0px";
-
-        setting.controlEl.style.width = "100%";
-        (setting.controlEl.children[0] as HTMLElement).style.width = "100%";
       });
 
   }

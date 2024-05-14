@@ -7,17 +7,9 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-}
-
-.experimental-plugin-notice > :first-child {
-  margin-top: 0;
-}
-.experimental-plugin-notice > :last-child {
-  margin-bottom: 0;
-}
-
-.experimental-plugin-notice > * {
-  margin: .3em 0;
+  & > :first-child { margin-top: 0; }
+  & > :last-child { margin-bottom: 0; }
+  & > * { margin: .3em 0; }
 }
 
 
@@ -26,18 +18,18 @@
 /* warning-banner div */
 
 .warning-banner {
+  background-color: var(--color-base-10);
+  color: var(--color-orange);
+  padding: 5px;
+  border: 3px solid var(--color-orange);
+  border-radius: 4px;
+  margin-bottom: 25px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: var(--color-orange);
-  background-color: var(--color-base-10);
-  border: 3px solid var(--color-orange);
-  border-radius: 4px;
-  padding: 5px;
-  margin-bottom: 25px;
-}
-.warning-banner > * {
-  margin: 2px 2px
+  & > * {
+    margin: 2px 2px;
+  }
 }
 
 /* break-trigger-time Setting */
@@ -45,10 +37,9 @@
 .break-trigger-time-item-control {
   display: grid;
   grid-template-columns: 1fr 1fr;
-}
-
-.break-trigger-time-item-control > input {
-  grid-column: span 2;
+  & > input {
+    grid-column: span 2;
+  }
 }
 
 /* About 'flex'
@@ -64,3 +55,118 @@
   *   (e.g. with 3 items, use 'flex: 2' in one of them to make it twice as wide as the others,
   *    i.e. it is treated as if it had 2 flex items)
 */
+
+/* Suggest */
+
+.suggest-input-container {
+  padding-right: var(--size-4-3);
+  border-bottom: 1px solid var(--background-secondary);
+  display: flex;
+  flex-direction: row;
+
+  & > .suggest-input {
+    flex: 1;
+    border-bottom: none;
+    &:focus, &:hover { border-bottom: none; }
+  }
+
+  & > .suggest-icon-container {
+    width: calc( 2 * 0.9 * var(--prompt-input-height)); /* n_icons * multiplier * input_height */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-evenly;
+
+    & > .icon-button-container {
+      /* background-color: var(--background-secondary); */
+      width:  calc(var(--prompt-input-height) * 0.75);
+      height: calc(var(--prompt-input-height) * 0.75);
+      /* border: 1px solid var(--text-faint);
+      border-radius: 4px; */
+      display: grid;
+      place-items: center;
+
+      & > .icon-button-svg { height: 80%; width: 80%; }
+    }
+
+  }
+
+}
+
+
+/* Heading Extractor */
+
+.target-file-container {
+  width: 100%;
+  padding: calc(var(--size-4-3) / 2) calc(var(--size-4-3) * 2);
+  border-bottom: 1px solid var(--background-secondary);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  /* & > .target-file-display {
+  } */
+}
+
+.breadcrumbs {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+  & > .breadcrumbs-divider {
+    font-weight: bold;
+    color: var(--text-accent);
+  }
+  /* & > .breadcrumbs-part {
+  } */
+}
+
+
+.target-file-setter-setting-control {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  & > button {
+    flex: 1;
+  }
+}
+
+.target-file-setting {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 10px;
+
+  & .setting-item-control, & .search-input-container {
+    width: 100%;
+  }
+
+  & .setting-item-info {
+    margin-right: 0;
+  }
+}
+
+
+/* Settings */
+
+.shrink-input-setting {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  & input {
+    width: 100%; /* 'display' and 'boxSizing' may also be useful */
+  }
+}
+
+
+.scroll-fraction-setting {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  & input.slider {
+    width: 100%;
+  }
+}
+
+.scroll-threshold-setting-control {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  width: 100%;
+}
