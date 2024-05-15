@@ -1,24 +1,17 @@
+import BundlePlugin, { BundlePluginComponent } from "main";
+
 import {
-  App,
-  MarkdownView,
-  Editor,
   Setting,
-  Notice,
   TextComponent,
   ToggleComponent,
   DropdownComponent,
+  ButtonComponent,
+  SliderComponent,
+  App,
+  Notice,
+  MarkdownView,
+  Editor,
 } from "obsidian";
-
-import BundlePlugin from "main";
-import { BundlePluginComponent } from "main";
-
-import {
-  getSetting,
-  getActiveFileCache,
-  getHeadingIndex,
-  scrollToCursor,
-} from "utils/utilsCore";
-
 
 
 
@@ -35,22 +28,28 @@ export default class TemplateComponent implements BundlePluginComponent {
     };
   }
 
+
   onload(): void {
     this.addCommands();
   }
 
+
   onunload(): void {}
+
 
   addCommands(): void {
     const plugin = this.parent;
   }
 
+
   addRibbonIcons(): void {}
   addStatusBarItems(): void {}
   addEventsAndIntervals(): void {}
+
 
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
   }
 
 }
+

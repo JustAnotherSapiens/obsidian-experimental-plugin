@@ -1,3 +1,5 @@
+import BundlePlugin, { BundlePluginComponent } from "main";
+
 import {
   Setting,
   ToggleComponent,
@@ -6,8 +8,6 @@ import {
 	ButtonComponent,
 } from "obsidian";
 
-import BundlePlugin from "main";
-import { BundlePluginComponent } from "main";
 
 
 const scriptComplexityLevels = [
@@ -45,19 +45,19 @@ export default class DemoScriptComponent implements BundlePluginComponent {
     };
   }
 
+
 	onload() {
 		this.addCommands();
 	}
 
+
   onunload(): void {}
+
 
   addCommands(): void {
     const plugin = this.parent;
   }
 
-  addRibbonIcons(): void {}
-  addStatusBarItems(): void {}
-  addEventsAndIntervals(): void {}
 
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;

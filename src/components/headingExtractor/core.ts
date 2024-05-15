@@ -1,3 +1,5 @@
+import BundlePlugin, { BundlePluginComponent } from "main";
+
 import {
   Setting,
   ButtonComponent,
@@ -11,12 +13,18 @@ import {
   Editor,
 } from "obsidian";
 
-import BundlePlugin from "main";
-import { BundlePluginComponent } from "main";
+import { hotkeyHTML } from "utils/display";
 
 import { HeadingExtractor } from "utils/headings/mdHeadings";
-import { runQuickSuggest } from "utils/suggest/suggestUtils";
-import { hotkeyHTML } from "utils/display";
+
+import {
+  targetFileAssertion,
+  resolveTargetFile,
+  manuallySetTargetFile,
+  setActiveFileAsTarget,
+  setTargetFileFromOpenedFiles,
+  setTargetFileFromVaultFiles,
+} from "./utils/targetFile";
 
 
 
@@ -47,10 +55,12 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
     };
   }
 
+
   async onload(): Promise<void> {
     this.addCommands();
-    await this.resolveTargetFile();
+    await resolveTargetFile.bind(this)();
   }
+
 
   onunload(): void {}
 
@@ -76,7 +86,7 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
       name: "Set Active File as Target",
       icon: "target",
       callback: async () => {
-        this.targetFileAssertion(await this.setActiveFileAsTarget());
+        targetFileAssertion.bind(this)(await setActiveFileAsTarget.bind(this)());
       },
     });
 
@@ -86,7 +96,7 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
       name: "Set Target File from Opened Files",
       icon: "crosshair",
       callback: async () => {
-        this.targetFileAssertion(await this.setTargetFileFromOpenedFiles());
+        targetFileAssertion.bind(this)(await setTargetFileFromOpenedFiles.bind(this)());
       },
     });
 
@@ -97,7 +107,7 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
       name: "Set Target File from Vault Files",
       icon: "crosshair",
       callback: async () => {
-        this.targetFileAssertion(await this.setTargetFileFromVaultFiles());
+        targetFileAssertion.bind(this)(await setTargetFileFromVaultFiles.bind(this)());
       },
 
     });
@@ -108,7 +118,7 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
       name: "Extract Heading at Cursor",
       icon: "list",
       editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
-        await this.resolveTargetFile();
+        await resolveTargetFile.bind(this)();
         if (!this.targetFile) {
           new Notice("No target file selected.");
           return;
@@ -125,95 +135,6 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
       },
     });
 
-  }
-
-
-  targetFileAssertion(targetFileSet: boolean) {
-    if (!targetFileSet) {
-      console.debug("Unable to set Target File.");
-    } else {
-      if (!this.targetFile) {
-        console.error("Critical Error: Target File not set after assertion.");
-      } else {
-        new Notice(`Target File: ${this.targetFile.path}`, 3500);
-      }
-    }
-  }
-
-  targetFileNotice(): void {
-    new Notice(`Target File: ${this.parent.settings.targetFilePath}`, 3000);
-  }
-
-
-  async resolveTargetFile(): Promise<void> {
-    const plugin = this.parent;
-    const getFile = (path: string) => plugin.app.vault.getAbstractFileByPath(path) as TFile | null;
-
-    switch (plugin.settings.targetFileMethod) {
-      case "manualSet":
-        this.targetFile = getFile(plugin.settings.targetFilePath);
-        break;
-      case "lastAccessed":
-        this.targetFile = getFile(plugin.app.workspace.getLastOpenFiles()[0]);
-        break;
-      case "active":
-        this.targetFile = plugin.app.workspace.getActiveFile();
-        break;
-    }
-
-    const filePath = this.targetFile?.path ?? "";
-
-    this.targetFileComponent?.setValue(filePath);
-
-    plugin.settings.targetFilePath = filePath;
-    await plugin.saveSettings();
-  }
-
-
-  async manuallySetTargetFile(file: TFile): Promise<void> {
-    this.targetFile = file;
-    this.parent.settings.targetFileMethod = "manualSet";
-    this.parent.settings.targetFilePath = file.path;
-    this.targetFileComponent?.setValue(file.path);
-    await this.parent.saveSettings();
-  }
-
-
-  async setActiveFileAsTarget(): Promise<boolean> {
-    const activeFile = this.parent.app.workspace.getActiveFile();
-    if (!activeFile) return false;
-    await this.manuallySetTargetFile(activeFile);
-    return true;
-  }
-
-
-  async setTargetFileFromOpenedFiles(): Promise<boolean> {
-    const mdLeaves = this.parent.app.workspace.getLeavesOfType("markdown");
-    if (mdLeaves.length === 0) return false;
-
-    const mdFiles = mdLeaves.map((leaf) => (leaf.view as MarkdownView).file);
-    const targetFile = await runQuickSuggest(this.parent.app, mdFiles,
-      (file: TFile) => file.path.slice(0, -3)
-    );
-    if (!targetFile) return false;
-
-    await this.manuallySetTargetFile(targetFile);
-    return true;
-  }
-
-
-  async setTargetFileFromVaultFiles(): Promise<boolean> {
-    const vaultFiles = this.parent.app.vault.getMarkdownFiles();
-    if (vaultFiles.length === 0) return false;
-
-    vaultFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
-    const targetFile = await runQuickSuggest(this.parent.app, vaultFiles,
-      (file: TFile) => file.path.slice(0, -3)
-    );
-    if (!targetFile) return false;
-
-    await this.manuallySetTargetFile(targetFile);
-    return true;
   }
 
 
@@ -284,17 +205,17 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
       .addButton((button: ButtonComponent) => {
         button
           .setButtonText("Active File")
-          .onClick(this.setActiveFileAsTarget.bind(this));
+          .onClick(setActiveFileAsTarget.bind(this));
       })
       .addButton((button: ButtonComponent) => {
         button
           .setButtonText("Opened Files")
-          .onClick(this.setTargetFileFromOpenedFiles.bind(this));
+          .onClick(setTargetFileFromOpenedFiles.bind(this));
       })
       .addButton((button: ButtonComponent) => {
         button
           .setButtonText("Vault Files")
-          .onClick(this.setTargetFileFromVaultFiles.bind(this));
+          .onClick(setTargetFileFromVaultFiles.bind(this));
       });
 
     new Setting(containerEl)
@@ -313,7 +234,7 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
               targetFileSetter.settingEl.show();
             else targetFileSetter.settingEl.hide();
             plugin.settings.targetFileMethod = value;
-            await this.resolveTargetFile();
+            await resolveTargetFile.bind(this)();
           });
           if (plugin.settings.targetFileMethod === 'manualSet')
             targetFileSetter.settingEl.show();
@@ -337,7 +258,7 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
           .onChange(async (value: string) => {
             const file = plugin.app.vault.getAbstractFileByPath(value);
             if (!file || !(file instanceof TFile)) return;
-            await this.manuallySetTargetFile(file);
+            await manuallySetTargetFile.bind(this)(file);
           });
       });
 

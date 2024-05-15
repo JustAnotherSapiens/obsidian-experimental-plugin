@@ -21,24 +21,23 @@ import {
 } from "utils/display";
 
 import {
-  isCodeBlockEnd,
-} from 'utils/headings/headingUtils';
-
-import {
-  DateFormat,
-  getMatchedDate,
-} from "components/time/core";
-
-import {
   BaseAbstractSuggest,
   QuickSuggest,
-  runQuickSuggest,
   registerKeybindings,
 } from "utils/suggest/suggestUtils";
 
 import {
+  isCodeBlockEnd,
+} from 'utils/headings/headingUtils';
+
+import {
   setDisplayFunctionAsHeadingNode,
 } from "utils/headings/headingDisplay";
+
+import {
+  DateFormat,
+  getMatchedDate,
+} from "components/time/utils/date";
 
 
 

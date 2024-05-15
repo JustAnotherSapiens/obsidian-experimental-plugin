@@ -5,7 +5,7 @@ import {
 import {
   DateFormat,
   getMatchedDate,
-} from "components/time/core";
+} from "components/time/utils/date";
 
 import { DataNode } from "utils/dataStructures/generics";
 
