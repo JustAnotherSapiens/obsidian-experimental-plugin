@@ -20,7 +20,7 @@ import {
 
 import {
   HeadingNode,
-} from "utils/headings/mdHeadings";
+} from "components/headingExtractor/utils/dataStructures";
 
 
 const getHeadingColor = (n: number) => `var(--h${n}-color)`;

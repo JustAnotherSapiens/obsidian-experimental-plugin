@@ -15,8 +15,6 @@ import {
 
 import { hotkeyHTML } from "utils/display";
 
-import { HeadingExtractor } from "utils/headings/mdHeadings";
-
 import {
   targetFileAssertion,
   resolveTargetFile,
@@ -25,6 +23,8 @@ import {
   setTargetFileFromOpenedFiles,
   setTargetFileFromVaultFiles,
 } from "./utils/targetFile";
+
+import HeadingExtractor from "./classes/headingExtractor";
 
 
 
