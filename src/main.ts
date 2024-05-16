@@ -9,16 +9,16 @@
 
 import { Plugin, PluginSettingTab, App } from "obsidian";
 
-import HeadingExtractorComponent from "components/headingExtractor/core";
-import FoldHeadingsComponent from "components/foldHeadings/core";
-import MoveToHeadingComponent from "components/moveToHeading/core";
+import HeadingExtractorComponent from "components/mdHeadings/headingExtractor/core";
+import MoveToHeadingComponent from "components/mdHeadings/moveToHeading/core";
+import FoldHeadingsComponent from "components/mdHeadings/foldHeadings/core";
 
-import SuggestComponent from "components/suggest/core";
-import TimeComponent from "components/time/core";
+import TextFormatComponent from "components/others/textFormat/core";
+import MiscellaneousComponent from "components/others/miscellaneous/core";
 
-import ScriptRunnerComponent from "components/scriptRunner/core";
-import MdEditingComponent from "components/mdEditing/core";
-import MiscellaneousComponent from "components/miscellaneous/core";
+import TimeComponent from "components/experimental/time/core";
+import SuggestComponent from "components/experimental/suggest/core";
+import ScriptRunnerComponent from "components/experimental/scriptRunner/core";
 
 
 
@@ -42,15 +42,15 @@ export default class BundlePlugin extends Plugin {
 
     this.components = [
       new HeadingExtractorComponent(this),
-      new FoldHeadingsComponent(this),
       new MoveToHeadingComponent(this),
+      new FoldHeadingsComponent(this),
 
-      new SuggestComponent(this),
-      new TimeComponent(this),
-
-      new ScriptRunnerComponent(this),
-      new MdEditingComponent(this),
+      new TextFormatComponent(this),
       new MiscellaneousComponent(this),
+
+      new TimeComponent(this),
+      new SuggestComponent(this),
+      new ScriptRunnerComponent(this),
     ];
 
     await this.loadSettings();

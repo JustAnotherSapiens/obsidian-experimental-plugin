@@ -1,7 +1,7 @@
 import { App } from "obsidian";
 
-import registerKeybindings from "utils/keybindings";
-import { DataNode } from "utils/dataStructures/generics";
+import registerKeybindings from "utils/obsidian/keybindings";
+import DataNode from "dataStructures/dataNode";
 
 import BaseAbstractSuggest from "suggests/baseAbstractSuggest";
 

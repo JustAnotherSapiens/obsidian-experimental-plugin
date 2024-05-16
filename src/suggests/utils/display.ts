@@ -1,6 +1,3 @@
-
-import BaseAbstractSuggest from "suggests/baseAbstractSuggest";
-
 import {
   ACCENT_COLOR,
   DEBUG_COLOR,
@@ -27,19 +24,6 @@ export function scoredText(score: number, text: string): string {
   return `<span style="color: ${DEBUG_COLOR};">${score.toFixed(4)}</span>  ${text}`;
 }
 
-
-
-export function setDisplayFunctionsAsDefault<T>(this: BaseAbstractSuggest<T>) {
-  this.defaultResultDisplay = (resultEl, item) => {
-    resultEl.innerHTML = this.itemToString(item);
-  };
-  this.simpleResultDisplay = (resultEl, object) => {
-    resultEl.innerHTML = simpleHighlight(object.match, object.string);
-  };
-  this.fuzzyResultDisplay = (resultEl, object) => {
-    resultEl.innerHTML = fuzzyHighlight(object.fuzzyResult.matches, object.string);
-  };
-}
 
 
 // CODE CEMENTERY

@@ -7,11 +7,11 @@ import {
   prepareQuery,
 } from "obsidian";
 
-import { wrapAround } from "utils/utilsCore";
-import registerKeybindings from "utils/keybindings";
-import IconButton from "utils/iconButton";
+import { wrapAround } from "utils/generic";
+import registerKeybindings from "utils/obsidian/keybindings";
+import IconButton from "utils/obsidian/classes/iconButton";
 
-import { setDisplayFunctionsAsDefault } from "./utils/display";
+import { simpleHighlight, fuzzyHighlight } from "./utils/display";
 
 
 
@@ -131,8 +131,21 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
     this.registerKeymapEvents();
 
-    setDisplayFunctionsAsDefault.bind(this)();
+    this.setDisplayFunctions();
     this.resolveSearchDisplay();
+  }
+
+
+  protected setDisplayFunctions() {
+    this.defaultResultDisplay = (resultEl, item) => {
+      resultEl.innerHTML = this.itemToString(item);
+    };
+    this.simpleResultDisplay = (resultEl, object) => {
+      resultEl.innerHTML = simpleHighlight(object.match, object.string);
+    };
+    this.fuzzyResultDisplay = (resultEl, object) => {
+      resultEl.innerHTML = fuzzyHighlight(object.fuzzyResult.matches, object.string);
+    };
   }
 
 
@@ -474,7 +487,6 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
     this.app.keymap.popScope(this.scope);
     this.app.workspace.getActiveViewOfType(MarkdownView)?.editor.focus();
   }
-
 
 }
 

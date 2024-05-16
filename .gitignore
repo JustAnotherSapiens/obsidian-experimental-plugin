@@ -1,7 +1,9 @@
 # custom
-guides
+**/trash/
+docs/
+
+# powershell scripts
 *.ps1
-src/trash
 
 # vscode
 .vscode 
