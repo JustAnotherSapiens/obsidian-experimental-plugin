@@ -1,60 +1,17 @@
 import {
   App,
-  Vault,
   MarkdownView,
-  TFile,
-  Editor,
   Scope,
-  Modifier,
   SearchResult,
   fuzzySearch,
   prepareQuery,
-  getIcon,
-  setTooltip,
 } from "obsidian";
 
-import { DataNode } from "utils/dataStructures/generics";
+import { wrapAround } from "utils/utilsCore";
+import registerKeybindings from "utils/keybindings";
+import IconButton from "utils/iconButton";
 
-import {
-  wrapAround
-} from "utils/utilsCore";
-
-import {
-  setDisplayFunctionsAsDefault,
-} from "utils/suggest/suggestDisplay";
-
-
-
-export function registerKeybinding(
-  scope: Scope,
-  modifiers: Modifier[],
-  key: string | null,
-  callback: (event: KeyboardEvent) => void | Promise<void>
-): void {
-  scope.register(modifiers, key,
-    async (event: KeyboardEvent) => {
-      if (!event.isComposing) {
-        event.preventDefault();
-        await callback(event);
-        return false;
-      }
-    }
-  );
-}
-
-
-export function registerKeybindings(
-  scope: Scope,
-  bindings: [
-    modifiers: Modifier[],
-    key: string | null,
-    callback: (event: KeyboardEvent) => void,
-  ][]
-): void {
-  bindings.forEach(
-    (binding) => registerKeybinding(scope, ...binding)
-  );
-}
+import { setDisplayFunctionsAsDefault } from "./utils/display";
 
 
 
@@ -90,93 +47,13 @@ interface SuggestModal {
 
 
 
-class IconButton {
-
-  static readonly defaultActiveColor = "var(--text-accent)";
-  static readonly defaultInactiveColor = "var(--text-faint)";
-
-  private iconId: string;
-  private tooltip: string;
-  private isActive: boolean;
-  private activeColor: string;
-  private inactiveColor: string;
-
-  private containerEl?: HTMLElement;
-  private svgEl?: SVGSVGElement;
-
-
-  constructor(args: {
-    iconId: string,
-    tooltip: string,
-    isActive: boolean,
-    onCssColor?: string,
-    offCssColor?: string,
-    parentEl: HTMLElement
-    clickCallback: (event: MouseEvent) => void,
-  }) {
-    this.iconId = args.iconId;
-    this.tooltip = args.tooltip;
-    this.isActive = args.isActive;
-    this.activeColor = args.onCssColor ?? IconButton.defaultActiveColor;
-    this.inactiveColor = args.offCssColor ?? IconButton.defaultInactiveColor;
-    this.resolveElement(args.parentEl);
-    this.addClickEvent(args.clickCallback);
-  }
-
-
-  addClickEvent(callback: (event: MouseEvent) => void): void {
-    if (!this.containerEl) return;
-    this.containerEl.on("click", ".icon-button-container", (event) => {
-      event.preventDefault();
-      callback(event);
-    }, {capture: true});
-  }
-
-
-  resolveElement(parentEl?: HTMLElement): void {
-    this.svgEl = getIcon(this.iconId) as SVGSVGElement;
-    if (!this.svgEl) return;
-    this.svgEl.addClass("icon-button-svg");
-
-    this.containerEl = createDiv("icon-button-container", (el) => {
-      el.appendChild(this.svgEl!);
-      setTooltip(el, this.tooltip, {placement: "top", delay: 200});
-    });
-    parentEl?.appendChild(this.containerEl);
-
-    this.resolveColor();
-  }
-
-
-  toggle(value?: boolean): void {
-    this.isActive = value ?? !this.isActive;
-    this.resolveColor();
-  }
-
-
-  resolveColor(): void {
-    if (!this.svgEl || !this.containerEl) return;
-    this.svgEl.style.color = this.isActive ? this.activeColor : this.inactiveColor;
-  }
-
-
-  setColor(activeColor: string, inactiveColor?: string): void {
-    this.activeColor = activeColor;
-    this.inactiveColor = inactiveColor ?? this.inactiveColor;
-    this.resolveColor();
-  }
-
-};
-
-
-
 /**
  * Base class for creating a suggest modal, i.e. a pop-up that provides a list of
  * suggestions based on a query string, and allows the user to select one of the
  * suggestions.
  * @abstract
  */
-export abstract class BaseAbstractSuggest<T> implements SuggestModal {
+export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
   abstract getSourceItems(): T[] | Promise<T[]>;
   /**
@@ -599,161 +476,5 @@ export abstract class BaseAbstractSuggest<T> implements SuggestModal {
   }
 
 
-}
-
-
-
-/**
- * An abstract suggest class that builds a data tree and allows the user to navigate it.
- * @abstract
- * @extends BaseAbstractSuggest<DataNode<T>>
- */
-export abstract class DataNodeSuggest<T> extends BaseAbstractSuggest<DataNode<T>> {
-
-  /**
-   * Ideally, the data tree should be built upon nodes with multiple children.
-   * @returns The root node of the data tree.
-   * @abstract
-   */
-  abstract buildDataTree(): Promise<DataNode<T>>;
-
-  protected referenceNode: DataNode<T>;
-  private selectionIndexStack: number[] = [];
-  private selectionQueryStack: string[] = [];
-
-  constructor(app: App, nodeToString: (node: DataNode<T>) => string) {
-    super(app, "data-node-suggest", {fuzzy: true});
-    this.itemToString = nodeToString;
-  }
-
-  async onOpen(): Promise<void> {
-    registerKeybindings(this.scope, [
-      [["Alt"],  "l", async () => await this.stepInto(this.renderedResults[this.selectionIndex])],
-      [["Alt"],  "h", async () => await this.stepOut()],
-    ]);
-    this.referenceNode = await this.buildDataTree();
-  }
-
-  async stepInto(result: DataNode<T>): Promise<boolean> {
-    if (result.children.length === 0) return false;
-    this.referenceNode = result;
-    this.selectionIndexStack.push(this.selectionIndex);
-    this.selectionQueryStack.push(this.query);
-    await this.updateInputAndResults("");
-    return true;
-  }
-
-  async stepOut(): Promise<boolean> {
-    if (!this.referenceNode.parent) return false;
-    this.referenceNode = this.referenceNode.parent;
-    await this.updateInputAndResults(
-      this.selectionQueryStack.pop()!,
-      this.selectionIndexStack.pop()!
-    );
-    return true;
-  }
-
-  getSourceItems(): DataNode<T>[] {
-    return this.referenceNode.children;
-  }
-
-  enterAction(result: DataNode<T>, event: MouseEvent | KeyboardEvent): void | Promise<void> {
-    this.stepInto(result);
-  }
-
-  clickAction(result: DataNode<T>, event: MouseEvent | KeyboardEvent): void | Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
-}
-
-
-
-/**
- * A BaseAbstractSuggest class that is tied to the active MarkdownView.
- *
- * Ease-of-access attributes:
- * - `vault`: The active Vault.
- * - `view`: The active MarkdownView.
- * - `file`: The active TFile.
- * - `editor`: The active Editor.
- *
- * @extends BaseAbstractSuggest<T>
- */
-export abstract class ViewAbstractSuggest<T> extends BaseAbstractSuggest<T> {
-  protected vault: Vault;
-  protected view?: MarkdownView;
-  protected file?: TFile;
-  protected editor?: Editor;
-
-  constructor(app: App, modalId: string, options?: {fuzzy?: boolean}) {
-    super(app, modalId, options);
-    this.vault = this.app.vault;
-    this.view = this.app.workspace.getActiveViewOfType(MarkdownView) ?? undefined;
-    this.file = this.view?.file ?? undefined;
-    this.editor = this.view?.editor ?? undefined;
-  }
-}
-
-
-
-/**
- * A simple Suggest class to be used internally for the 'runQuickSuggest' function.
- */
-export class QuickSuggest<T> extends BaseAbstractSuggest<T> {
-  private selectedItem?: T;
-
-  constructor(app: App, items: T[], itemToString: (item: T) => string, placeholder?: string) {
-    super(app, "quick-suggest", {fuzzy: true});
-    this.sourceItems = items;
-    this.itemToString = itemToString;
-    if (placeholder) this.placeholder = placeholder;
-  }
-
-  async waitForSelection(): Promise<T | null> {
-    await this.open();
-    if (this.selectedItem){
-      return new Promise((resolve) => resolve(this.selectedItem!));
-      // Since the 'async' keyword implies that the function will return
-      // a Promise, the above line can be simplified to:
-      // return this.selectedItem!;
-    }
-    // 'resolve' is a function that must be called to fulfill the promise, i.e.
-    // the Promise will remain pending until 'resolve' is called.
-    // Calling 'resolve' on the 'this.onClose' function will ensure that the
-    // promise is fulfilled when the modal is closed.
-    return new Promise((resolve) => {
-      this.onClose = () => resolve(this.selectedItem ?? null);
-    });
-  }
-
-  getSourceItems(): T[] {
-    return this.sourceItems;
-  }
-
-  enterAction(result: T, evt: MouseEvent | KeyboardEvent): void {
-    this.selectedItem = result;
-    this.close();
-  }
-
-  clickAction(result: T, evt: MouseEvent | KeyboardEvent): void {
-    this.enterAction(result, evt);
-  }
-
-}
-
-
-/**
- * Quickly select an item from a list.
- * @returns the selected item.
- */
-export async function runQuickSuggest<T>(
-  app: App,
-  items: T[],
-  itemToText: (item: T) => string,
-  placeholder?: string
-): Promise<T | null> {
-  const quickSuggest = new QuickSuggest(app, items, itemToText, placeholder);
-  return await quickSuggest.waitForSelection();
 }
 

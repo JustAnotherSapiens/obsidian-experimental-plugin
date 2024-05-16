@@ -6,10 +6,8 @@ import {
   Editor,
 } from 'obsidian';
 
-import {
-  BaseAbstractSuggest,
-  registerKeybindings,
-} from "utils/suggest/suggestUtils";
+import BaseAbstractSuggest from 'suggests/baseAbstractSuggest';
+import registerKeybindings from 'utils/keybindings';
 
 import {
   setDisplayFunctionAsHeadingNode,

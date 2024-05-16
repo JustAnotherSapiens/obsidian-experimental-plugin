@@ -1,12 +1,11 @@
 
-import {
-  BaseAbstractSuggest,
-} from "utils/suggest/suggestUtils";
+import BaseAbstractSuggest from "suggests/baseAbstractSuggest";
 
 import {
   ACCENT_COLOR,
   DEBUG_COLOR,
 } from "utils/display";
+
 
 
 export function simpleHighlight(match: [number, number], text: string): string {

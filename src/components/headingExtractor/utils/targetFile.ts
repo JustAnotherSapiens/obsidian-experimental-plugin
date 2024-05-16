@@ -1,11 +1,10 @@
-
 import {
   Notice,
   MarkdownView,
   TFile,
 } from "obsidian";
 
-import { runQuickSuggest } from "utils/suggest/suggestUtils";
+import { runQuickSuggest } from "suggests/quickSuggest";
 
 import HeadingExtractorComponent from "../core";
 

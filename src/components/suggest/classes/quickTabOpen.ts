@@ -8,10 +8,8 @@ import {
   getTFilesFromFolder,
 } from "utils/utilsCore";
 
-import {
-  BaseAbstractSuggest,
-  registerKeybindings,
-} from "utils/suggest/suggestUtils";
+import BaseAbstractSuggest from "suggests/baseAbstractSuggest";
+import registerKeybindings from "utils/keybindings";
 
 
 

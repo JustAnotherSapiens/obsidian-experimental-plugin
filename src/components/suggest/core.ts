@@ -14,7 +14,7 @@ import {
   shrinkSettingInputField,
 } from "utils/utilsCore";
 
-import { MoveToHeadingSuggest } from "utils/headings/headingSuggests";
+import MoveToHeadingSuggest from "suggests/moveToHeadingSuggest";
 import { getHeadingsArray } from "utils/headings/headingUtils";
 
 import { runQuickPopoverSuggest } from "./classes/quickPopover";

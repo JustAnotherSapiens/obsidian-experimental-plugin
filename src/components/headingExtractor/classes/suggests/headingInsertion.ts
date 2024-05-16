@@ -14,16 +14,15 @@ import {
   breadcrumbsHTML,
 } from "utils/display";
 
-import {
-  BaseAbstractSuggest,
-  QuickSuggest,
-  registerKeybindings,
-} from "utils/suggest/suggestUtils";
+import registerKeybindings from 'utils/keybindings';
 
 import {
   MarkdownLevel,
   HeadingNode,
 } from "../../utils/dataStructures";
+
+import BaseAbstractSuggest from 'suggests/baseAbstractSuggest';
+import QuickSuggest from 'suggests/quickSuggest';
 
 import HeadingTreeSuggest, { HeadingTreeArgs } from './headingTree';
 

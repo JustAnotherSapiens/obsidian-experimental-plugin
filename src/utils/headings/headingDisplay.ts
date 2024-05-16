@@ -1,8 +1,6 @@
   
-import {
-  BaseAbstractSuggest,
-  DataNodeSuggest,
-} from "utils/suggest/suggestUtils";
+import BaseAbstractSuggest from "suggests/baseAbstractSuggest";
+import DataNodeSuggest from "suggests/dataNodeSugggest";
 
 import {
   createStyledEl,
@@ -11,7 +9,7 @@ import {
 import {
   simpleHighlight,
   fuzzyHighlight,
-} from "utils/suggest/suggestDisplay";
+} from "suggests/utils/display";
 
 import {
   Heading,
@@ -23,7 +21,9 @@ import {
 } from "components/headingExtractor/utils/dataStructures";
 
 
+
 const getHeadingColor = (n: number) => `var(--h${n}-color)`;
+
 
 
 export function setDisplayFunctionsAsColoredHeading(this: BaseAbstractSuggest<FlatHeading>) {
