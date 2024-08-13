@@ -39,8 +39,12 @@ const context = await esbuild.context({
 	format: "cjs",
 	target: "es2018",
 	logLevel: "info",
+	// SOURCE MAP
 	sourcemap: prod ? false : "inline",
+	sourcesContent: false, // Do not include full source code in the source map
+	// OPTIMIZATION
 	treeShaking: true,
+	minify: true,
 	outfile: outFile,
 });
 

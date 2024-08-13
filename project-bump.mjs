@@ -1,38 +1,45 @@
 
 // USAGE:
-// - Update name, version, and description in package.json
-// - Update minAppVersion in manifest.json
-// - Run `npm run version`
-// - Commit changes
-
-// EFFECTS:
-// - manifest.json fields updated: name, version, description
-// - versions.json gets updated with new version and minAppVersion
+//
+// - Update any of the following fields in "package.json":
+//   - name
+//   - version
+//   - description
+//   - devDependencies.obsidian
+//
+// - Run `npm run bump` to update the following files:
+//   - manifest.json
+//   - versions.json
 
 
 import { readFileSync, writeFileSync } from "fs";
 
 
-// Display package name and version from the process environment
-const packageName = process.env.npm_package_name;
-const packageVersion = process.env.npm_package_version;
-console.log(`Bumping version of "${packageName}" to ${packageVersion}`);
-
-// Display package name and version from package.json
-const packageJson = JSON.parse(readFileSync(process.env.npm_package_json, "utf8"));
-const { name, version, description } = packageJson;
-console.log(`${name} v${version} - ${description}`);
+const npmPackage = JSON.parse(readFileSync(process.env.npm_package_json, "utf8"));
 
 
-// Update manifest.json with package.json values
-const manifest = JSON.parse(readFileSync("manifest.json", "utf8"));
-const { minAppVersion } = manifest;
-manifest.id = packageJson.name;
-manifest.version = packageJson.version;
-manifest.description = packageJson.description;
-writeFileSync("manifest.json", JSON.stringify(manifest, null, "\t"));
+(function logPackageInfo(npm_package_json) {
+  const { esbuild, obsidian } = npm_package_json.devDependencies;
+  console.log("esbuild:", esbuild);
+  console.log("obsidian:", obsidian);
+  const { name, version, description } = npm_package_json;
+  console.log(`\n${name} ${version} - ${description}\n`);
+})(npmPackage);
 
-// Update versions.json with new version and minAppVersion
-const versions = JSON.parse(readFileSync("versions.json", "utf8"));
-versions[packageJson.version] = minAppVersion;
-writeFileSync("versions.json", JSON.stringify(versions, null, "\t"));
+
+(function updateManifest(npm_package_json) {
+  const manifest = JSON.parse(readFileSync("manifest.json", "utf8"));
+  manifest.id = npm_package_json.name;
+  manifest.version = npm_package_json.version;
+  manifest.description = npm_package_json.description;
+  manifest.minAppVersion = npm_package_json.devDependencies.obsidian;
+  writeFileSync("manifest.json", JSON.stringify(manifest, null, "\t"));
+})(npmPackage);
+
+
+(function updateObsidianVersionRequirement(package_version, obsidian_version) {
+  const versions = JSON.parse(readFileSync("versions.json", "utf8"));
+  versions[package_version] = obsidian_version;
+  writeFileSync("versions.json", JSON.stringify(versions, null, "\t"));
+})(npmPackage.version, npmPackage.devDependencies.obsidian);
+
