@@ -156,8 +156,8 @@ export class HeadingTree {
 
   public root: HeadingNode;
   public lineCount: number;
+  public levelTable: HeadingLevelTable;
   private mdLevelLimit: MarkdownLevel;
-  private levelTable: HeadingLevelTable;
 
 
   constructor(markdownText: string, mdLevelLimit?: MarkdownLevel) {
@@ -279,9 +279,18 @@ export class HeadingTree {
 
   /**
    * Search algorithm that takes advantage of the tree structure to find the last
-   * contiguous node that matches the given condition.
+   * contiguous node that matches the given node-order-related condition.
    *
    * From benchmarks, it is from 5 to 30 times faster than its linear version.
+   * 
+   * DESCRIPTION:
+   * It first searches through the highest level until a match is not met;
+   * then it searches through the children of the last matched node, and so on.
+   * 
+   * WARNING:
+   * It must be noted that this search is only meant to be used for match conditions
+   * that are related to the order of the nodes (e.g., line number), since for any
+   * other type of match getting the right node is only fully ensured by a linear search.
    */
   searchLastContiguous(match: (node: HeadingNode) => boolean, topNode?: HeadingNode): HeadingNode | undefined {
     if (!topNode) topNode = this.root;
