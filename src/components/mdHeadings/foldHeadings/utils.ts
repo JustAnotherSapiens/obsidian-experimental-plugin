@@ -48,6 +48,85 @@ function applyFolds(view: MarkdownView, folds: Array<Fold>): void {
 
 
 
+import { App, Notice } from "obsidian";
+import { HeadingTree, MarkdownLevel } from "../headingExtractor/utils/dataStructures";
+import { runQuickSuggest } from "suggests/quickSuggest";
+
+
+export function getHeadingTree(editor: Editor, mdLevelLimit?: MarkdownLevel): HeadingTree {
+  return new HeadingTree(editor.getValue(), mdLevelLimit);
+}
+
+
+export async function foldingHeadingsByLevel(app: App, view: MarkdownView, opts: {unfold: boolean}): Promise<void> {
+
+  const foldText = opts.unfold ? "Unfold" : "Fold";
+
+  const level = await runQuickSuggest(app,
+    [1, 2, 3, 4, 5, 6],
+    (level: number) => `${foldText} H${level}: ${'#'.repeat(level)}`,
+    `${foldText} headings by level`
+  );
+  if (!level) return;
+
+  if (level < 1 || level > 6) {
+    const message = `ERROR(foldHeadingsByLevel): Invalid level: ${level}`;
+    new Notice(message);
+    console.log(message);
+    return;
+  }
+  const mdLevel = level as MarkdownLevel;
+
+  const editor = view.editor;
+  const lineCount = editor.lineCount();
+
+  const tree = getHeadingTree(editor, mdLevel);
+  let folds = getFolds(view);
+
+
+  if (opts.unfold) {
+    const linesOfFoldsToRemove = tree.levelTable[mdLevel].map(
+      (node) => node.heading.range.from.line
+    );
+    folds = folds.filter((fold) => !linesOfFoldsToRemove.includes(fold.from));
+
+  } else {
+    for (const node of tree.levelTable[mdLevel]) {
+      node.calculateHeadingLineEnd(lineCount);
+      const fold = {
+        from: node.heading.range.from.line,
+        to: node.heading.range.to!.line - 1,
+      };
+
+      if (fold.to < 0) {
+        const message = `ERROR(foldHeadingsByLevel): Invalid fold line end: ${fold.to}`;
+        new Notice(message);
+        console.log(message);
+        continue;
+      }
+      if (folds.some((f) => f.from === fold.from && f.to === fold.to)) continue;
+
+      folds.push(fold);
+    }
+
+    // Sort folds in ascending order.
+    folds.sort((a, b) => a.from - b.from);
+
+  }
+
+  applyFolds(view, folds);
+
+  // customActiveLineScroll(view, {
+  //   viewportThreshold: 0.5,
+  //   scrollFraction: 0.3,
+  //   asymmetric: true,
+  // });
+
+}
+
+
+
+
 // TODO: Rewrite without FileCache dependency.
 export async function cleanToggleFoldOnChildrenHeadings(
   editor: Editor,
