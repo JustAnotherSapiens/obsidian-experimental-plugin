@@ -233,7 +233,7 @@ export class HeadingTree {
           current = current.parent;
           if (current === topNode) return;
         }
-        current = current.next as HeadingNode; // Can be undefined.
+        current = current.next as HeadingNode; // Becomes undefined if it is the last node
       }
     }
   }
@@ -310,14 +310,14 @@ export class HeadingTree {
   }
 
 
-  flatten(filter?: (node: HeadingNode) => boolean): HeadingNode[] {
+  flatten(filter?: (node: HeadingNode) => boolean, topNode?: HeadingNode): HeadingNode[] {
     let nodes: HeadingNode[] = [];
     if (!filter) {
-      this.traverse(node => nodes.push(node));
+      this.traverse(node => nodes.push(node), topNode);
     } else {
       this.traverse(node => {
         if (filter(node)) nodes.push(node);
-      });
+      }, topNode);
     }
     return nodes;
   }

@@ -24,7 +24,6 @@ import {
 
 
 type HeadingInsertionArgs = HeadingTreeArgs & {
-  startFlat?: boolean;
   skewUpwards?: boolean;
 };
 
@@ -52,7 +51,6 @@ export default class HeadingInsertionSuggest extends HeadingTreeSuggest {
   private insertion: Insertion;
 
   private mdLevel: MarkdownLevel;
-  private startFlat: boolean;
   private skewUpwards: boolean;
 
   private resultsFilter: (node: HeadingNode) => boolean;
@@ -61,13 +59,16 @@ export default class HeadingInsertionSuggest extends HeadingTreeSuggest {
   constructor(app: App, args: HeadingInsertionArgs) {
     super(app, args);
     this.mdLevel = args.mdLevelLimit ?? 6;
-    this.startFlat = args.startFlat ?? false;
     this.skewUpwards = args.skewUpwards ?? false;
+
+    // TODO: Add icon button to toggle inclusion of headings from the same level.
     this.resultsFilter = (node: HeadingNode) => node.heading.level.bySyntax <= this.mdLevel;
+
     this.instructions = [
       {command: "<A-j/k>", purpose: "Navigate"},
       {command: "<A-l>", purpose: "Step Into"},
       {command: "<A-h>", purpose: "Step Out"},
+      {command: "<A-d>", purpose: "Toggle Expand"},
       {command: "<Enter>/<Click>", purpose: "Append, Insert After"},
       {command: "<S-Enter>/<R_Click>", purpose: "Prepend, Insert Before"},
       {command: "<Esc>", purpose: "Close"},
@@ -76,9 +77,6 @@ export default class HeadingInsertionSuggest extends HeadingTreeSuggest {
 
 
   getSourceItems(): HeadingNode[] {
-    if (this.startFlat && this.referenceNode === this.tree.root) {
-      return this.tree.flatten(this.resultsFilter);
-    }
     return super.getSourceItems(this.referenceNode, this.resultsFilter);
   }
 
@@ -139,11 +137,16 @@ export default class HeadingInsertionSuggest extends HeadingTreeSuggest {
         }
 
         let changes: EditorChange[] = [];
-        // I don't understand why if I assign 'this.insertion.pos' directly
-        // to 'from', the value of 'line' is changed at the moment of the push,
-        // but the 'line' value at 'this.insertion.pos' is not modified.
-        // If 'from' is assigned to the destructured object, no problem occurs.
         // TLDR: The destructured assignmet is absolutely necessary.
+        //
+        // I don't understand why...
+        //
+        // If the 'this.insertion.pos' object is directly assigned to 'from',
+        // its 'line' value is changed at the moment of the push,
+        // but the 'this.insertion.pos' object itself is not modified in any way.
+        //
+        // If the 'this.insertion.pos' object is assigned to 'from' by destructuring,
+        // the problem does not occur.
         changes.push({text: insertionText, from: {...this.insertion.pos}});
 
         let endPos: EditorPosition = {...extraction.pos};

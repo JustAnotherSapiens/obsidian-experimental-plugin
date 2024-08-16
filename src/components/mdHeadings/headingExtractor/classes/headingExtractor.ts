@@ -74,7 +74,7 @@ export default class HeadingExtractor {
       this.app, {
         sources: {file},
         mdLevelLimit: this.extractionNode.heading.level.bySyntax,
-        startFlat: flags.startFlat,
+        expand: flags.startFlat,
         skewUpwards: flags.skewUpwards,
       }
     );

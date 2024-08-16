@@ -7,6 +7,7 @@ import {
 } from 'obsidian';
 
 import registerKeybindings from 'utils/obsidian/keybindings';
+import IconButton from "utils/obsidian/classes/iconButton";
 
 import BaseAbstractSuggest from 'suggests/baseAbstractSuggest';
 import { simpleHighlight, fuzzyHighlight } from "suggests/utils/display";
@@ -30,6 +31,7 @@ type MdTextSources = {
 export type HeadingTreeArgs = {
   sources: MdTextSources;
   mdLevelLimit?: MarkdownLevel;
+  expand?: boolean;
 };
 
 
@@ -57,6 +59,7 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
 
   constructor(app: App, args: HeadingTreeArgs) {
     super(app, "heading-tree-suggest");
+
     this.setPlaceholder("Select a Heading...");
     this.file = args.sources.file;
     this.editor = args.sources.editor;
@@ -64,37 +67,15 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
     this.mdLevelLimit = args.mdLevelLimit ?? 6;
     this.itemToString = (node: HeadingNode) => node.heading.header.text;
     this.setDisplayFunctions();
-  }
 
-
-  setDisplayFunctions() {
-    this.defaultResultDisplay = (resultEl, node) => {
-      resultEl.innerHTML = mdHeadingHTML(
-        node.heading.level.bySyntax,
-        node.heading.header.text,
-        node.children.length,
-      );
-    };
-    this.simpleResultDisplay = (resultEl, object) => {
-      resultEl.innerHTML = mdHeadingHTML(
-        object.item.heading.level.bySyntax,
-        simpleHighlight(object.match, object.item.heading.header.text),
-        object.item.children.length,
-      );
-    };
-    this.fuzzyResultDisplay = (resultEl, object) => {
-      resultEl.innerHTML = mdHeadingHTML(
-        object.item.heading.level.bySyntax,
-        fuzzyHighlight(object.fuzzyResult.matches, object.item.heading.header.text),
-        object.item.children.length,
-      );
-    };
-  }
-
-
-  setTree(tree: HeadingTree) {
-    this.tree = tree;
-    this.referenceNode = tree.root;
+    this.flags.expand = args.expand ?? false;
+    this.iconButtons.expand = new IconButton({
+      parentEl: this.iconContainerEl,
+      iconId: "expand",
+      tooltip: "Expand All",
+      isActive: this.flags.expand,
+      clickCallback: () => this.toggleExpandAll(),
+    });
   }
 
 
@@ -102,6 +83,7 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
     registerKeybindings(this.scope, [
       [["Alt"],  "l", async () => await this.stepInto(this.renderedResults[this.selectionIndex])],
       [["Alt"],  "h", async () => await this.stepOut()],
+      [["Alt"],  "d", () => this.toggleExpandAll()],
     ]);
   }
 
@@ -110,6 +92,14 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
     if (!this.tree) await this.buildTree();
     if (!this.tree) return;
     await super.open();
+  }
+
+
+  async buildTree(): Promise<void> {
+    await this.setMarkdownText();
+    if (!this.markdownText) return;
+    this.tree = new HeadingTree(this.markdownText, this.mdLevelLimit);
+    this.referenceNode = this.tree.root;
   }
 
 
@@ -144,20 +134,13 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
   }
 
 
-  async buildTree(): Promise<void> {
-    await this.setMarkdownText();
-    if (!this.markdownText) return;
-    this.tree = new HeadingTree(this.markdownText, this.mdLevelLimit);
-    this.referenceNode = this.tree.root;
-  }
-
-
-  getSourceItems(source?: HeadingNode, filter?: (node: HeadingNode) => boolean): HeadingNode[] {
-    if (!source) return this.referenceNode.children;
-    else {
-      if (!filter) return source.children;
-      return source.children.filter(filter);
+  getSourceItems(sourceNode?: HeadingNode, filter?: (node: HeadingNode) => boolean): HeadingNode[] {
+    if (!this.flags.expand) {
+      if (!sourceNode) return this.referenceNode.children;
+      else if (!filter) return sourceNode.children;
+      else return sourceNode.children.filter(filter);
     }
+    else return this.tree.flatten(filter, sourceNode);
   }
 
 
@@ -180,6 +163,45 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
       this.selectionIndexStack.pop()!
     );
     return true;
+  }
+
+
+  toggleExpandAll(): void {
+    this.flags.expand = !this.flags.expand;
+    this.iconButtons.expand?.toggle(this.flags.expand);
+    this.inputEl.dispatchEvent(new Event("input"));
+    this.inputEl.focus();
+  }
+
+
+  setTree(tree: HeadingTree) {
+    this.tree = tree;
+    this.referenceNode = tree.root;
+  }
+
+
+  setDisplayFunctions() {
+    this.defaultResultDisplay = (resultEl, node) => {
+      resultEl.innerHTML = mdHeadingHTML(
+        node.heading.level.bySyntax,
+        node.heading.header.text,
+        node.children.length,
+      );
+    };
+    this.simpleResultDisplay = (resultEl, object) => {
+      resultEl.innerHTML = mdHeadingHTML(
+        object.item.heading.level.bySyntax,
+        simpleHighlight(object.match, object.item.heading.header.text),
+        object.item.children.length,
+      );
+    };
+    this.fuzzyResultDisplay = (resultEl, object) => {
+      resultEl.innerHTML = mdHeadingHTML(
+        object.item.heading.level.bySyntax,
+        fuzzyHighlight(object.fuzzyResult.matches, object.item.heading.header.text),
+        object.item.children.length,
+      );
+    };
   }
 
 }

@@ -93,6 +93,7 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
   public inputEl: HTMLInputElement;
   public resultsEl: HTMLElement;
   public instructionsEl: HTMLElement;
+  public iconContainerEl: HTMLElement;
 
   protected app: App;
   protected scope: Scope;
@@ -100,8 +101,8 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
   protected placeholder: string;
   protected instructions: {command: string, purpose: string}[];
 
-  protected flags: SuggestFlags;
-  protected iconButtons: {[Key in keyof SuggestFlags]?: IconButton};
+  protected flags: {[key: string]: boolean};
+  protected iconButtons: {[key: string]: IconButton};
 
   protected sourceItems: T[];
   protected renderedResults: T[];
@@ -120,6 +121,10 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
       strictCase: false,
       instructions: true
     }, flags);
+
+    // NOTE: This element MUST exist before any IconButton gets created (either here or in a subclass).
+    this.iconContainerEl = createEl("div", { cls: "suggest-icon-container" });
+    this.iconButtons = {};
 
     this.placeholder = "Enter text here...";
     this.instructions = [
@@ -150,37 +155,36 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
 
   private addSearchToggleIcons(): void {
+    this.inputEl.addClass("suggest-input");
+
     const inputContainer = this.inputEl.parentElement as HTMLElement;
     inputContainer.addClass("suggest-input-container");
-
-    const iconContainer = createEl("div", { cls: "suggest-icon-container" });
-    this.inputEl.addClass("suggest-input");
-    inputContainer.appendChild(iconContainer);
+    inputContainer.appendChild(this.iconContainerEl);
 
     // TODO: Implement regex search.
-    this.iconButtons = {
+    this.iconButtons = Object.assign(this.iconButtons, {
       // "regex": new IconButton({
-      //   parentEl: iconContainer,
+      //   parentEl: this.iconContainerEl,
       //   iconId: "regex",
       //   tooltip: "Toggle Regular Expression",
       //   isActive: this.flags.regex,
       //   clickCallback: () => this.toggleRegexSearch(),
       // }),
       "fuzzy": new IconButton({
-        parentEl: iconContainer,
+        parentEl: this.iconContainerEl,
         iconId: "search-code",
         tooltip: "Toggle Fuzzy Search",
         isActive: this.flags.fuzzy,
         clickCallback: () => this.toggleFuzzySearch(),
       }),
       "strictCase": new IconButton({
-        parentEl: iconContainer,
+        parentEl: this.iconContainerEl,
         iconId: "case-sensitive",
         tooltip: "Toggle Case Sensitivity",
         isActive: this.flags.strictCase,
         clickCallback: () => this.toggleStrictCase(),
       }),
-    };
+    });
 
   }
 
@@ -204,7 +208,7 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
       [["Alt"], "j", () => this.setSelectedResultEl(this.selectionIndex + 1)],
       [["Alt"], "k", () => this.setSelectedResultEl(this.selectionIndex - 1)],
       [["Alt"], "f", () => this.toggleFuzzySearch()],
-      // TODO: <A-d> and <A-u> to scroll down and up by one page.
+      // TODO: Add default hotkeys to scroll down and up by one result page.
     ]);
   }
 
