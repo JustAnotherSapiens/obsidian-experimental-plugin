@@ -12,6 +12,7 @@ import { Plugin, PluginSettingTab, App } from "obsidian";
 import HeadingExtractorComponent from "components/mdHeadings/headingExtractor/core";
 import MoveToHeadingComponent from "components/mdHeadings/moveToHeading/core";
 import FoldHeadingsComponent from "components/mdHeadings/foldHeadings/core";
+import HeadingExtraToolsComponent from "components/mdHeadings/headingExtraTools/core";
 
 import TextFormatComponent from "components/others/textFormat/core";
 import MiscellaneousComponent from "components/others/miscellaneous/core";
@@ -44,6 +45,7 @@ export default class BundlePlugin extends Plugin {
       new HeadingExtractorComponent(this),
       new MoveToHeadingComponent(this),
       new FoldHeadingsComponent(this),
+      new HeadingExtraToolsComponent(this),
 
       new TextFormatComponent(this),
       new MiscellaneousComponent(this),

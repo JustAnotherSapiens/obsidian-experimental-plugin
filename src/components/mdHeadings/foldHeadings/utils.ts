@@ -21,7 +21,7 @@ import {
 
 
 
-type Fold = {from: number, to: number};
+export type Fold = {from: number, to: number};
 
 
 
@@ -33,13 +33,13 @@ export function cleanToggleFold(editor: Editor, view: MarkdownView) {
 
 
 
-function getFolds(view: MarkdownView): Array<Fold> {
+export function getFolds(view: MarkdownView): Array<Fold> {
   const foldInfo = (view.currentMode as any).getFoldInfo();
   if (foldInfo) return foldInfo.folds;
   return [];
 }
 
-function applyFolds(view: MarkdownView, folds: Array<Fold>): void {
+export function applyFolds(view: MarkdownView, folds: Array<Fold>): void {
   (view.currentMode as any).applyFoldInfo({
     folds, lines: view.editor.lineCount()
   });

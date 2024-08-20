@@ -127,6 +127,12 @@ export class HeadingNode {
   }
 
 
+  getHeadingContents(editor: Editor) {
+    if (!this.heading.range.to) this.calculateHeadingLineEnd(editor.lastLine());
+    return editor.getRange(this.heading.range.from, this.heading.range.to!);
+  }
+
+
   calculateHeadingLineEnd(lineCount: number) {
     if (!this.parent) this.heading.range.to = {line: lineCount, ch: 0};
     else if (this.next) {
@@ -307,6 +313,11 @@ export class HeadingTree {
       refNode = foundNode;
     }
     return foundNode;
+  }
+
+
+  getNodeAtLine(line: number): HeadingNode | undefined {
+    return this.searchLastContiguous(node => node.heading.range.from.line <= line);
   }
 
 
