@@ -122,13 +122,15 @@ export class HeadingNode {
 
 
   getHeadingRange(lineCount: number): EditorRange {
-    this.calculateHeadingLineEnd(lineCount);
+    if (this.heading.range.to === undefined)
+      this.calculateHeadingLineEnd(lineCount);
     return this.heading.range as EditorRange;
   }
 
 
   getHeadingContents(editor: Editor) {
-    if (!this.heading.range.to) this.calculateHeadingLineEnd(editor.lastLine());
+    if (this.heading.range.to === undefined)
+      this.calculateHeadingLineEnd(editor.lastLine());
     return editor.getRange(this.heading.range.from, this.heading.range.to!);
   }
 

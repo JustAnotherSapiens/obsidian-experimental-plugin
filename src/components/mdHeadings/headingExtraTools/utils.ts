@@ -203,36 +203,36 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
 
 
   const presortedSiblings = [...siblings];
-  const getSiblingFolds = () => getFolds(view).filter(
-    (fold) => fold.from >= siblingsRange.from.line && fold.from <= siblingsRange.to.line
+
+  const siblingSectionFolds = getFolds(view).filter(
+    (fold) => fold.from >= siblingsRange.from.line && fold.to <= siblingsRange.to.line
   );
 
-  let foldedHeadingIndices: number[] = [];
-  const folds = getSiblingFolds();
-  console.log("Folds before sort replacement:", folds);
 
-  if (folds.length > 0) {
-    for (const fold of folds) {
-      for (let i = 0; i < siblings.length; i++) {
-        if (siblings[i].heading.range.from.line === fold.from) {
-          foldedHeadingIndices.push(i);
-          break;
-        }
-      }
-    }
+  const siblingFoldData: {[key: number]: {relativeFolds: any[], mapsTo?: number}} = {};
+  // TODO: Optimize this loop if necessary.
+  for (let i = 0; i < siblings.length; i++) {
+    const headingFrom = siblings[i].heading.range.from.line;
+    const headingTo = siblings[i].heading.range.to!.line;
+    const foldsAtSibling = siblingSectionFolds.filter(
+      (fold) => fold.from >= headingFrom && fold.to <= headingTo
+    );
+    const relativeFolds = foldsAtSibling.map(
+      (fold) => ({from: fold.from - headingFrom, to: fold.to - headingFrom})
+    );
+    siblingFoldData[i] = { relativeFolds };
   }
-  console.log("Folded heading indices:", foldedHeadingIndices);
-  
+
 
   // WARNING: Sorting means that some information about the siblings order will be lost.
   //          Make sure to preserve any important information before sorting.
   siblings.sort(selectedSort.func);
 
-  const siblingSortMapping = new Map<number, number>();
+
   for (let i = 0; i < siblings.length; i++) {
-    siblingSortMapping.set(i, presortedSiblings.indexOf(siblings[i]));
+    siblingFoldData[i].mapsTo = presortedSiblings.indexOf(siblings[i]);
   }
-  console.log(siblingSortMapping);
+  console.log("Sibling Fold Data:", siblingFoldData);
 
 
   let sortedText = "";
@@ -245,20 +245,21 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
   if (lastSiblingBeforeSort.heading.range.to!.line === editor.lineCount()) {
     for (const node of siblings) {
       if (node === lastSiblingBeforeSort) {
-        sortedText += node.heading.getContents(editor) + "\n"; // Add newline to last sibling before sorting.
+        sortedText += node.getHeadingContents(editor) + "\n"; // Add newline to last sibling before sorting.
       } else {
-        sortedText += node.heading.getContents(editor);
+        sortedText += node.getHeadingContents(editor);
       }
     }
     sortedText = sortedText.slice(0, -1); // Remove last newline.
   }
   else {
     for (const node of siblings) {
-      sortedText += node.heading.getContents(editor);
+      sortedText += node.getHeadingContents(editor);
     }
   }
 
   const initialLineCount = editor.lineCount();
+  // After modifying an editor range, the folds within the range are removed.
   editor.replaceRange(sortedText, siblingsRange.from, siblingsRange.to);
   const finalLineCount = editor.lineCount();
 
@@ -268,10 +269,8 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
     new Notice(message, 0);
   }
 
-  // TODO: Preserve also internal folds.
 
-  const newFolds = getSiblingFolds();
-  console.log("Folds after sort replacement:", newFolds);
+  const newFolds = getFolds(view);
 
   const siblingsAfterSort = getHeadingNodeSiblings(editor, {parentLine, mdLevel});
 
@@ -282,13 +281,17 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
     new Notice(message, 0);
   }
 
-  for (const headingOldIndex of foldedHeadingIndices) {
-    const headingNewIndex = siblingSortMapping.get(headingOldIndex)!;
-    const headingRange = siblingsAfterSort[headingNewIndex].heading.range;
-    newFolds.push({
-      from: headingRange.from.line,
-      to: headingRange.to!.line - 1,
-    });
+  for (const index in siblingFoldData) {
+    const siblingRelativeFolds = siblingFoldData[index].relativeFolds;
+    if (siblingRelativeFolds.length === 0) continue;
+    const siblingNewIndex = siblingFoldData[index].mapsTo!;
+    const newSiblingRange = siblingsAfterSort[siblingNewIndex].heading.range;
+    for (const relativeFold of siblingRelativeFolds) {
+      newFolds.push({
+        from: relativeFold.from + newSiblingRange.from.line,
+        to:   relativeFold.to   + newSiblingRange.from.line,
+      })
+    }
   }
 
   newFolds.sort((a, b) => a.from - b.from);
