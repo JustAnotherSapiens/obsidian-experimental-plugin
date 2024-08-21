@@ -36,6 +36,7 @@ export class MdHeading {
   header: HeadingHeader;
   level: HeadingLevel;
   range: HeadingRange;
+  hasLastLine: boolean = false;
 
 
   constructor(lineNumber: number, headerLine: string, headerDefiner?: string) {
@@ -225,6 +226,42 @@ export class HeadingTree {
       currentNode.heading.level.byDepth = depthCount as MarkdownLevel;
     }
 
+    this.resolveHeadingRanges();
+  }
+
+
+  resolveHeadingRanges() {
+    this.root.heading.range = {
+      from: {line: 0, ch: 0},
+      to: {line: this.lineCount, ch: 0}
+    };
+    this.root.heading.hasLastLine = true;
+
+    let refNode = this.root;
+    while (refNode.children.length !== 0) {
+      refNode = refNode.children[refNode.children.length - 1];
+      refNode.heading.hasLastLine = true;
+    }
+
+    this.breadthFirstTraversal((node: HeadingNode) => {
+      if (node.next !== undefined) {
+        node.heading.range.to = {...node.next.heading.range.from};
+      } else {
+        node.heading.range.to = {...node.parent!.heading.range.to!};
+      }
+    });
+  }
+
+
+  breadthFirstTraversal(callback: (node: HeadingNode) => void, topNode?: HeadingNode) {
+    if (!topNode) topNode = this.root;
+    let queue: HeadingNode[] = [...topNode.children];
+    while (queue.length !== 0) {
+      const node = queue.shift()!;
+      callback(node);
+      if (node.children.length !== 0)
+        queue.push(...node.children);
+    }
   }
 
 
