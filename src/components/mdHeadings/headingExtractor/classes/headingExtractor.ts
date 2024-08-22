@@ -51,7 +51,7 @@ export default class HeadingExtractor {
 
     let changes: EditorChange[] = [];
     let foreignFileInsertion: boolean = true;
-    const extractionRange = this.extractionNode.getHeadingRange(this.tree.lineCount);
+    const extractionRange = this.extractionNode.getHeadingRange();
 
     const extraction: Extraction = {
       text: this.editor.getRange(extractionRange.from, extractionRange.to!),

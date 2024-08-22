@@ -252,7 +252,6 @@ export default class HeadingInsertionSuggest extends HeadingTreeSuggest {
 
     if (targetNode.heading.level.bySyntax === this.mdLevel) {
       if (!top) {
-        targetNode.calculateHeadingLineEnd(this.tree.lineCount);
         insertionPos = {line: targetNode.heading.range.to!.line, ch: 0};
       } else {
         insertionPos = {line: targetNode.heading.range.from.line, ch: 0};
@@ -275,7 +274,6 @@ export default class HeadingInsertionSuggest extends HeadingTreeSuggest {
 
       if (!siblingRefNode) {
         if (!stopNode) {
-          targetNode.calculateHeadingLineEnd(this.tree.lineCount);
           insertionPos = {line: targetNode.heading.range.to!.line, ch: 0};
         } else {
           insertionPos = {line: stopNode.heading.range.from.line, ch: 0};
@@ -283,7 +281,6 @@ export default class HeadingInsertionSuggest extends HeadingTreeSuggest {
       }
       else {
         if (!top) {
-          siblingRefNode.calculateHeadingLineEnd(this.tree.lineCount);
           insertionPos = {line: siblingRefNode.heading.range.to!.line, ch: 0};
         } else {
           insertionPos = {line: siblingRefNode.heading.range.from.line, ch: 0};

@@ -49,9 +49,9 @@ export function cutHeadingSection(editor: Editor) {
   const headingTree = new HeadingTree(editor.getValue());
   const headingNode = headingTree.getNodeAtLine(editor.getCursor("head").line);
   if (!headingNode) return;
-  const headingRange = headingNode.heading.range;
-  const headingText = editor.getRange(headingRange.from, headingRange.to!);
-  editor.replaceRange("", headingRange.from, headingRange.to!);
+  const headingRange = headingNode.getHeadingRange();
+  const headingText = editor.getRange(headingRange.from, headingRange.to);
+  editor.replaceRange("", headingRange.from, headingRange.to);
   copyToClipboard(headingText);
 }
 
@@ -67,40 +67,6 @@ export function moveHeadingDownwards(editor: Editor) {
 
 
 export function formatHeadingInterspacing(editor: Editor) {
-}
-
-
-function getHeadingNodeSiblings(headingTree: HeadingTree, ref: {siblingLine?: number, parentLine?: number, mdLevel?: number}): HeadingNode[] {
-  if (ref.siblingLine === undefined && ref.parentLine === undefined) return [];
-
-  let siblingNodes: HeadingNode[];
-
-  if (ref.siblingLine !== undefined) {
-    const refNode = headingTree.getNodeAtLine(ref.siblingLine);
-    if (!refNode) return [];
-    const refLevel = refNode.heading.level.bySyntax;
-    siblingNodes = refNode.parent!.children
-      .filter(
-        (node) => node.heading.level.bySyntax === refLevel
-      ).sort(
-        (a, b) => a.heading.range.from.line - b.heading.range.from.line
-      );
-  }
-  else if (ref.parentLine !== undefined) {
-    const refNode = headingTree.getNodeAtLine(ref.parentLine);
-    if (!refNode) return [];
-    // Use the level of the first child if 'ref.mdLevel' is not provided.
-    const refLevel = ref.mdLevel ?? refNode.children[0].heading.level.bySyntax;
-    siblingNodes = refNode.children
-      .filter(
-        (node) => node.heading.level.bySyntax === refLevel
-      ).sort(
-        (a, b) => a.heading.range.from.line - b.heading.range.from.line
-      );
-  }
-  else return [];
-
-  return siblingNodes;
 }
 
 
@@ -168,14 +134,16 @@ function getSiblingsSortedText(siblings: HeadingNode[], editor: Editor): string 
   // An empty line at the end of the file is actually a single "\n" character;
   // whereas an empty line between two headings is two "\n" characters.
   let sortedText = "";
+  let atEndOfFile = false;
   for (const node of siblings) {
     if (!node.heading.hasLastLine) {
       sortedText += node.getHeadingContents(editor);
     } else {
       sortedText += node.getHeadingContents(editor) + "\n"; // Add newline to the heading at the end of the file.
+      atEndOfFile = true;
     }
   }
-  sortedText = sortedText.slice(0, -1); // Remove last newline character.
+  if (atEndOfFile) sortedText = sortedText.slice(0, -1); // Remove last newline character.
   return sortedText;
 }
 
@@ -185,18 +153,20 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
   const initialTree = new HeadingTree(editor.getValue());
   const cursorHead = editor.getCursor("head");
 
-  let siblings = getHeadingNodeSiblings(initialTree, {siblingLine: cursorHead.line});
+  const cursorNode = initialTree.getNodeAtLine(cursorHead.line);
+  if (!cursorNode) {
+    new Notice("Cursor is not at a heading.", 5000);
+    return;
+  }
+
+  let siblings = cursorNode.getLevelSiblings();
   if (siblings.length < 2) {
     new Notice("Not enough sibling headings to sort.", 5000);
     return;
   }
 
-  const nodeAtCursor = initialTree.getNodeAtLine(cursorHead.line)!;
-  const nodeAtCursorIndex = siblings.indexOf(nodeAtCursor);
-  const cursorOffsetToHeading = cursorHead.line - nodeAtCursor.heading.range.from.line;
-
-  const mdLevel = siblings[0].heading.level.bySyntax;
-  const parentLine = siblings[0].parent!.heading.range.from.line;
+  const cursorNodeIndex = siblings.indexOf(cursorNode);
+  const cursorHeadingOffset = cursorHead.line - cursorNode.heading.range.from.line;
 
   const siblingsRange = {
     from: siblings[0].heading.range.from,
@@ -227,7 +197,6 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
   // WARNING: Sorting means that some information about the siblings order will be lost.
   //          Make sure to preserve any important information before sorting.
   const presortedSiblings = [...siblings];
-  const lastSiblingBeforeSort = siblings[siblings.length - 1];
   const sortFunction = await getHeadingSortFunction(app);
   if (!sortFunction) return;
   siblings.sort(sortFunction);
@@ -253,7 +222,8 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
   }
 
   const finalTree = new HeadingTree(editor.getValue());
-  const siblingsAfterSort = getHeadingNodeSiblings(finalTree, {parentLine, mdLevel});
+  const newFirstNode = finalTree.getNodeAtLine(siblingsRange.from.line)!;
+  const siblingsAfterSort = newFirstNode.getLevelSiblings();
 
   // Ensure oldSiblings and newSiblings have the same length.
   if (siblingsAfterSort.length !== siblings.length) {
@@ -263,25 +233,26 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
   }
 
   // Set the cursor to its relative position to the heading it was at originally.
-  const newCursorNodeIndex = siblingFoldData[nodeAtCursorIndex].mapsTo!;
+  const newCursorNodeIndex = siblingFoldData[cursorNodeIndex].mapsTo!;
   const newCursorNode = siblingsAfterSort[newCursorNodeIndex];
   editor.setCursor({
-    line: newCursorNode.heading.range.from.line + cursorOffsetToHeading,
+    line: newCursorNode.heading.range.from.line + cursorHeadingOffset,
     ch: cursorHead.ch,
   });
 
 
   const newFolds = getFolds(view);
 
+  // Recalculate the folds based on the new sibling order and add them back.
   for (const index in siblingFoldData) {
     const siblingRelativeFolds = siblingFoldData[index].relativeFolds;
     if (siblingRelativeFolds.length === 0) continue;
     const siblingNewIndex = siblingFoldData[index].mapsTo!;
-    const newSiblingRange = siblingsAfterSort[siblingNewIndex].heading.range;
+    const newSiblingLine = siblingsAfterSort[siblingNewIndex].heading.range.from.line;
     for (const relativeFold of siblingRelativeFolds) {
       newFolds.push({
-        from: relativeFold.from + newSiblingRange.from.line,
-        to:   relativeFold.to   + newSiblingRange.from.line,
+        from: relativeFold.from + newSiblingLine,
+        to:   relativeFold.to   + newSiblingLine,
       })
     }
   }
@@ -295,3 +266,4 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
     asymmetric: true,
   });
 }
+

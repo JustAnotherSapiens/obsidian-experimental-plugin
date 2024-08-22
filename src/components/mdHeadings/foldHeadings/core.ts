@@ -9,9 +9,9 @@ import {
 
 import {
   cleanToggleFold,
-  cleanToggleFoldOnSiblingHeadings,
-  cleanToggleFoldOnChildrenHeadings,
   foldingHeadingsByLevel,
+  toggleSiblingHeadingsFolds,
+  toggleChildrenHeadingsFolds,
 } from "./utils";
 
 
@@ -84,8 +84,8 @@ export default class FoldHeadingsComponent implements BundlePluginComponent {
     id: "toggle-fold-sibling-headings",
     name: "Toggle fold on sibling headings",
     icon: "fold-vertical",
-    editorCallback: async (editor: Editor, view: MarkdownView) => {
-      await cleanToggleFoldOnSiblingHeadings(editor, view);
+    editorCallback: (editor: Editor, view: MarkdownView) => {
+      toggleSiblingHeadingsFolds(editor, view);
     }
   });
 
@@ -94,8 +94,8 @@ export default class FoldHeadingsComponent implements BundlePluginComponent {
     id: "toggle-fold-children-headings",
     name: "Toggle fold on children headings",
     icon: "fold-vertical",
-    editorCallback: async (editor: Editor, view: MarkdownView) => {
-      await cleanToggleFoldOnChildrenHeadings(editor, view);
+    editorCallback: (editor: Editor, view: MarkdownView) => {
+      toggleChildrenHeadingsFolds(editor, view);
     }
   });
 

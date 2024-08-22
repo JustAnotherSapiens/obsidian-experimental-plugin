@@ -2,7 +2,6 @@ import {
   Editor,
   EditorRange,
   EditorRangeOrCaret,
-  EditorChange,
 } from 'obsidian';
 
 import { DateFormat, getMatchedDate } from "utils/time";
@@ -117,38 +116,39 @@ export class HeadingNode {
   }
 
 
-  getExtractionChange(lineCount: number): EditorChange {
-    return { text: '', ...this.getHeadingRange(lineCount) };
-  }
-
-
-  getHeadingRange(lineCount: number): EditorRange {
-    if (this.heading.range.to === undefined)
-      this.calculateHeadingLineEnd(lineCount);
+  getHeadingRange(): EditorRange {
     return this.heading.range as EditorRange;
   }
 
 
   getHeadingContents(editor: Editor) {
-    if (this.heading.range.to === undefined)
-      this.calculateHeadingLineEnd(editor.lastLine());
-    return editor.getRange(this.heading.range.from, this.heading.range.to!);
+    const range = this.getHeadingRange();
+    return editor.getRange(range.from, range.to);
   }
 
 
-  calculateHeadingLineEnd(lineCount: number) {
-    if (!this.parent) this.heading.range.to = {line: lineCount, ch: 0};
-    else if (this.next) {
-      this.heading.range.to = {line: this.next.heading.range.from.line, ch: 0};
+  getRawSiblings(): HeadingNode[] {
+    let siblings = [this as HeadingNode];
+    let refNode = this as HeadingNode;
+    while (refNode.prev) {
+      siblings.unshift(refNode.prev);
+      refNode = refNode.prev;
     }
-    else {
-      let reference: HeadingNode = this;
-      while (reference.next === undefined && reference.parent !== undefined) {
-        reference = reference.parent;
-      }
-      const endLine = reference.next?.heading.range.from.line ?? lineCount;
-      this.heading.range.to = {line: endLine, ch: 0};
+    refNode = this as HeadingNode;
+    while (refNode.next) {
+      siblings.push(refNode.next);
+      refNode = refNode.next;
     }
+    return siblings;
+  }
+
+
+  getLevelSiblings(): HeadingNode[] {
+    const rawSiblings = this.getRawSiblings();
+    const refLevel = this.heading.level.bySyntax;
+    return rawSiblings.filter(
+      node => node.heading.level.bySyntax === refLevel
+    );
   }
 
 }
@@ -181,7 +181,7 @@ export class HeadingTree {
   }
 
 
-  parseMarkdownText(text: string) {
+  private parseMarkdownText(text: string) {
     const lines = text.split("\n");
     this.lineCount = lines.length;
 
@@ -230,7 +230,7 @@ export class HeadingTree {
   }
 
 
-  resolveHeadingRanges() {
+  private resolveHeadingRanges() {
     this.root.heading.range = {
       from: {line: 0, ch: 0},
       to: {line: this.lineCount, ch: 0}
