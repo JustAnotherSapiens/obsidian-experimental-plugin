@@ -10,7 +10,7 @@ import BaseAbstractSuggest from "suggests/baseAbstractSuggest";
 export default class QuickTabOpenSuggest extends BaseAbstractSuggest<TFile> {
 
   constructor(app: App) {
-    super(app, "quick-tab-open-suggest", { fuzzy: true });
+    super(app, "quick-tab-open-suggest");
 
     this.itemToString = (file: TFile) => {
       if (file.extension !== "md") return file.path;

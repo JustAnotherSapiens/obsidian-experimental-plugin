@@ -7,7 +7,13 @@
 
 
 
-import { Plugin, PluginSettingTab, App } from "obsidian";
+import {
+  Plugin,
+  PluginSettingTab,
+  Setting,
+  ToggleComponent,
+  App,
+} from "obsidian";
 
 import HeadingExtractorComponent from "components/mdHeadings/headingExtractor/core";
 import MoveToHeadingComponent from "components/mdHeadings/moveToHeading/core";
@@ -75,7 +81,9 @@ export default class BundlePlugin extends Plugin {
 
 
   async loadSettings() {
-    let bundleSettings: {[key: string]: any} = {};
+    let bundleSettings: {[key: string]: any} = {
+      showSuggestInstructions: true,
+    };
     this.components.forEach((component: BundlePluginComponent) => {
       bundleSettings = { ...bundleSettings, ...component.settings };
     });
@@ -112,6 +120,22 @@ class BundleSettingTab extends PluginSettingTab {
       component.addSettings(containerEl);
       containerEl.createEl("br");
     });
+
+		containerEl.createEl("br");
+
+    // Global Settings
+    containerEl.createEl("h3", { text: "Global Settings" });
+
+    // Suggest Prompt Instructions visible by default
+    new Setting(containerEl)
+      .setName("Suggest Prompt Instructions visible by default")
+      .addToggle((toggle: ToggleComponent) => {
+        toggle.setValue(this.plugin.settings.showSuggestInstructions);
+        toggle.onChange(async (value: boolean) => {
+          this.plugin.settings.showSuggestInstructions = value;
+          await this.plugin.saveSettings();
+        });
+      });
 
 		containerEl.createEl("br");
 

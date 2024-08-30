@@ -68,14 +68,21 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
     this.itemToString = (node: HeadingNode) => node.heading.header.text;
     this.setDisplayFunctions();
 
-    this.flags.expand = args.expand ?? false;
-    this.iconButtons.expand = new IconButton({
+    this.flags.expandHeadingTree = args.expand ?? false;
+
+    this.iconButtons.set("expandHeadingTree", new IconButton({
       parentEl: this.iconContainerEl,
       iconId: "expand",
-      tooltip: "Expand All",
-      isActive: this.flags.expand,
-      clickCallback: () => this.toggleExpandAll(),
-    });
+      tooltip: "Expand Heading Tree",
+      isActive: this.flags.expandHeadingTree,
+      clickCallback: () => this.toggleExpandHeadingTree(),
+    }));
+
+  }
+
+
+  private toggleExpandHeadingTree(): void {
+    this.toggleIconButton("expandHeadingTree");
   }
 
 
@@ -83,7 +90,7 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
     registerKeybindings(this.scope, [
       [["Alt"],  "l", async () => await this.stepInto(this.renderedResults[this.selectionIndex])],
       [["Alt"],  "h", async () => await this.stepOut()],
-      [["Alt"],  "d", () => this.toggleExpandAll()],
+      [["Alt"],  "d", () => this.toggleExpandHeadingTree()],
     ]);
   }
 
@@ -96,14 +103,37 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
 
 
   async buildTree(): Promise<void> {
-    await this.setMarkdownText();
+    await this.resolveMarkdownText();
     if (!this.markdownText) return;
     this.tree = new HeadingTree(this.markdownText, this.mdLevelLimit);
     this.referenceNode = this.tree.root;
   }
 
 
-  async setMarkdownText(): Promise<void> {
+  async rebuildTree(): Promise<void> {
+    this.markdownText = undefined;
+    await this.buildTree();
+  }
+
+
+  setTree(tree: HeadingTree) {
+    this.tree = tree;
+    this.referenceNode = tree.root;
+  }
+
+
+  getTree(): HeadingTree {
+    if (!this.tree) throw new Error("HeadingTreeSuggest::Tree not yet built.");
+    return this.tree;
+  }
+
+  // TODO: Extract this as a utility function.
+  /**
+   * If neither `markdownText` nor `editor` nor `file` is provided, the function
+   * will try to get the markdown text from the active `MarkdownView`; if that 
+   * fails, then it will return without doing anything.
+   */
+  async resolveMarkdownText(): Promise<void> {
     if (this.markdownText) return;
 
     else if (this.editor)
@@ -116,11 +146,11 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
       const activeFiles = activeViews.map((view: MarkdownView) => view.file as TFile);
       const targetFileIndex = activeFiles.indexOf(this.file);
       if (targetFileIndex !== -1) {
-        console.debug("File contents read from: WORKSPACE VIEW EDITOR");
+        console.debug("HeadingTreeSuggest::File contents read from WORKSPACE VIEW EDITOR");
         this.editor = activeViews[targetFileIndex].editor;
         this.markdownText = this.editor.getValue();
       } else {
-        console.debug("File contents read from: DISK");
+        console.debug("HeadingTreeSuggest::File contents read from DISK");
         this.markdownText = await this.app.vault.read(this.file);
       }
     }
@@ -135,12 +165,10 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
 
 
   getSourceItems(sourceNode?: HeadingNode, filter?: (node: HeadingNode) => boolean): HeadingNode[] {
-    if (!this.flags.expand) {
-      if (!sourceNode) return this.referenceNode.children;
-      else if (!filter) return sourceNode.children;
-      else return sourceNode.children.filter(filter);
-    }
-    else return this.tree.flatten(filter, sourceNode);
+    if (this.flags.expandHeadingTree) return this.tree.flatten(filter, sourceNode);
+    else if (!sourceNode) return this.tree.root.children;
+    else if (!filter) return sourceNode.children;
+    else return sourceNode.children.filter(filter);
   }
 
 
@@ -163,20 +191,6 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
       this.selectionIndexStack.pop()!
     );
     return true;
-  }
-
-
-  toggleExpandAll(): void {
-    this.flags.expand = !this.flags.expand;
-    this.iconButtons.expand?.toggle(this.flags.expand);
-    this.inputEl.dispatchEvent(new Event("input"));
-    this.inputEl.focus();
-  }
-
-
-  setTree(tree: HeadingTree) {
-    this.tree = tree;
-    this.referenceNode = tree.root;
   }
 
 

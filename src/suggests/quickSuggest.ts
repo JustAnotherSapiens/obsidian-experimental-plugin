@@ -11,7 +11,7 @@ export default class QuickSuggest<T> extends BaseAbstractSuggest<T> {
   private selectedItem?: T;
 
   constructor(app: App, items: T[], itemToString: (item: T) => string, placeholder?: string) {
-    super(app, "quick-suggest", {fuzzy: true});
+    super(app, "quick-suggest");
     this.sourceItems = items;
     this.itemToString = itemToString;
     if (placeholder) this.placeholder = placeholder;

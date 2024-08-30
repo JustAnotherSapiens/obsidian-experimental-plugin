@@ -26,7 +26,7 @@ export default abstract class DataNodeSuggest<T> extends BaseAbstractSuggest<Dat
   private selectionQueryStack: string[] = [];
 
   constructor(app: App, nodeToString: (node: DataNode<T>) => string) {
-    super(app, "data-node-suggest", {fuzzy: true});
+    super(app, "data-node-suggest");
     this.itemToString = nodeToString;
   }
 

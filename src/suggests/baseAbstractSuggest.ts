@@ -8,19 +8,12 @@ import {
 } from "obsidian";
 
 import { wrapAround } from "utils/generic";
+import { getSetting } from "utils/obsidian/settings";
 import registerKeybindings from "utils/obsidian/keybindings";
 import IconButton from "utils/obsidian/classes/iconButton";
 
 import { simpleHighlight, fuzzyHighlight } from "./utils/display";
 
-
-
-type SuggestFlags = {
-  fuzzy: boolean,
-  regex: boolean,
-  strictCase: boolean,
-  instructions: boolean,
-};
 
 type SimpleSearchObject<T> = {
   item: T,
@@ -102,7 +95,7 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
   protected instructions: {command: string, purpose: string}[];
 
   protected flags: {[key: string]: boolean};
-  protected iconButtons: {[key: string]: IconButton};
+  protected iconButtons: Map<string, IconButton>;
 
   protected sourceItems: T[];
   protected renderedResults: T[];
@@ -111,20 +104,20 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
   protected selectionIndex: number;
 
 
-  constructor(app: App, modalId: string, flags?: {[Key in keyof SuggestFlags]?: boolean}) {
+  constructor(app: App, modalId: string, flags?: {[key: string]: boolean}) {
     this.app = app;
     this.id = modalId;
 
     this.flags = Object.assign({
-      fuzzy: true,
-      regex: false,
+      fuzzySearch: true,
       strictCase: false,
-      instructions: true
+      instructions: getSetting("showSuggestInstructions"),
     }, flags);
 
     // NOTE: This element MUST exist before any IconButton gets created (either here or in a subclass).
     this.iconContainerEl = createEl("div", { cls: "suggest-icon-container" });
-    this.iconButtons = {};
+    this.iconButtons = new Map();
+    this.addDefaultIconButtons();
 
     this.placeholder = "Enter text here...";
     this.instructions = [
@@ -138,6 +131,44 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
     this.setDisplayFunctions();
     this.resolveSearchDisplay();
+  }
+
+
+  private addDefaultIconButtons(): void {
+
+    this.iconButtons.set("fuzzySearch", new IconButton({
+      parentEl: this.iconContainerEl,
+      iconId: "search-code",
+      tooltip: "Toggle Fuzzy Search",
+      isActive: this.flags.fuzzySearch,
+      clickCallback: () => this.toggleFuzzySearch(),
+    }));
+
+    // (only works for simple search, i.e. not for fuzzy search)
+    this.iconButtons.set("strictCase", new IconButton({
+      parentEl: this.iconContainerEl,
+      iconId: "case-sensitive",
+      tooltip: "Toggle Case Sensitivity",
+      isActive: this.flags.strictCase,
+      clickCallback: () => this.toggleIconButton("strictCase"),
+    }));
+
+    // // TODO: Implement regex search.
+    // this.newIconButtons.set("regex", new IconButton({
+    //   parentEl: this.iconContainerEl,
+    //   iconId: "regex",
+    //   tooltip: "Toggle Regular Expression",
+    //   isActive: this.flags.regex,
+    //   clickCallback: () => this.toggleIconButton("regex"),
+    // }));
+
+  }
+
+
+  private toggleFuzzySearch(): void {
+    this.toggleIconButton("fuzzySearch", () => {
+      this.resolveSearchDisplay();
+    });
   }
 
 
@@ -159,33 +190,23 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
     const inputContainer = this.inputEl.parentElement as HTMLElement;
     inputContainer.addClass("suggest-input-container");
+
+    // Since the icon container is right-aligned, and the icons get added from
+    // the most generic to the most specific, it is visually more appealing to
+    // have the most specific icons on the left (closer to the input text), or,
+    // conversely, to have the most generic icons at a fixed position (at the
+    // right corner).
+    const reversedIcons = Array.from(this.iconContainerEl.children).reverse();
+    for (const iconEl of reversedIcons) {
+      this.iconContainerEl.appendChild(iconEl);
+    }
+
+    // Append the Icon Container to the Input Container.
     inputContainer.appendChild(this.iconContainerEl);
 
-    // TODO: Implement regex search.
-    this.iconButtons = Object.assign(this.iconButtons, {
-      // "regex": new IconButton({
-      //   parentEl: this.iconContainerEl,
-      //   iconId: "regex",
-      //   tooltip: "Toggle Regular Expression",
-      //   isActive: this.flags.regex,
-      //   clickCallback: () => this.toggleRegexSearch(),
-      // }),
-      "fuzzy": new IconButton({
-        parentEl: this.iconContainerEl,
-        iconId: "search-code",
-        tooltip: "Toggle Fuzzy Search",
-        isActive: this.flags.fuzzy,
-        clickCallback: () => this.toggleFuzzySearch(),
-      }),
-      "strictCase": new IconButton({
-        parentEl: this.iconContainerEl,
-        iconId: "case-sensitive",
-        tooltip: "Toggle Case Sensitivity",
-        isActive: this.flags.strictCase,
-        clickCallback: () => this.toggleStrictCase(),
-      }),
-    });
-
+    // Set the CSS variable for the number of icons.
+    const iconCount = this.iconButtons.size;
+    this.iconContainerEl.style.setProperty("--suggest-icon-count", iconCount.toString());
   }
 
 
@@ -208,13 +229,15 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
       [["Alt"], "j", () => this.setSelectedResultEl(this.selectionIndex + 1)],
       [["Alt"], "k", () => this.setSelectedResultEl(this.selectionIndex - 1)],
       [["Alt"], "f", () => this.toggleFuzzySearch()],
+      [["Alt"], ".", () => this.toggleInstructionsVisibility()],
       // TODO: Add default hotkeys to scroll down and up by one result page.
+      // TODO: Add <C-U>/<A-U> to clear the input.
     ]);
   }
 
 
   private resolveSearchDisplay(): void {
-    this.searchDisplay = this.flags.fuzzy ? this.fuzzySearchDisplay : this.simpleSearchDisplay;
+    this.searchDisplay = this.flags.fuzzySearch ? this.fuzzySearchDisplay : this.simpleSearchDisplay;
   }
 
 
@@ -311,29 +334,19 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
   }
 
 
-  protected toggleFuzzySearch(): void {
-    this.flags.fuzzy = !this.flags.fuzzy;
-    this.iconButtons.fuzzy?.toggle(this.flags.fuzzy);
-    this.resolveSearchDisplay();
-    this.inputEl.dispatchEvent(new Event("input"));
-    this.inputEl.focus();
-  }
-
-
   /**
-   * TODO: Implement this functionality.
+   * Toggle the `this.flags[iconId]` value and update the icon button accordingly.
+   * 
+   * After the `callback` dispatch an "input" Event to the `this.inputEl` and bring it to focus.
+   * @param iconId 
+   * @param callback An additional specific action that the icon button is supposed to perform.
    */
-  protected toggleRegexSearch(): void {
-    this.flags.regex = !this.flags.regex;
-    this.iconButtons.regex?.toggle(this.flags.regex);
-    this.inputEl.dispatchEvent(new Event("input"));
-    this.inputEl.focus();
-  }
-
-
-  protected toggleStrictCase(): void {
-    this.flags.strictCase = !this.flags.strictCase;
-    this.iconButtons.strictCase?.toggle(this.flags.strictCase);
+  protected toggleIconButton(iconId: string, callback?: () => void): void {
+    this.flags[iconId] = !this.flags[iconId];
+    this.iconButtons.get(iconId)?.toggle(this.flags[iconId]);
+    callback?.();
+    // The "input" event listener on the `this.inputEl` triggers the
+    // `this.refreshResults()` asynchronous method.
     this.inputEl.dispatchEvent(new Event("input"));
     this.inputEl.focus();
   }
@@ -341,14 +354,15 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
   private createSuggestModalElements(): void {
 
-    // Input Container
-    const inputContainer = createEl("div", { cls: "prompt-input-container" });
+    // Prompt Input Element
     this.inputEl = createEl("input", {
       cls: "prompt-input suggest-prompt-input",
       attr: { id: `${this.id}-input`, enterkeyhint: "done", type: "text" },
     });
+
+    // Prompt Input Container
+    const inputContainer = createEl("div", { cls: "prompt-input-container" });
     inputContainer.appendChild(this.inputEl);
-    this.addSearchToggleIcons();
 
     // Prompt Results Container
     this.resultsEl = createEl("div", {
@@ -361,6 +375,7 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
       cls: "prompt-instructions",
       attr: { id: `${this.id}-instructions` }
     });
+    this.addInstructions();
 
     // Prompt Container
     this.promptEl = createEl("div", {
@@ -422,10 +437,11 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
   }
 
 
-  protected setInstructions(): void {
+  private addInstructions(): void {
+    // Ensure that the instructions container is empty.
     this.instructionsEl.empty();
-    if (!this.flags.instructions) return;
 
+    // Append Instructions
     this.instructions.forEach((instruction) => {
       const instructionEl = createEl("div", { cls: "prompt-instruction" });
 
@@ -440,6 +456,16 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
 
       this.instructionsEl.appendChild(instructionEl);
     });
+
+    if (!this.flags.instructions){
+      this.instructionsEl.toggle(false);
+    }
+  }
+
+
+  protected toggleInstructionsVisibility(): void {
+    this.flags.instructions = !this.flags.instructions;
+    this.instructionsEl.toggle(this.flags.instructions);
   }
 
 
@@ -462,13 +488,14 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
   public async open() {
     this.createSuggestModalElements();
     this.addCoreInteractionEvents();
+    this.addSearchToggleIcons();
 
     this.inputEl.setAttribute("placeholder", this.placeholder);
     // TODO:
     // - Set toggleable default instructions.
     // - Function to append custom instructions.
     // - Method to remove some or all instructions.
-    this.setInstructions();
+    this.addInstructions();
 
     await this.onOpen?.();
     // `onOpen` could potentially modify the behavior of the following lines.

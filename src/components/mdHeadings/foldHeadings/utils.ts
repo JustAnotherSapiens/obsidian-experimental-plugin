@@ -1,6 +1,7 @@
 import {
   App,
   Notice,
+  TFile,
   MarkdownView,
   Editor,
 } from "obsidian";
@@ -24,6 +25,11 @@ import {
 
 export type Fold = {from: number, to: number};
 
+export type FoldInfo = {
+  folds: Fold[],
+  lines: number,
+};
+
 
 
 export function cleanToggleFold(editor: Editor, view: MarkdownView) {
@@ -34,7 +40,7 @@ export function cleanToggleFold(editor: Editor, view: MarkdownView) {
 
 
 
-export function getFolds(view: MarkdownView): Array<Fold> {
+export function getFolds(view: MarkdownView): Fold[] {
   const foldInfo = (view.currentMode as any).getFoldInfo();
   if (foldInfo) return foldInfo.folds;
   return [];
@@ -42,11 +48,37 @@ export function getFolds(view: MarkdownView): Array<Fold> {
 
 
 
-export function applyFolds(view: MarkdownView, folds: Array<Fold>): void {
+export function applyFolds(view: MarkdownView, folds: Fold[]): void {
   (view.currentMode as any).applyFoldInfo({
     folds, lines: view.editor.lineCount()
   });
   (view as any).onMarkdownFold();
+}
+
+
+
+export function loadFoldInfo(app: App, source: MarkdownView | TFile | string): FoldInfo | undefined {
+  let foldInfo: FoldInfo | null;
+
+  if (typeof source === 'string') {
+    foldInfo = (app as any).foldManager.loadPath(source);
+  } else {
+    // This one calls `loadPath` internally.
+    foldInfo = (app as any).foldManager.load(source);
+  }
+  return foldInfo ?? undefined;
+}
+
+
+
+export function saveFoldInfo(app: App, source: MarkdownView | TFile | string, foldInfo: FoldInfo): void {
+  console.debug("saveFoldInfo args:", source, foldInfo);
+  if (typeof source === 'string') {
+    (app as any).foldManager.savePath(source, foldInfo);
+  } else {
+    // This one calls `savePath` internally.
+    (app as any).foldManager.save(source, foldInfo);
+  }
 }
 
 

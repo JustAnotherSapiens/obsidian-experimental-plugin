@@ -1,3 +1,5 @@
+// - Lucide Icons: https://lucide.dev/
+
 import { getIcon, setTooltip } from "obsidian";
 
 

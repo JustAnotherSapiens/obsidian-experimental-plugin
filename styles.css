@@ -71,7 +71,8 @@
   }
 
   & > .suggest-icon-container {
-    width: calc( 2 * 0.9 * var(--prompt-input-height)); /* n_icons * multiplier * input_height */
+    /* --suggest-icon-count */
+    width: calc( 0.8 * var(--suggest-icon-count) * var(--prompt-input-height)); /* multiplier * n_icons * input_height */
     display: flex;
     flex-direction: row;
     align-items: center;
