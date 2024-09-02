@@ -121,7 +121,7 @@ function getLineViewportData(view: FileView, vieportFraction: number, lineEl?: H
     console.log("No active line HTMLElement found. Please report this issue.");
     return {lineEl, outOfBounds: false, top: false};
   }
-  const viewRect = view.contentEl.getBoundingClientRect()!;
+  const viewRect = view.contentEl.getBoundingClientRect();
   const upperBound = viewRect.top + (viewRect.height * vieportFraction);
   const lowerBound = viewRect.bottom - (viewRect.height * vieportFraction);
   const elemRect = lineEl.getBoundingClientRect();
@@ -168,9 +168,9 @@ export function printActiveLineInfo(view: FileView, label: string = "Active Line
 
 function scrollToFraction(elem: HTMLElement, scrollableEl: HTMLElement, fraction: number, top: boolean): void {
   if (scrollableEl.scrollHeight <= scrollableEl.clientHeight) {
-    console.log("Element is not scrollable:", scrollableEl);
-    console.log("Scroll_Height:", scrollableEl.scrollHeight);
-    console.log("Client_Height:", scrollableEl.clientHeight);
+    // console.log("Element is not scrollable:", scrollableEl);
+    // console.log("Scroll_Height:", scrollableEl.scrollHeight);
+    // console.log("Client_Height:", scrollableEl.clientHeight);
     return;
   }
   const elemRect = elem.getBoundingClientRect();

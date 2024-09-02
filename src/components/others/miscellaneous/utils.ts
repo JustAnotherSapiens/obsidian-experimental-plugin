@@ -2,6 +2,10 @@
 // TODO: Generalize moveArrayElement to work with any numerical offset, not just 1.
 
 
+// NOTE: This function requires  a 'this' context; use methods like:
+//       - Function.prototype.bind
+//       - Function.prototype.call
+//       - Function.prototype.apply
 export function moveCurrentTab(direction: "left" | "right") {
   const activeTabGroup = this.app.workspace.activeTabGroup;
   const tabsArray = activeTabGroup.children;

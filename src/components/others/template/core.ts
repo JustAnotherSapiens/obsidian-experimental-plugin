@@ -39,6 +39,20 @@ export default class TemplateComponent implements BundlePluginComponent {
 
   addCommands(): void {
     const plugin = this.parent;
+
+    // Sample Command
+    plugin.addCommand({
+      id: "cmd",
+      name: "Command",
+      icon: "command",
+      callback: () => {
+        new Notice("Sample Command callback executed!");
+      },
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        new Notice("Sample Command editor callback executed!");
+      }
+    });
+
   }
 
 
