@@ -16,7 +16,7 @@ import {
 } from "utils/obsidian/cache";
 
 import {
-  DateFormat,
+  DateTimeFormat,
   DATE_FORMATS,
   getMatchedDate,
 } from "utils/time";
@@ -35,7 +35,7 @@ async function timeFormatTransform(tp: any, editor: Editor) {
   const cursorLineStr = editor.getLine(cursorLine);
 
   // Get the date format of the current line.
-  const matchedDate = getMatchedDate(cursorLineStr, {verbose: true}) as DateFormat;
+  const matchedDate = getMatchedDate(cursorLineStr, {verbose: true}) as DateTimeFormat;
   if (!matchedDate) return;
 
   // Prompt the user for the date format to transform to.
@@ -61,7 +61,7 @@ async function dateTransformInSelection(tp: any, editor: Editor) {
   const rangeText = editor.getRange(editRange.from, editRange.to);
 
   // Find all the matching date formats in the selection.
-  const matchedDates = getMatchedDate(rangeText, {multiple: true, verbose: true}) as DateFormat[];
+  const matchedDates = getMatchedDate(rangeText, {multiple: true, verbose: true}) as DateTimeFormat[];
   if (!matchedDates) return;
 
   // Prompt the user for the date format to transform from if there are multiple.
@@ -100,16 +100,16 @@ async function dateTransformInSelection(tp: any, editor: Editor) {
 }
 
 
-async function getTransformFormat(tp: any, fromDate: DateFormat) {
+async function getTransformFormat(tp: any, fromDate: DateTimeFormat) {
   // Get the date formats excluding the one to transform from.
   const dates = structuredClone(DATE_FORMATS);
-  const fromDateIdx = dates.findIndex((date: DateFormat) => date.name === fromDate.name);
+  const fromDateIdx = dates.findIndex((date: DateTimeFormat) => date.name === fromDate.name);
   if (fromDateIdx !== -1) dates.splice(fromDateIdx, 1);
 
   // Prompt the user for the new date format.
   return await tp.system.suggester(
-    dates.map((date: DateFormat) => `${date.name}\n${date.format}`),
-    dates.map((date: DateFormat) => date.format), false, // Throw on cancel
+    dates.map((date: DateTimeFormat) => `${date.name}\n${date.format}`),
+    dates.map((date: DateTimeFormat) => date.format), false, // Throw on cancel
     `Transform from ${fromDate.format} to...`
   );
 }
@@ -118,7 +118,7 @@ async function getTransformFormat(tp: any, fromDate: DateFormat) {
 async function getHeadingsDateChanges(
   tp: any,
   editor: Editor,
-  matchedDate: DateFormat,
+  matchedDate: DateTimeFormat,
   newFormat: string,
 ) {
   const cursorLine = editor.getCursor().line;

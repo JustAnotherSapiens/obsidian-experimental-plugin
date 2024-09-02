@@ -4,7 +4,7 @@ import {
   EditorRangeOrCaret,
 } from 'obsidian';
 
-import { DateFormat, getMatchedDate } from "utils/time";
+import { DateTimeFormat, getMatchedDate } from "utils/time";
 
 import { isCodeBlockEnd } from "components/mdHeadings/utils/helpers";
 
@@ -25,6 +25,7 @@ type HeadingHeader = {
   definer: string;
   text: string;
   timestamp?: string;
+  timeFormat?: DateTimeFormat;
   title: string;
 }
 
@@ -52,19 +53,25 @@ export class MdHeading {
 
 
   setHeader(headerLine: string, definer: string) {
-    const text = headerLine.slice(definer.length).trim();
+    this.header = {
+      raw: headerLine,
+      definer: definer,
+      text: headerLine.slice(definer.length).trim(),
+      title: '',
+      timestamp: '',
+    };
+    const text = this.header.text;
 
-    const timeFormat = getMatchedDate(text) as DateFormat;
+    const timeFormat = getMatchedDate(text) as DateTimeFormat;
     if (timeFormat) {
       const timeMatch = text.match(timeFormat.regex)!;
-      var timestamp = timeMatch[0];
-      var title = text.slice(timestamp.length).trim() || timestamp;
+      const timestamp = timeMatch[0];
+      this.header.title = text.slice(timestamp.length).trim() || timestamp;
+      this.header.timestamp = timestamp;
+      this.header.timeFormat = timeFormat;
     } else {
-      var timestamp = '';
-      var title = text;
+      this.header.title = text;
     }
-
-    this.header = {raw: headerLine, text, definer, timestamp, title};
   }
 
   
@@ -233,6 +240,10 @@ export class HeadingTree {
   private resolveHeadingRanges() {
     this.root.heading.range = {
       from: {line: 0, ch: 0},
+      // TODO: Check if this is the correct way to set the last line.
+      //       What if the last line is empty?
+      //       What if the last line has text on it?
+      // Is it just a standardized way to set the section end at the beginning of the next section?
       to: {line: this.lineCount, ch: 0}
     };
     this.root.heading.hasLastLine = true;

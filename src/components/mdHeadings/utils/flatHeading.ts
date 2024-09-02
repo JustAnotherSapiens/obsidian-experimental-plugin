@@ -4,7 +4,7 @@ import { getSetting } from "utils/obsidian/settings";
 
 import { customActiveLineScroll } from "utils/obsidian/scroll";
 
-import { DateFormat, getMatchedDate } from "utils/time";
+import { DateTimeFormat, getMatchedDate } from "utils/time";
 
 import { createStyledEl } from "utils/display";
 import { simpleHighlight, fuzzyHighlight } from "suggests/utils/display";
@@ -49,7 +49,7 @@ function getHeadingsArray(fileText: string): FlatHeading[] {
     const line = i;
     const level = match[0].length - 1;
 
-    const dateFormat = getMatchedDate(textLine) as DateFormat;
+    const dateFormat = getMatchedDate(textLine) as DateTimeFormat;
     if (dateFormat) {
       const dateMatch = textLine.match(dateFormat.regex);
       if (dateMatch && dateMatch.index === match[0].length) {

@@ -1,9 +1,12 @@
 // TODO: Remove the "obsidian" dependency.
-import { Notice } from "obsidian";
+import {
+  Notice,
+  moment,
+} from "obsidian";
 
 
 
-export type DateFormat = {
+export type DateTimeFormat = {
   name: string,
   format: string,
   regex: RegExp,
@@ -12,7 +15,7 @@ export type DateFormat = {
 
 
 // Sticking to the ISO 8601 standard.
-export const DATE_FORMATS: Array<DateFormat> = [
+export const DATE_FORMATS: Array<DateTimeFormat> = [
   {
     name: "1. Standard datetime",
     format: "YYYY-MM-DD[T]HH:mm:ss",
@@ -42,10 +45,10 @@ export const DATE_FORMATS: Array<DateFormat> = [
 
 
 
-export function getMatchedDate(
-  text: string,
-  args?:  {multiple?: boolean, verbose?: boolean}
-): DateFormat | DateFormat[] | undefined {
+export function getMatchedDate(text: string, args?: {
+  multiple?: boolean,
+  verbose?: boolean,
+}): DateTimeFormat | DateTimeFormat[] | undefined {
   if (!args) args = {multiple: false, verbose: false};
   if (!args.multiple) args.multiple = false;
   if (!args.verbose) args.verbose = false;
@@ -68,7 +71,7 @@ export function getMatchedDate(
 
   // If no date was found, show a notice and return.
   const message = "None of the supported date formats were found.";
-  console.log(this.moment().format("YYYY-MM-DD HH:mm:ss"), message);
+  console.log(moment().format("YYYY-MM-DD HH:mm:ss"), message);
   new Notice(message, 3500);
 }
 

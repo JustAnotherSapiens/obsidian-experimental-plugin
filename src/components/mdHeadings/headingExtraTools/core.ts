@@ -16,6 +16,7 @@ import {
 import {
   cutHeadingSection,
   sortSiblingHeadings,
+  transformSiblingHeadingDates,
 } from "./utils";
 
 
@@ -24,12 +25,14 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
   parent: BundlePlugin;
   settings: {
+    excludeTimezoneOffsetFormats: boolean;
   };
 
 
   constructor(plugin: BundlePlugin) {
     this.parent = plugin;
     this.settings = {
+      excludeTimezoneOffsetFormats: false,
     };
   }
 
@@ -65,6 +68,18 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
       }
     });
 
+    // Transform Sibling Headings Timestamps
+    plugin.addCommand({
+      id: "transform-sibling-headings-timestamps",
+      name: "Transform Sibling Headings Timestamps",
+      icon: "calendar",
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        await transformSiblingHeadingDates(plugin.app, view, {
+          excludeTimezoneOffsetFormats: plugin.settings.excludeTimezoneOffsetFormats,
+        });
+      }
+    });
+
   }
 
 
@@ -75,6 +90,20 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
+
+    containerEl.createEl("h3", {text: "Heading Extra Tools Settings"});
+
+    new Setting(containerEl)
+      .setName("Exclude Timezone Offset Formats")
+      .setDesc("Exclude timezone offset formats in the transformed timestamps.")
+      .addToggle((toggle: ToggleComponent) => {
+        toggle.setValue(plugin.settings.excludeTimezoneOffsetFormats);
+        toggle.onChange(async (value: boolean) => {
+          plugin.settings.excludeTimezoneOffsetFormats = value;
+          await plugin.saveSettings();
+        });
+      });
+
   }
 
 }

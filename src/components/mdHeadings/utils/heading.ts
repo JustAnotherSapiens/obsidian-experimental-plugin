@@ -6,7 +6,7 @@ import {
   Editor,
 } from "obsidian";
 
-import { DateFormat, getMatchedDate } from "utils/time";
+import { DateTimeFormat, getMatchedDate } from "utils/time";
 
 import DataNode from "dataStructures/dataNode";
 
@@ -53,7 +53,7 @@ export class Heading {
   setHeader(headerLine: string, definer: string) {
     const text = headerLine.slice(definer.length).trim();
 
-    const timeFormat = getMatchedDate(text) as DateFormat;
+    const timeFormat = getMatchedDate(text) as DateTimeFormat;
     if (timeFormat) {
       const timeMatch = text.match(timeFormat.regex)!;
       var timestamp = timeMatch[0];
