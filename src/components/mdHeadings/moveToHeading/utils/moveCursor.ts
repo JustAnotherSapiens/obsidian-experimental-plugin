@@ -6,8 +6,7 @@ import {
 import { getSetting } from "utils/obsidian/settings";
 
 import {
-  ScrollOptions,
-  customActiveLineScroll,
+  scrollActiveLineByTriggerBounds,
 } from "utils/obsidian/scroll";
 
 import {
@@ -80,39 +79,15 @@ export default function moveCursorToHeading(
   if (movementLine === -1 || movementLine === startLine) return;
 
   editor.setCursor({line: movementLine, ch: 0});
-  resolveScroll(view);
+  scrollActiveLineByTriggerBounds(view, {
+    bounds: {
+      top: getSetting("moveToHeading_scrollTriggerBounds")[0],
+      bottom: getSetting("moveToHeading_scrollTriggerBounds")[1],
+    },
+  });
 
 }
 
-
-function resolveScroll(view: MarkdownView): void {
-
-  const scrollExecution = getSetting("scrollExecution");
-  if (scrollExecution === "never") return;
-
-  let scrollOptions = {} as ScrollOptions;
-  // if (getSetting("useScrollTimeout")) scrollOptions["timeout"] = 0;
-
-  switch (scrollExecution) {
-    case "always":
-      scrollOptions["viewportThreshold"] = 0.5;
-      break;
-    case "onThreshold":
-      scrollOptions["viewportThreshold"] = getSetting("scrollThreshold");
-      break;
-  }
-
-  switch (getSetting("scrollMode")) {
-    case "viewportFraction":
-      scrollOptions!["scrollFraction"] = getSetting("scrollFraction");
-      break;
-    case "offsetLines":
-      scrollOptions!["scrollOffsetLines"] = getSetting("scrollOffsetLines");
-      break;
-  }
-
-  customActiveLineScroll(view, scrollOptions!);
-}
 
 
 
@@ -178,46 +153,3 @@ function lastChildHeading(args: CursorMoveArgs) {
 }
 
 
-
-////////////////////////////////////////
-// DEPRECATED
-////////////////////////////////////////
-
-
-  // LEVEL ZERO BEHAVIOR
-
-  // let mode = mode;
-  // if (headingLevel === 0) {
-  //   switch (getSetting("levelZeroBehavior")) {
-  //     case "snap-contiguous":
-  //       if (mainMode === "parent") args.backwards = true;
-  //       mode = "contiguous";
-  //       break;
-  //     case "snap-parent":
-  //       mode = "parent";
-  //       break;
-  //     case "on-parent-behavior":
-  //       const parentLine = movementFunctions.parent(args);
-  //       if (parentLine === -1) return;
-  //       else args.startLine = parentLine;
-  //     default:
-  //       break;
-  //   }
-  // }
-
-		// // Level Zero Behavior
-		// new Setting(containerEl)
-		//   .setName("Movement at no heading line")
-		// 	.setDesc("How to behave on any heading movement action when the cursor is not on a heading line.")
-		// 	.addDropdown((dropdown: DropdownComponent) => {
-		// 		dropdown.addOptions({
-		// 			"snap-contiguous":    "Snap to contiguous",
-		// 			"snap-parent":        "Snap to parent",
-		// 			"on-parent-behavior": "Behave as if parent",
-		// 		});
-		// 		dropdown.setValue(plugin.settings.levelZeroBehavior);
-		// 		dropdown.onChange(async (value: LevelZeroBehavior) => {
-		// 			plugin.settings.levelZeroBehavior = value;
-		// 			await plugin.saveSettings();
-		// 		});
-		// 	});

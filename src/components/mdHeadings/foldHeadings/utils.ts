@@ -8,7 +8,8 @@ import {
 
 import {
   scrollToCursor,
-  customActiveLineScroll,
+  scrollActiveLineByTriggerBounds,
+  restoreActiveLineScroll,
 } from "utils/obsidian/scroll";
 
 import { getSetting } from "utils/obsidian/settings";
@@ -32,6 +33,9 @@ export type FoldInfo = {
 
 
 
+/**
+ * NOTE: This function calls an async function (scrollToCursor)
+ */
 export function cleanToggleFold(editor: Editor, view: MarkdownView) {
   editor.exec("toggleFold");
   // In this particular case the built-in scrollIntoView does the job.
@@ -139,10 +143,8 @@ export async function foldingHeadingsByLevel(app: App, view: MarkdownView, opts:
 
   applyFolds(view, folds);
 
-  customActiveLineScroll(view, {
-    viewportThreshold: 0.5,
-    scrollFraction: 0.3,
-    asymmetric: true,
+  scrollActiveLineByTriggerBounds(view, {
+    bounds: {top: 0.2, bottom: 0.8},
   });
 
 }
@@ -186,7 +188,11 @@ export function toggleChildrenHeadingsFolds(editor: Editor, view: MarkdownView) 
     return (foldCount / targetNodes.length) > 0.5;
   };
 
-  toggleHeadingNodesFolds(view, targetNodes, shouldUnfold);
+  restoreActiveLineScroll(view, () => {
+    toggleHeadingNodesFolds(view, targetNodes, shouldUnfold);
+    editor.setCursor(cursorNode.getHeadingRange().from.line, 0);
+  });
+
 }
 
 
@@ -202,12 +208,15 @@ export function toggleSiblingHeadingsFolds(editor: Editor, view: MarkdownView) {
     (fold) => fold.from === cursorNode.heading.range.from.line
   );
 
-  toggleHeadingNodesFolds(view, targetNodes, shouldUnfold);
+  restoreActiveLineScroll(view, () => {
+    toggleHeadingNodesFolds(view, targetNodes, shouldUnfold);
+    editor.setCursor(cursorNode.getHeadingRange().from.line, 0);
+  });
+
 }
 
 
-
-export function toggleHeadingNodesFolds(view: MarkdownView, targetNodes: HeadingNode[], shouldUnfold: (folds: Fold[]) => boolean) {
+function toggleHeadingNodesFolds(view: MarkdownView, targetNodes: HeadingNode[], shouldUnfold: (folds: Fold[]) => boolean) {
   const targetNodesLines = targetNodes.map((node) => node.heading.range.from.line);
 
   let folds = getFolds(view);
@@ -228,12 +237,7 @@ export function toggleHeadingNodesFolds(view: MarkdownView, targetNodes: Heading
     folds.sort((a, b) => a.from - b.from);
   }
 
+  // WARNING: Once the folds are applied, the scroll tends to get messed up.
   applyFolds(view, folds);
-
-  customActiveLineScroll(view, {
-    viewportThreshold: 0.5,
-    scrollFraction: 0.3,
-    asymmetric: true,
-  });
 }
 

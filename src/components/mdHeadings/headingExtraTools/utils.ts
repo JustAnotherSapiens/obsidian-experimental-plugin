@@ -9,8 +9,7 @@ import {
 import { getSetting } from "utils/obsidian/settings";
 
 import {
-  scrollToCursor,
-  customActiveLineScroll,
+  scrollActiveLineByTriggerBounds,
 } from "utils/obsidian/scroll";
 
 import {
@@ -279,11 +278,10 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
   newFolds.sort((a, b) => a.from - b.from);
   applyFolds(view, newFolds);
 
-  customActiveLineScroll(view, {
-    viewportThreshold: 0.5,
-    scrollFraction: 0.3,
-    asymmetric: true,
+  scrollActiveLineByTriggerBounds(view, {
+    bounds: {top: 0.2, bottom: 0.7},
   });
+
 }
 
 

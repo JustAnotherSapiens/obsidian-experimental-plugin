@@ -32,6 +32,10 @@ import {
   FoldInfo,
 } from "../../foldHeadings/utils";
 
+import {
+  restoreActiveLineScrollFunc,
+} from "utils/obsidian/scroll";
+
 
 
 type ExtractorFlags = {
@@ -131,12 +135,15 @@ export default class HeadingExtractor {
 
     this.insertionFile = targetFile;
 
+    const restoreActiveLineScroll = restoreActiveLineScrollFunc(this.view);
+
     if (targetFile === this.file) {
       await this.sameFileExtractAndInsertHeading(insertionSuggest, flags);
     } else {
       await this.foreignFileExtractAndInsertHeading(insertionSuggest, targetFile, flags);
     }
 
+    if (restoreActiveLineScroll) restoreActiveLineScroll();
   }
 
 

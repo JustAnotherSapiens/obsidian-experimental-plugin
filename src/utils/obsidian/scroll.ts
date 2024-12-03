@@ -1,40 +1,326 @@
-import { FileView, Editor, EditorRange } from "obsidian";
-
-import { PLUGIN_ID } from "utils/data";
+import { FileView, Editor } from "obsidian";
 
 
+////////////////////////////////////////////////////////////////////////////////
+// CORE FUNCTIONS
+////////////////////////////////////////////////////////////////////////////////
 
-export function handleCursorMovement(
-  editor: Editor,
-  line: number | undefined,
+
+function roundViewportFraction(fraction: number): number {
+  return Math.round(fraction * 1e4) / 1e4;
+}
+
+
+/**
+ * Scroll the `scrollableEl` so that the `referenceEl` is at the specified `fraction` of the viewport.
+ * @param referenceEl - Reference HTMLElement within the scrollable element
+ * @param fraction - Value between 0 and 1
+ * @returns 
+ * @link https://developer.mozilla.org/en-US/docs/Web/API/Element/getBoundingClientRect
+ */
+function scrollToViewportFraction(
+  scrollableEl: HTMLElement,
+  referenceEl: HTMLElement,
+  fraction: number,
+  adaptiveReferencePoint: boolean = true
 ): void {
-  if (line === undefined) return;
 
-  if (!editor.somethingSelected()) {
-    editor.setCursor({line, ch: 0});
-    return;
-  }
+  // Return if the scroll height fits within the client height
+  if (scrollableEl.scrollHeight <= scrollableEl.clientHeight) return;
 
-  let selection: EditorRange = {
-    from: editor.getCursor("anchor"),
-    to: {line, ch: 0},
-  };
+  // Get the DOMRect objects
+  const referenceElRect = referenceEl.getBoundingClientRect();
+  const scrollableElRect = scrollableEl.getBoundingClientRect();
 
-  if (this.app.vault.getConfig("vimMode")) {
-    if (line >= selection.from.line) {
-      selection.to.ch = 1;
+  // Round the fraction for precision
+  fraction = roundViewportFraction(fraction);
+
+  // Get the key Y positions to calculate the scroll
+  const targetY = scrollableElRect.top + (fraction * scrollableElRect.height);
+  let referenceElY = referenceElRect.top;
+  if (adaptiveReferencePoint) {
+    // Set the reference point based on the viewport section (top, middle, bottom)
+    // WARNING: Float point number comparisons are not entirely reliable.
+    switch (true) {
+      case fraction < 0.4:
+        referenceElY = referenceElRect.top;
+        break;
+      case fraction > 0.6:
+        referenceElY = referenceElRect.bottom;
+        break;
+      default:
+        referenceElY = (referenceElRect.top + referenceElRect.bottom) / 2;
     }
   }
 
-  editor.transaction({selection});
+  // Execute the scroll
+  const requiredScrollPixels = referenceElY - targetY;
+  scrollableEl.scrollBy(0, requiredScrollPixels);
 }
 
 
 
+function getScrollerEl(view: FileView): HTMLElement | undefined {
+  const selector = ".markdown-source-view .cm-editor .cm-scroller";
+  const scrollerEl = view.contentEl.querySelector(selector) as HTMLElement;
+
+  if (!scrollerEl) {
+    console.error(`${getScrollerEl.name} - No scroller HTMLElement found.`);
+    console.debug("View:", view);
+    console.debug("Selector:", selector);
+    console.debug("ScrollerEl:", scrollerEl);
+    return;
+  }
+  return scrollerEl;
+}
+
+
+function getActiveLineEl(view: FileView): HTMLElement | undefined {
+  const selector = ".cm-editor .cm-scroller .cm-content .cm-active.cm-line";
+  const lineEl = view.contentEl.querySelector(selector) as HTMLElement;
+
+  if (!lineEl) {
+    console.error(`${getActiveLineEl.name} - No active line HTMLElement found.`);
+    console.debug("View:", view);
+    console.debug("Selector:", selector);
+    console.debug("LineEl:", lineEl);
+    return;
+  }
+  return lineEl;
+}
+
+
+/**
+ * Get the viewport fraction of an HTMLElement's top within a reference viewport DOMRect.
+ */
+function getViewportFraction(elem: HTMLElement, viewportRect: DOMRect): number {
+  const elemRect = elem.getBoundingClientRect();
+  const elemRectRelativeY = elemRect.top - viewportRect.top;
+  return elemRectRelativeY / viewportRect.height;
+}
+
+
+
+/**
+ * Compare the target viewport fraction with the current viewport fraction from
+ * the active line element. If they differ by at least 0.001, re-scroll.
+ * 
+ * __NOTE__: Calling this function within a setTimeout() is the best approach.
+ * The only drawback is that it will take slightly longer, and it will make
+ * the scroll transition visible to the user. _That's price to pay for the
+ * reliability of the scroll._
+ */
+function rescrollActiveLineOnFailure(view: FileView, targetViewportFraction: number): void {
+  const scrollerEl = getScrollerEl(view);
+  if (!scrollerEl) return;
+
+  const activeLineEl = getActiveLineEl(view);
+  if (!activeLineEl) return;
+
+  const resultingViewportFraction = getViewportFraction(activeLineEl, scrollerEl.getBoundingClientRect());
+
+  const viewportFractionDifference = Math.abs(
+    roundViewportFraction(resultingViewportFraction - targetViewportFraction)
+  );
+
+  // This is the failure criterion: the error in the viewport fraction is greater than 0.001
+  // NOTE: It was tricky to get this right. Since comparing floating point numbers
+  //       was not reliable (something like `viewportFractionDifference > 0.001`
+  //       was yielding false negatives), the workaround was to make the comparison
+  //       in the realm of integers.
+  if (viewportFractionDifference * 1e4 >= 10) {
+    scrollToViewportFraction(scrollerEl, activeLineEl, targetViewportFraction, false);
+    console.debug(`SCROLL RE-TRIGGERED (${viewportFractionDifference})`);
+  }
+}
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// RESTORE ACTIVE LINE SCROLL
+////////////////////////////////////////////////////////////////////////////////
+
+
+/**
+ * Restore the scroll position for the active line in a FileView.
+ * @param view - A FileView object.
+ * @param callback - A callback function to execute before restoring the scroll.
+ * 
+ * @todo Add support for async callbacks.
+ */
+export function restoreActiveLineScroll(view: FileView, callback: () => void): void {
+  const scrollerEl = getScrollerEl(view);
+  if (!scrollerEl) return;
+
+  let activeLineEl = getActiveLineEl(view);
+  if (!activeLineEl) return;
+
+  const activeLineRect = activeLineEl.getBoundingClientRect();
+  const scrollerRect = scrollerEl.getBoundingClientRect();
+
+  // This sets the active line in the center of the viewport
+  if (activeLineRect.bottom > scrollerRect.bottom || activeLineRect.top < scrollerRect.top) {
+    console.debug("Active line is out of view (at least partially). Scrolling to active line.");
+    activeLineEl.scrollIntoView({block: "center"});
+  }
+
+  const initialViewportFraction = getViewportFraction(activeLineEl, scrollerRect);
+
+  callback();
+
+  activeLineEl = getActiveLineEl(view);
+  if (!activeLineEl) return;
+  scrollToViewportFraction(scrollerEl, activeLineEl, initialViewportFraction, false);
+
+  setTimeout(() => rescrollActiveLineOnFailure(view, initialViewportFraction));
+
+}
+
+
+/**
+ * Call this function before modifying the DOM to get a function that restores the
+ * scroll position for the active line.
+ * @returns A function that restores the scroll position for the active line in a FileView.
+ */
+export function restoreActiveLineScrollFunc(view: FileView): (() => void) | undefined {
+  const activeLineEl = getActiveLineEl(view);
+  if (!activeLineEl) return;
+
+  const scrollerEl = getScrollerEl(view);
+  if (!scrollerEl) return;
+
+  const activeLineRect = activeLineEl.getBoundingClientRect();
+  const scrollerRect = scrollerEl.getBoundingClientRect();
+
+  if (activeLineRect.bottom > scrollerRect.bottom || activeLineRect.top < scrollerRect.top) {
+    console.debug("Active line is out of view (at least partially). Scrolling to active line.");
+    activeLineEl.scrollIntoView({block: "center"});
+  }
+
+  const initialViewportFraction = getViewportFraction(activeLineEl, scrollerRect);
+
+  // Return the Restore Function
+  return () => {
+    const activeLineEl = getActiveLineEl(view);
+    if (!activeLineEl) return;
+
+    scrollToViewportFraction(scrollerEl, activeLineEl, initialViewportFraction, false);
+
+    setTimeout(() => rescrollActiveLineOnFailure(view, initialViewportFraction));
+  };
+}
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// SCROLL ACTIVE LINE BY TRIGGER BOUNDS
+////////////////////////////////////////////////////////////////////////////////
+
+
+type ViewportFractions = {
+  top: number,
+  bottom: number,
+}
+
+type ScrollTriggerStatus = {
+  triggered: boolean,
+  top: boolean,
+}
+
+
+/**
+ * Resolve the scroll trigger for the `referenceEl` within the `scrollerEl` based on the `triggerBounds`.
+ * @returns {ScrollTriggerStatus}
+ */
+function resolveScrollTrigger(triggerBounds: ViewportFractions, scrollerEl: HTMLElement, referenceEl: HTMLElement): ScrollTriggerStatus {
+
+  // Get the DOMRect objects
+  const scrollerRect = scrollerEl.getBoundingClientRect();
+  const refElemRect = referenceEl.getBoundingClientRect();
+
+  // Calculate the bound for the top trigger section
+  const topTriggerBound = scrollerRect.top + (
+    scrollerRect.height * triggerBounds.top
+  );
+
+  // Calculate the bound for the bottom trigger section
+  const bottomTriggerBound = scrollerRect.top + ( // Here was the mistake
+    scrollerRect.height * triggerBounds.bottom
+  );
+
+
+  // Within the top viewport trigger section
+  if (refElemRect.bottom < topTriggerBound) {
+    return {triggered: true, top: true};
+
+  // Within the bottom viewport trigger section
+  } else if (refElemRect.top > bottomTriggerBound) {
+    return {triggered: true, top: false};
+
+  // Not within the viewport trigger sections
+  } else {
+    return {triggered: false, top: false};
+  }
+}
+
+
+
+type ScrollTriggerSpecs = {
+  bounds: ViewportFractions,
+  targets?: ViewportFractions,
+}
+
+
+/**
+ * Scroll the active line if:
+ * - above the top trigger bound, or
+ * - below the bottom trigger bound.
+ * @param {FileView} view - The FileView object.
+ * @param {ScrollTriggerSpecs} triggerSpecs - The scroll trigger specifications.
+ * @param {boolean} [timeoutCheck] - Set timeout to rescroll on failure.
+ */
+export function scrollActiveLineByTriggerBounds(
+  view: FileView,
+  triggerSpecs: ScrollTriggerSpecs,
+  timeoutCheck?: boolean
+): void {
+
+  const lineEl = getActiveLineEl(view);
+  if (!lineEl) return;
+
+  const scrollerEl = getScrollerEl(view);
+  if (!scrollerEl) return;
+
+  const {triggered, top} = resolveScrollTrigger(triggerSpecs.bounds, scrollerEl, lineEl);
+  if (!triggered) return;
+
+  let scrollFraction = top ? triggerSpecs.bounds.top : triggerSpecs.bounds.bottom;
+  if (triggerSpecs.targets) {
+    scrollFraction = top ? triggerSpecs.targets.top : triggerSpecs.targets.bottom;
+  }
+
+  scrollToViewportFraction(scrollerEl, lineEl, scrollFraction);
+
+  if (timeoutCheck) {
+    setTimeout(() => rescrollActiveLineOnFailure(view, scrollFraction));
+  }
+}
+
+
+
+
 ////////////////////////////////////////
-// SCROLLING FUNCTIONS
+// OTHER SCROLLING FUNCTIONS
 ////////////////////////////////////////
 
+
+/**
+ * Scroll the cursor line into view.
+ * @param {Editor} editor - The Editor object.
+ * @param {number} [offset=0] - Number of lines to remain visible above and below the cursor.
+ */
 export async function scrollToCursor(editor: Editor, offset: number = 0): Promise<void> {
   const cursorPos = editor.getCursor();
   await sleep(0); // This ensures that the scroll works properly.
@@ -45,200 +331,4 @@ export async function scrollToCursor(editor: Editor, offset: number = 0): Promis
 }
 
 
-export type ScrollOptions = {
-  viewportThreshold: number,
-  scrollFraction?: number,
-  scrollOffsetLines?: number,
-  // top?: boolean,
-  asymmetric?: boolean,
-  // timeout?: number,
-};
-
-export function customActiveLineScroll(view: FileView, options: ScrollOptions): void {
-  // console.debug("---");
-  let {lineEl, outOfBounds, top} = getLineViewportData(view, options.viewportThreshold);
-  if (!outOfBounds) return;
-
-  try {
-    getScrollFunction(view, options)(lineEl, top);
-  } catch (error) {
-    console.log(`${PLUGIN_ID} - Scroll Error:`, error.message);
-  }
-}
-
-
-function getScrollFunction(view: FileView, options: ScrollOptions): (lineEl: HTMLElement, top: boolean) => void {
-
-  if (options.scrollOffsetLines !== undefined) return (lineEl: HTMLElement, top: boolean) => {
-    scrollIntoViewWithOffset(lineEl, options.scrollOffsetLines!, top);
-    setTimeout(() => {
-      const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
-      if (!lineEl) {
-        console.log(`${PLUGIN_ID} - No active line HTMLElement found after scroll. Please report this issue.`);
-        return;
-      }
-      const limitEl = getOffsetLimitElement(lineEl, options.scrollOffsetLines!, top);
-      const {outOfBounds} = getLineViewportData(view, 0, limitEl);
-      if (outOfBounds) {
-        console.debug(`${PLUGIN_ID} - Additional scroll triggered after offset lines scroll.`);
-        // printActiveLineInfo(view, "Before Offset Lines Scroll", lineEl);
-        scrollIntoViewWithOffset(lineEl, options.scrollOffsetLines!, top);
-        // printActiveLineInfo(view, "After Offset Lines Scroll", lineEl);
-      }
-    });
-  };
-
-  else return (lineEl: HTMLElement, top: boolean) => {
-    const scrollerEl = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
-    if (!scrollerEl) {
-      console.log(`${PLUGIN_ID} - No scroller HTMLElement found. Please report this issue.`);
-      return;
-    }
-    let scrollFraction = options.scrollFraction ?? options.viewportThreshold;
-    // options.scrollFraction ??= options.viewportThreshold;
-    if (options.asymmetric) top = true;
-    else if (!top) scrollFraction = 1 - scrollFraction;
-    scrollToFraction(lineEl, scrollerEl, scrollFraction, top);
-    setTimeout(() => {
-      const {lineEl, outOfBounds} = getLineViewportData(view, scrollFraction <= 0.5 ? scrollFraction : 1 - scrollFraction);
-      if (outOfBounds) {
-        console.debug(`${PLUGIN_ID} - Additional scroll triggered after fraction scroll.`);
-        // printActiveLineInfo(view, "Before Fraction Scroll", lineEl);
-        scrollToFraction(lineEl, scrollerEl, options.scrollFraction!, top);
-        // printActiveLineInfo(view, "After Fraction Scroll", lineEl);
-      }
-    });
-  };
-
-}
-
-
-function getLineViewportData(view: FileView, vieportFraction: number, lineEl?: HTMLElement): {
-  lineEl: HTMLElement, outOfBounds: boolean, top: boolean,
-} {
-  lineEl ??= view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
-  if (!lineEl) {
-    console.log("No active line HTMLElement found. Please report this issue.");
-    return {lineEl, outOfBounds: false, top: false};
-  }
-  const viewRect = view.contentEl.getBoundingClientRect();
-  const upperBound = viewRect.top + (viewRect.height * vieportFraction);
-  const lowerBound = viewRect.bottom - (viewRect.height * vieportFraction);
-  const elemRect = lineEl.getBoundingClientRect();
-  // console.log("Upper Bound:", upperBound, "Lower Bound:", lowerBound);
-
-  if (elemRect.bottom < upperBound) return {lineEl, outOfBounds: true, top: true};
-  if (elemRect.top > lowerBound) return {lineEl, outOfBounds: true, top: false};
-  return {lineEl, outOfBounds: false, top: false};
-}
-
-
-export function printActiveLineInfo(view: FileView, label: string = "Active Line", lineEl?: HTMLElement): void {
-  lineEl = lineEl ?? view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
-  const lineRect = lineEl.getBoundingClientRect();
-  console.debug(`${label} => Top:`, lineRect.top, "Bottom:", lineRect.bottom);
-}
-
-
-// function activeLineScroll(view: FileView, options: ScrollOptions): void {
-//   const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
-//   if (!lineEl) {
-//     console.log("No active line HTMLElement found. Please report this issue.");
-//     return;
-//   }
-//   let {inBounds, top} = elemInViewportFraction(lineEl, view, options.viewportThreshold);
-//   if (!inBounds) return;
-
-//   if (options.scrollOffsetLines === undefined) {
-//     const scrollerEl = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
-//     if (!scrollerEl) {
-//       console.log("No scroller HTMLElement found. Please report this issue.");
-//       return;
-//     }
-//     let scrollFraction = (options.scrollFraction ?? options.viewportThreshold);
-//     if (options.asymmetric) top = true;
-//     else if (!top) scrollFraction = 1 - scrollFraction;
-//     scrollToFraction(lineEl, scrollerEl, scrollFraction, top);
-
-//   } else {
-//     scrollIntoViewWithOffset(lineEl, options.scrollOffsetLines, top);
-//   }
-// }
-
-
-function scrollToFraction(elem: HTMLElement, scrollableEl: HTMLElement, fraction: number, top: boolean): void {
-  if (scrollableEl.scrollHeight <= scrollableEl.clientHeight) {
-    // console.log("Element is not scrollable:", scrollableEl);
-    // console.log("Scroll_Height:", scrollableEl.scrollHeight);
-    // console.log("Client_Height:", scrollableEl.clientHeight);
-    return;
-  }
-  const elemRect = elem.getBoundingClientRect();
-  const scrollRect = scrollableEl.getBoundingClientRect();
-  const targetY = scrollRect.top + scrollRect.height * fraction;
-  const scrollY = (elemRect.top + elemRect.bottom) / 2 - targetY;
-  scrollableEl.scrollBy(0, scrollY);
-}
-
-
-// TO-CONTINUE: use the options object as argument instead of the individual parameters
-function scrollIntoViewWithOffset(elem: HTMLElement, offset: number, top: boolean): void {
-  // const nextSibling = top ? (el: HTMLElement) => el.previousElementSibling : (el: HTMLElement) => el.nextElementSibling;
-  // let limitEl = elem;
-  // for (let i = 0; i < offset; i++) {
-  //   const nextEl = nextSibling(limitEl) as HTMLElement;
-  //   if (nextEl === null) break;
-  //   limitEl = nextEl;
-  // }
-  getOffsetLimitElement(elem, offset, top).scrollIntoView({
-    block: top ? "start" : "end",
-    inline: "nearest",
-    behavior: "auto"
-  });
-}
-
-
-function getOffsetLimitElement(elem: HTMLElement, offset: number, top: boolean): HTMLElement {
-  const nextSibling = top ? (el: HTMLElement) => el.previousElementSibling : (el: HTMLElement) => el.nextElementSibling;
-  let limitEl = elem;
-  for (let i = 0; i < offset; i++) {
-    const nextEl = nextSibling(limitEl) as HTMLElement;
-    if (nextEl === null) break;
-    limitEl = nextEl;
-  }
-  return limitEl;
-}
-
-
-function elemInViewportFraction(elem: HTMLElement, view: FileView, fraction: number): {inBounds: boolean, top: boolean} {
-  const viewRect = view.contentEl.getBoundingClientRect()!;
-  const upperBound = viewRect.top + (viewRect.height * fraction);
-  const lowerBound = viewRect.bottom - (viewRect.height * fraction);
-  const elemRect = elem.getBoundingClientRect();
-  console.log("Upper Bound:", upperBound, "Lower Bound:", lowerBound);
-
-  if (elemRect.bottom < upperBound) return {inBounds: true, top: true};
-  if (elemRect.top > lowerBound) return {inBounds: true, top: false};
-  return {inBounds: false, top: false};
-}
-
-
-// export async function scrollActiveLineIntoView(view: FileView, offset: number, top: boolean = true): Promise<void> {
-//   await sleep(0);
-//   const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
-//   scrollIntoViewWithOffset(lineEl, offset, top);
-// }
-
-
-// export async function scrollActiveLineToFraction(view: FileView, fraction: number, top: boolean = true): Promise<void> {
-//   await sleep(0);
-//   const lineEl = view.contentEl.querySelector(".cm-content .cm-line.cm-active") as HTMLElement;
-//   const scrollerEl = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
-//   scrollToFraction(lineEl, scrollerEl, fraction, top);
-// }
-
-
-// Useful DevTools Snippets for Debugging
-// var viewRect = this.app.workspace.getActiveFileView().contentEl.getBoundingClientRect()
-// var lineRect = this.app.workspace.getActiveFileView().contentEl.querySelector(".cm-content .cm-line.cm-active").getBoundingClientRect()
 

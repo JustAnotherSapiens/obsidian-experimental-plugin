@@ -12,20 +12,11 @@ import {
   Editor,
 } from "obsidian";
 
-import {
-  DynamicSetting,
-  FloatInputSetting,
-  shrinkSettingInputField,
-} from "utils/obsidian/settings";
-
 import moveCursorToHeading from "./utils/moveCursor";
 
 
 
 type SiblingMode = "strictSibling" | "looseSibling";
-type ScrollMode = "viewportFraction" | "offsetLines";
-type ScrollExecution = "never" | "always" | "onThreshold";
-// type LevelZeroBehavior = "snap-contiguous" | "snap-parent" | "on-parent-behavior";
 
 
 
@@ -33,15 +24,9 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
   settings: {
-    // levelZeroBehavior: LevelZeroBehavior,
     siblingMode: SiblingMode,
 
-    scrollExecution: ScrollExecution,
-    scrollMode: ScrollMode,
-    scrollThreshold: number,
-    scrollFraction: number,
-    scrollOffsetLines: number,
-    // useScrollTimeout: boolean,
+    moveToHeading_scrollTriggerBounds: [number, number],
 
     globalWrapAround: boolean,
     contiguousWrapAround: boolean,
@@ -56,12 +41,7 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
       // levelZeroBehavior: "snap-contiguous",
       siblingMode: "looseSibling",
 
-      scrollExecution: "onThreshold",
-      scrollMode: "viewportFraction",
-      scrollThreshold: 0.25,
-      scrollFraction: 0.25,
-      scrollOffsetLines: 5,
-      // useScrollTimeout: false,
+      moveToHeading_scrollTriggerBounds: [0.0, 0.7],
 
       globalWrapAround: false,
       contiguousWrapAround: false,
@@ -252,182 +232,36 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 			});
 
 
+    // SCROLL TRIGGER BOUNDS
+		containerEl.createEl("h4", {text: "Scroll Trigger Bounds"});
 
-    /* Scroll Settings */
-    containerEl.createEl("h5", {text: "Scroll Settings"});
-
-
-    class ScrollModeSetting extends DynamicSetting {
-      fractionSetting: DynamicSetting;
-      offsetLinesSetting: DynamicSetting;
-
-      constructor(containerEl: HTMLElement) {
-        super(containerEl);
-        this.setName("Scroll mode");
-
-        this.addDropdown((dropdown: DropdownComponent) => {
-          dropdown.addOptions({
-            "viewportFraction": "Viewport fraction",
-            "offsetLines":      "Offset lines",
-          });
-          dropdown.setValue(plugin.settings.scrollMode);
-          dropdown.onChange(async (value: ScrollMode) => {
-            plugin.settings.scrollMode = value;
-            this.switch(value);
-            await plugin.saveSettings();
-          });
+    // Top Bound
+    new Setting(containerEl)
+      .setName("Top Bound")
+      .setDesc("Top fraction bound of the viewport.")
+      .addSlider((slider: SliderComponent) => {
+        slider.setLimits(0, 1, 0.01);
+        slider.setDynamicTooltip();
+        slider.setValue(plugin.settings.moveToHeading_scrollTriggerBounds[0]);
+        slider.onChange(async (value: number) => {
+          plugin.settings.moveToHeading_scrollTriggerBounds[0] = value;
+          await plugin.saveSettings();
         });
+      });
 
-        this.fractionSetting = new DynamicSetting(containerEl)
-          .setName("Viewport fraction")
-          .setDesc("Fraction of the viewport that the target line will be placed at when scrolling.")
-          .addSlider((slider: SliderComponent) => {
-            slider.setLimits(0, 0.5, 0.01);
-            slider.setDynamicTooltip();
-            slider.setValue(plugin.settings.scrollFraction);
-            slider.onChange(async (value: number) => {
-              plugin.settings.scrollFraction = value;
-              await plugin.saveSettings();
-            });
-          })
-          .then((setting: Setting) => {
-            setting.settingEl.addClass("scroll-fraction-setting");
-          });
-
-
-        this.offsetLinesSetting = new DynamicSetting(containerEl)
-          .setName("Offset lines")
-          .setDesc("Minimum number of lines visible above and below the target line.")
-          .addText((textField: TextComponent) => {
-            textField.inputEl.type = "number";
-            textField.setPlaceholder("scroll_offset");
-            textField.setValue(String(plugin.settings.scrollOffsetLines));
-            textField.onChange(async (value: string) => {
-              plugin.settings.scrollOffsetLines = Number(value);
-              await plugin.saveSettings();
-            });
-          })
-          .then(shrinkSettingInputField);
-      }
-
-      switch(mode: ScrollMode) {
-        switch (mode) {
-          case "viewportFraction":
-            this.fractionSetting.show();
-            this.offsetLinesSetting.hide();
-            break;
-          case "offsetLines":
-            this.fractionSetting.hide();
-            this.offsetLinesSetting.show();
-            break;
-        }
-      }
-
-      show() {
-        this.settingEl.show();
-        this.switch(plugin.settings.scrollMode);
-      }
-
-      hide() {
-        this.settingEl.hide();
-        this.fractionSetting.hide();
-        this.offsetLinesSetting.hide();
-      }
-
-    }
-
-
-    class ScrollTriggerSetting extends Setting {
-      scrollThreshold: FloatInputSetting;
-      scrollMode: ScrollModeSetting;
-      dynamicSettings: DynamicSetting[];
-
-      constructor(containerEl: HTMLElement) {
-        super(containerEl);
-        this.setName("Scroll trigger");
-        this.setDesc("When to trigger the plugin's scroll.");
-
-        this.addDropdown((dropdown: DropdownComponent) => {
-          dropdown.addOptions({
-            "onThreshold": "On threshold",
-            "always":      "Always",
-            "never":       "Never",
-          });
-          dropdown.setValue(plugin.settings.scrollExecution);
-          dropdown.onChange(async (value: ScrollExecution) => {
-            plugin.settings.scrollExecution = value;
-            this.switch(value);
-            await plugin.saveSettings();
-          });
+    // Bottom Bound
+    new Setting(containerEl)
+      .setName("Bottom Bound")
+      .setDesc("Bottom fraction bound of the viewport (should be greater than the top bound).")
+      .addSlider((slider: SliderComponent) => {
+        slider.setLimits(0, 1, 0.01);
+        slider.setDynamicTooltip();
+        slider.setValue(plugin.settings.moveToHeading_scrollTriggerBounds[1]);
+        slider.onChange(async (value: number) => {
+          plugin.settings.moveToHeading_scrollTriggerBounds[1] = value;
+          await plugin.saveSettings();
         });
-
-        this.scrollThreshold = new FloatInputSetting(containerEl, plugin, {
-          settingId: "scrollThreshold",
-          placeholder: "scroll_fraction",
-          min: 0, max: 0.5, default: 0.25,
-        })
-          .setName("Trigger threshold")
-          .setDesc("Fraction of the viewport (both from the top downwards and from the bottom upwards) that the target line must be within to trigger scrolling.")
-          .then((setting: Setting) => {
-            setting.controlEl.addClass("scroll-threshold-setting-control");
-          })
-          .addButton((button: ButtonComponent) => {
-            button.setButtonText("Equalize");
-            button.onClick(async () => {
-              const fractionSlider = this.scrollMode.fractionSetting.components[0] as SliderComponent;
-              fractionSlider.setValue(plugin.settings.scrollThreshold);
-              // this.scrollMode.fractionSetting.input = plugin.settings.scrollThreshold;
-              plugin.settings.scrollFraction = plugin.settings.scrollThreshold;
-              await plugin.saveSettings();
-            });
-          });
-
-        this.scrollMode = new ScrollModeSetting(containerEl);
-
-        this.dynamicSettings = [
-          this.scrollThreshold,
-          this.scrollMode,
-
-          // // Use Scroll Timeout
-          // new DynamicSetting(containerEl)
-          //   .setName("Use Scroll timeout")
-          //   .setDesc("This guarantees expected scroll behavior, but at the cost of some UI flicking.")
-          //   .addToggle((toggle: ToggleComponent) => {
-          //     toggle.setValue(plugin.settings.useScrollTimeout);
-          //     toggle.onChange(async (value: boolean) => {
-          //       plugin.settings.useScrollTimeout = value;
-          //       await plugin.saveSettings();
-          //     });
-          //   }),
-
-        ];
-
-        this.switch((this.components[0] as DropdownComponent).getValue() as ScrollExecution);
-      }
-
-      showDynamicSettings() { this.dynamicSettings.forEach(setting => setting.show()); }
-      hideDynamicSettings() { this.dynamicSettings.forEach(setting => setting.hide()); }
-
-      switch(value: ScrollExecution) {
-        switch (value) {
-          case "onThreshold":
-            this.showDynamicSettings();
-            break;
-          case "always":
-            this.showDynamicSettings();
-            this.scrollThreshold.hide();
-            break;
-          case "never":
-            this.hideDynamicSettings();
-            break;
-        }
-      }
-
-    }
-
-
-    new ScrollTriggerSetting(containerEl);
-
+      });
 
 
 		/* Wrap Around Settings */

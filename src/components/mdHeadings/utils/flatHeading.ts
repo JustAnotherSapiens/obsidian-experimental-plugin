@@ -2,7 +2,7 @@ import { App } from "obsidian";
 
 import { getSetting } from "utils/obsidian/settings";
 
-import { customActiveLineScroll } from "utils/obsidian/scroll";
+import { scrollActiveLineByTriggerBounds } from "utils/obsidian/scroll";
 
 import { DateTimeFormat, getMatchedDate } from "utils/time";
 
@@ -95,11 +95,15 @@ export default class MoveToHeadingSuggest extends ViewAbstractSuggest<FlatHeadin
       this.editor.setCursor(result.line, 0);
 
       if (!this.view?.contentEl) return;
-      customActiveLineScroll(this.view!, {
-        viewportThreshold: 1,
-        scrollFraction: getSetting("headingSelectionViewportFraction"),
-        asymmetric: true,
-      });
+
+      const viewportFraction = getSetting("headingSelectionViewportFraction");
+      scrollActiveLineByTriggerBounds(this.view!, {
+        bounds: {
+          top: viewportFraction,
+          bottom: viewportFraction,
+        }
+      }, true);
+
     }
     await this.close();
   }

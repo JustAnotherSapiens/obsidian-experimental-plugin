@@ -13,8 +13,9 @@ import {
 import { getSetting } from "utils/obsidian/settings";
 
 import {
-  scrollToCursor,
-  customActiveLineScroll,
+  restoreActiveLineScroll,
+  restoreActiveLineScrollFunc,
+  scrollActiveLineByTriggerBounds,
 } from "utils/obsidian/scroll";
 
 import { DateTimeFormat, getMatchedDate } from "utils/time";
