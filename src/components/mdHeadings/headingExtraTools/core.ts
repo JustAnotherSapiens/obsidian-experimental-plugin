@@ -11,6 +11,7 @@ import {
   Notice,
   MarkdownView,
   Editor,
+  moment,
 } from "obsidian";
 
 import cutHeadingSection from "./func/cutHeadingSection";
@@ -20,6 +21,7 @@ import {
   insertSmartHeadingSuggest,
   insertTimestampedSmartHeadingSuggest,
 } from "./func/smartHeadingSuggest";
+import { insertSmartHeadingUnderHeading } from "./func/customSmartHeadings";
 
 
 
@@ -52,6 +54,50 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
   addCommands(): void {
     const plugin = this.parent;
+
+    // Custom Smart Heading: Timestamped H5 under H1/H2 'Captures'
+    plugin.addCommand({
+      id: 'insert-smart-timestamped-h5-under-captures',
+      name: 'Insert Smart Timestamped H5 under Captures',
+      icon: 'watch',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        insertSmartHeadingUnderHeading(plugin.app, view, {
+          insertionHeading: {
+            level: 5,
+            title: moment().format('YYYY-MM-DD[T]HH:mm:ss'),
+            contents: '\n',
+          },
+          referenceHeading: {
+            validLevels: [1, 2],
+            titlePattern: 'Captur[ea]s',
+          },
+          ignoreSelection: false,
+          skewUpwards: plugin.settings.smartHeadingSkewUpwards,
+        });
+      }
+    });
+
+    // Custom Smart Heading: Timestamped H6 under H1/H2 'Tasks'
+    plugin.addCommand({
+      id: 'insert-smart-timestamped-h6-under-tasks',
+      name: 'Insert Smart Timestamped H6 under Tasks',
+      icon: 'watch',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        insertSmartHeadingUnderHeading(plugin.app, view, {
+          insertionHeading: {
+            level: 6,
+            title: moment().format('YYYY-MM-DD[T]HH:mm:ss'),
+            contents: '- [ ] ',
+          },
+          referenceHeading: {
+            validLevels: [1, 2],
+            titlePattern: 'Tasks|TO[- ]?DO|Tareas',
+          },
+          ignoreSelection: false,
+          skewUpwards: plugin.settings.smartHeadingSkewUpwards,
+        });
+      }
+    });
 
     // Insert Smart Heading
     plugin.addCommand({
