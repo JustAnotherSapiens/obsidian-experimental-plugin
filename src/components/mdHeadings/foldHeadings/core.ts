@@ -43,8 +43,7 @@ export default class FoldHeadingsComponent implements BundlePluginComponent {
   * TODO:
   * - Add commands to fold/unfold
   *       1. from one level (levelwise)
-  *       2. at a specific heading
-  *   recursively downwards.
+  *       2. at a specific heading recursively downwards
   */
   addCommands(): void {
     const plugin = this.parent;

@@ -168,6 +168,7 @@ type HeadingLevelTable = {
 
 
 
+// TODO: Make tree-specific methods static (e.g. traverse, breadthFirstTraversal, etc.)
 export class HeadingTree {
 
   public root: HeadingNode;
@@ -238,22 +239,14 @@ export class HeadingTree {
 
 
   private resolveHeadingRanges() {
+    // Assign the root heading range
     this.root.heading.range = {
       from: {line: 0, ch: 0},
-      // TODO: Check if this is the correct way to set the last line.
-      //       What if the last line is empty?
-      //       What if the last line has text on it?
-      // Is it just a standardized way to set the section end at the beginning of the next section?
+      // TODO: Ensure that this is the correct way to set the last line.
       to: {line: this.lineCount, ch: 0}
     };
-    this.root.heading.hasLastLine = true;
 
-    let refNode = this.root;
-    while (refNode.children.length !== 0) {
-      refNode = refNode.children[refNode.children.length - 1];
-      refNode.heading.hasLastLine = true;
-    }
-
+    // Assign every node's heading range end ('to')
     this.breadthFirstTraversal((node: HeadingNode) => {
       if (node.next !== undefined) {
         node.heading.range.to = {...node.next.heading.range.from};
@@ -261,6 +254,14 @@ export class HeadingTree {
         node.heading.range.to = {...node.parent!.heading.range.to!};
       }
     });
+
+    // Set the 'hasLastLine' property for the appropriate headings
+    let refNode = this.root;
+    refNode.heading.hasLastLine = true;
+    while (refNode.children.length !== 0) {
+      refNode = refNode.children[refNode.children.length - 1];
+      refNode.heading.hasLastLine = true;
+    }
   }
 
 
@@ -366,6 +367,9 @@ export class HeadingTree {
   }
 
 
+  // TODO: Return the root node if 'searchLastContiguous' returns undefined.
+  // UPDATE: For my current use cases, it is not necessary to return the root node;
+  //         I would have to rewrite the code at almost every call of this method.
   getNodeAtLine(line: number): HeadingNode | undefined {
     return this.searchLastContiguous(node => node.heading.range.from.line <= line);
   }
