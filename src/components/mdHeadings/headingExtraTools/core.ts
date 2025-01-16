@@ -16,6 +16,11 @@ import {
 import cutHeadingSection from "./func/cutHeadingSection";
 import sortSiblingHeadings from "./func/sortSiblingHeadings";
 import { transformSiblingHeadingDates } from "./func/transformDates";
+import {
+  insertSmartHeadingSuggest,
+  insertTimestampedSmartHeadingSuggest,
+} from "./func/smartHeadingSuggest";
+
 
 
 
@@ -24,6 +29,7 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
   parent: BundlePlugin;
   settings: {
     excludeTimezoneOffsetFormats: boolean;
+    smartHeadingSkewUpwards: boolean;
   };
 
 
@@ -31,6 +37,7 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
     this.parent = plugin;
     this.settings = {
       excludeTimezoneOffsetFormats: false,
+      smartHeadingSkewUpwards: true
     };
   }
 
@@ -45,6 +52,28 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
   addCommands(): void {
     const plugin = this.parent;
+
+    // Insert Smart Heading
+    plugin.addCommand({
+      id: 'insert-smart-heading',
+      name: 'Insert Smart Heading',
+      icon: 'hash',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        const skewUpwards = plugin.settings.smartHeadingSkewUpwards;
+        insertSmartHeadingSuggest(plugin.app, view, skewUpwards);
+      }
+    });
+
+    // Insert Timestamped Smart Heading
+    plugin.addCommand({
+      id: 'insert-timestamped-smart-heading',
+      name: 'Insert Timestamped Smart Heading',
+      icon: 'watch',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        const skewUpwards = plugin.settings.smartHeadingSkewUpwards;
+        insertTimestampedSmartHeadingSuggest(plugin.app, view, skewUpwards);
+      }
+    });
 
     // Cut Heading Section
     plugin.addCommand({
@@ -90,6 +119,17 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
     const plugin = this.parent;
 
     containerEl.createEl("h3", {text: "Heading Extra Tools Settings"});
+
+    new Setting(containerEl)
+      .setName("Smart Heading Skew Upwards")
+      .setDesc("Skew the Smart Heading insertion upwards.")
+      .addToggle((toggle: ToggleComponent) => {
+        toggle.setValue(plugin.settings.smartHeadingSkewUpwards);
+        toggle.onChange(async (value: boolean) => {
+          plugin.settings.smartHeadingSkewUpwards = value;
+          await plugin.saveSettings();
+        });
+      });
 
     new Setting(containerEl)
       .setName("Exclude Timezone Offset Formats")
