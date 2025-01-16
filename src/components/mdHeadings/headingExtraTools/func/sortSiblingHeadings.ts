@@ -6,72 +6,23 @@ import {
   moment,
 } from "obsidian";
 
-import { getSetting } from "utils/obsidian/settings";
-
 import {
   scrollActiveLineByTriggerBounds,
 } from "utils/obsidian/scroll";
 
 import {
-  DATE_FORMATS,
-  DateTimeFormat,
-  getMatchedDate,
-} from "utils/time";
-
-import { isCodeBlockEnd } from "components/mdHeadings/utils/helpers";
-
-import {
-  MdHeading,
   HeadingNode,
   HeadingTree,
-  MarkdownLevel,
 } from "components/mdHeadings/headingExtractor/utils/dataStructures";
 
 import { runQuickSuggest } from "suggests/quickSuggest";
 
 import {
-  Fold,
   getFolds,
   applyFolds,
 } from "components/mdHeadings/foldHeadings/utils";
 
 
-
-function copyToClipboard(text: string) {
-  if (typeof require === 'undefined') return;
-  if (process.platform === 'win32') {
-    require('child_process').spawn('clip').stdin.end(text, 'utf16le');
-  } else if (process.platform === 'linux' || process.platform === 'darwin') {
-    require('child_process').spawn('pbcopy').stdin.end(text);
-  } else if (process.platform === 'android') {
-    require('obsidian').clipboard.writeText(text);
-  }
-}
-
-
-export function cutHeadingSection(editor: Editor) {
-  const headingTree = new HeadingTree(editor.getValue());
-  const headingNode = headingTree.getNodeAtLine(editor.getCursor("head").line);
-  if (!headingNode) return;
-  const headingRange = headingNode.getHeadingRange();
-  const headingText = editor.getRange(headingRange.from, headingRange.to);
-  editor.replaceRange("", headingRange.from, headingRange.to);
-  copyToClipboard(headingText);
-}
-
-
-export function moveHeadingUpwards(editor: Editor) {
-  const headingTree = new HeadingTree(editor.getValue());
-}
-
-
-export function moveHeadingDownwards(editor: Editor) {
-  const headingTree = new HeadingTree(editor.getValue());
-}
-
-
-export function formatHeadingInterspacing(editor: Editor) {
-}
 
 
 async function getHeadingSortFunction(app: App): Promise<((a: HeadingNode, b: HeadingNode) => number) | undefined> {
@@ -145,6 +96,7 @@ async function getHeadingSortFunction(app: App): Promise<((a: HeadingNode, b: He
 }
 
 
+
 function getSiblingsSortedText(siblings: HeadingNode[], editor: Editor): string {
   // NOTE:
   // An empty line at the end of the file is actually a single "\n" character;
@@ -164,7 +116,8 @@ function getSiblingsSortedText(siblings: HeadingNode[], editor: Editor): string 
 }
 
 
-export async function sortSiblingHeadings(app: App, editor: Editor, view: MarkdownView) {
+
+export default async function sortSiblingHeadings(app: App, editor: Editor, view: MarkdownView) {
 
   const initialTree = new HeadingTree(editor.getValue());
   const cursorHead = editor.getCursor("head");
@@ -281,134 +234,5 @@ export async function sortSiblingHeadings(app: App, editor: Editor, view: Markdo
   scrollActiveLineByTriggerBounds(view, {
     bounds: {top: 0.2, bottom: 0.7},
   });
-
-}
-
-
-export async function promptForDateFormat(app: App, args: {
-  placeholder: string,
-  excludeDate?: DateTimeFormat,
-  filterRegexStr?: string,
-  excludeTimezoneOffsetFormats?: boolean,
-}): Promise<DateTimeFormat | undefined> {
-
-  let dateFormats = structuredClone(DATE_FORMATS);
-
-  if (args.excludeTimezoneOffsetFormats) {
-    dateFormats = dateFormats.filter(
-      (format: DateTimeFormat) => !format.name.toLocaleLowerCase().includes("timezone")
-    );
-  }
-
-  if (args.filterRegexStr) {
-    dateFormats = dateFormats.filter(
-      (format: DateTimeFormat) => format.name.match(new RegExp(args.filterRegexStr!))
-    );
-  }
-
-  if (args.excludeDate) {
-    dateFormats = dateFormats.filter(
-      (format: DateTimeFormat) => format.name !== args.excludeDate!.name
-    );
-  }
-
-  if (dateFormats.length === 0) {
-    new Notice("No date formats available for selection.", 3500);
-    return;
-  } else if (dateFormats.length === 1) {
-    return dateFormats[0];
-  }
-
-  const dateFormatToString = (dateFmt: DateTimeFormat) => {
-    return dateFmt.name + "\n" + dateFmt.format;
-  }
-
-  const selectedFormat = await runQuickSuggest(app, dateFormats, dateFormatToString, args.placeholder);
-  if (!selectedFormat) return;
-
-  return selectedFormat;
-}
-
-
-// TODO: Implement this function.
-export async function transformListDates(app: App, editor: Editor, view: MarkdownView) {
-  const cursorHead = editor.getCursor("head");
-  const cursorLine = editor.getLine(cursorHead.line);
-
-  const timeFormat = getMatchedDate(cursorLine);
-  if (!timeFormat) {
-    new Notice("No valid date format found.", 5000);
-    return;
-  }
-
-  const lineRegex = /^(\s*)([-+*])(\s*)/;
-}
-
-
-export async function transformSiblingHeadingDates(app: App, view: MarkdownView, flags: {excludeTimezoneOffsetFormats: boolean}) {
-  const editor = view.editor;
-  const tree = new HeadingTree(editor.getValue());
-  const cursorHead = editor.getCursor("head");
-
-  const cursorNode = tree.getNodeAtLine(cursorHead.line);
-  if (!cursorNode) {
-    new Notice("Cursor is not at a heading.", 5000);
-    return;
-  }
-
-  const refTimeFormat = cursorNode.heading.header.timeFormat;
-  if (!refTimeFormat) {
-    new Notice("Cursor heading has no valid time format.", 5000);
-    return;
-  }
-
-  let filterRegexStr = "";
-  if (refTimeFormat.name.match(/\bdate\b/)) {
-    filterRegexStr = "\\bdate\\b";
-  } else {
-    filterRegexStr = "\\bdatetime\\b";
-  }
-
-  const transformTimeFormat = await promptForDateFormat(app, {
-    placeholder: `Transform from ${refTimeFormat.format} to...`,
-    excludeDate: refTimeFormat,
-    filterRegexStr,
-    excludeTimezoneOffsetFormats: flags.excludeTimezoneOffsetFormats,
-  }
-  );
-  if (!transformTimeFormat) return;
-
-  const siblings = cursorNode.getLevelSiblings();
-  const sameTimeFormatSiblings = siblings.filter((node) => {
-    const timeFormat = node.heading.header.timeFormat;
-    if (!timeFormat) return false;
-    return timeFormat.format === refTimeFormat.format;
-  });
-
-  const changes = [];
-
-  for (const sibling of sameTimeFormatSiblings) {
-    const siblingLine = sibling.heading.range.from.line;
-    const lineStr = editor.getLine(siblingLine);
-    const timeMatch = lineStr.match(refTimeFormat.regex);
-    if (!timeMatch) continue;
-    changes.push({
-      from: {line: siblingLine, ch: timeMatch.index!},
-      to: {line: siblingLine, ch: timeMatch.index! + timeMatch[0].length},
-      text: moment(timeMatch[0], refTimeFormat.format).format(transformTimeFormat.format),
-    });
-  }
-
-  const folds = getFolds(view);
-
-  editor.transaction({
-    changes: changes,
-    selection: {from: {
-      line: cursorHead.line,
-      ch: cursorNode.heading.header.definer.length,
-    }},
-  });
-
-  applyFolds(view, folds);
 
 }

@@ -13,11 +13,9 @@ import {
   Editor,
 } from "obsidian";
 
-import {
-  cutHeadingSection,
-  sortSiblingHeadings,
-  transformSiblingHeadingDates,
-} from "./utils";
+import cutHeadingSection from "./func/cutHeadingSection";
+import sortSiblingHeadings from "./func/sortSiblingHeadings";
+import { transformSiblingHeadingDates } from "./func/transformDates";
 
 
 
