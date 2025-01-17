@@ -18,6 +18,7 @@ import {
 import { runQuickSuggest } from "suggests/quickSuggest";
 
 import {
+  Fold,
   getFolds,
   applyFolds,
 } from "components/mdHeadings/foldHeadings/utils";
@@ -117,39 +118,21 @@ function getSiblingsSortedText(siblings: HeadingNode[], editor: Editor): string 
 
 
 
-export default async function sortSiblingHeadings(app: App, editor: Editor, view: MarkdownView) {
+function restoreSiblingSectionFoldsFunction(view: MarkdownView, siblings: HeadingNode[], sortedSiblings: HeadingNode[]): (recalculatedSiblings: HeadingNode[]) => void {
 
-  const initialTree = new HeadingTree(editor.getValue());
-  const cursorHead = editor.getCursor("head");
+  const siblingSectionStart = siblings[0].heading.range.from.line;
+  const siblingSectionEnd = siblings[siblings.length - 1].heading.range.to!.line;
 
-  const cursorNode = initialTree.getNodeAtLine(cursorHead.line);
-  if (!cursorNode) {
-    new Notice("Cursor is not at a heading.", 5000);
-    return;
-  }
-
-  let siblings = cursorNode.getLevelSiblings();
-  if (siblings.length < 2) {
-    new Notice("Not enough sibling headings to sort.", 5000);
-    return;
-  }
-
-  const cursorNodeIndex = siblings.indexOf(cursorNode);
-  const cursorHeadingOffset = cursorHead.line - cursorNode.heading.range.from.line;
-
-  const siblingsRange = {
-    from: siblings[0].heading.range.from,
-    to: siblings[siblings.length - 1].heading.range.to!,
-  };
-
-
+  // Get the folds within the sibling section.
   const siblingSectionFolds = getFolds(view).filter(
-    (fold) => fold.from >= siblingsRange.from.line && fold.to <= siblingsRange.to.line
+    (fold) => fold.from >= siblingSectionStart && fold.to <= siblingSectionEnd
   );
 
-  const siblingFoldData: {[key: number]: {relativeFolds: any[], mapsTo?: number}} = {};
+  // Get the fold data for each sibling.
+  const siblingFoldData: {[key: number]: {relativeFolds: Fold[], mappedIndex: number}} = {};
 
   for (let i = 0; i < siblings.length; i++) {
+
     const headingFrom = siblings[i].heading.range.from.line;
     const headingTo = siblings[i].heading.range.to!.line;
 
@@ -159,78 +142,121 @@ export default async function sortSiblingHeadings(app: App, editor: Editor, view
       (fold) => ({from: fold.from - headingFrom, to: fold.to - headingFrom})
     );
 
-    siblingFoldData[i] = { relativeFolds };
+    siblingFoldData[i] = {
+      relativeFolds: relativeFolds,
+      mappedIndex: siblings.indexOf(sortedSiblings[i]),
+    };
   }
 
+  // NOTE: This function should be called after the editor has been modified.
+  return (recalculatedSiblings: HeadingNode[]) => {
 
+    // Add the remaining folds at the view.
+    const newFolds: Fold[] = getFolds(view);
+
+    for (const indexKey in siblingFoldData) {
+
+      const {relativeFolds, mappedIndex} = siblingFoldData[indexKey];
+      if (relativeFolds.length === 0) continue;
+
+      // Add the recalculated folds for the new sibling position.
+      const newSiblingLine = recalculatedSiblings[mappedIndex].heading.range.from.line;
+      for (const relativeFold of relativeFolds) {
+        newFolds.push({
+          from: newSiblingLine + relativeFold.from,
+          to: newSiblingLine + relativeFold.to,
+        })
+      }
+    }
+
+    // Sort the folds by 'from' position (by convention).
+    newFolds.sort((a, b) => a.from - b.from);
+
+    // Update the folds at the view.
+    applyFolds(view, newFolds);
+  };
+
+}
+
+
+
+export default async function sortSiblingHeadings(app: App, editor: Editor, view: MarkdownView): Promise<void> {
+
+  const sortFunction = await getHeadingSortFunction(app);
+  if (!sortFunction) return;
+
+  const cursorHead = editor.getCursor('head');
+
+  // Get the node at the cursor position.
+  const initialTree = new HeadingTree(editor.getValue());
+  const cursorNode = initialTree.getNodeAtLine(cursorHead.line);
+  if (!cursorNode) {
+    new Notice('Cursor is not at a heading.', 5000);
+    return;
+  }
+
+  // Get the cursor node's siblings.
+  let siblings = cursorNode.getLevelSiblings();
+  if (siblings.length < 2) {
+    new Notice('Not enough sibling headings to sort.', 5000);
+    return;
+  }
+
+  // Sort the siblings in-place.
   // WARNING: Sorting means that some information about the siblings order will be lost.
   //          Make sure to preserve any important information before sorting.
   const presortedSiblings = [...siblings];
-  const sortFunction = await getHeadingSortFunction(app);
-  if (!sortFunction) return;
+  const siblingsRange = {
+    from: siblings[0].heading.range.from,
+    to: siblings[siblings.length - 1].heading.range.to!,
+  };
   siblings.sort(sortFunction);
 
 
-  for (let i = 0; i < siblings.length; i++) {
-    siblingFoldData[i].mapsTo = presortedSiblings.indexOf(siblings[i]);
-  }
+  // Get the restore-folds function before modifying the editor.
+  const restoreSiblingSectionFolds = restoreSiblingSectionFoldsFunction(view, presortedSiblings, siblings);
 
 
+  // After modifying an editor range, the folds within the range are removed.
   const initialLineCount = editor.lineCount();
 
   const sortedText = getSiblingsSortedText(siblings, editor);
-  // After modifying an editor range, the folds within the range are removed.
   editor.replaceRange(sortedText, siblingsRange.from, siblingsRange.to);
 
   const finalLineCount = editor.lineCount();
-
   if (initialLineCount !== finalLineCount) {
     const message = `ERROR(sortSiblingHeadings): Line count mismatch after sorting (Initial: ${initialLineCount}, Final: ${finalLineCount}).`;
     console.error(message);
     new Notice(message, 0);
   }
 
-  const finalTree = new HeadingTree(editor.getValue());
-  const newFirstNode = finalTree.getNodeAtLine(siblingsRange.from.line)!;
-  const siblingsAfterSort = newFirstNode.getLevelSiblings();
 
-  // Ensure oldSiblings and newSiblings have the same length.
-  if (siblingsAfterSort.length !== siblings.length) {
-    const message = `ERROR(sortSiblingHeadings): Sibling count mismatch after sorting (Initial: ${siblings.length}, Final: ${siblingsAfterSort.length}).`;
-    // console.debug("Initial Siblings:", siblings);
-    // console.debug("Final Siblings:", siblingsAfterSort);
+  // Recreate the tree to get the siblings with updated ranges.
+  const finalTree = new HeadingTree(editor.getValue());
+  const finalFirstSiblingNode = finalTree.getNodeAtLine(siblingsRange.from.line)!;
+  const finalSiblings = finalFirstSiblingNode.getLevelSiblings();
+
+  // Check if the sibling count is the same after modifying the editor.
+  if (finalSiblings.length !== siblings.length) {
+    const message = `ERROR(sortSiblingHeadings): Sibling count mismatch after sorting (Initial: ${siblings.length}, Final: ${finalSiblings.length}).`;
     console.error(message);
     new Notice(message, 0);
   }
 
-  // Set the cursor to its relative position to the heading it was at originally.
-  const newCursorNodeIndex = siblingFoldData[cursorNodeIndex].mapsTo!;
-  const newCursorNode = siblingsAfterSort[newCursorNodeIndex];
+  // Restore the cursor position.
+  // NOTE: Indices must be the same for 'finalSiblings' and 'siblings' (sorted).
+  const finalCursorNode = finalSiblings[siblings.indexOf(cursorNode)];
+  const cursorHeadingOffset = cursorHead.line - cursorNode.heading.range.from.line;
   editor.setCursor({
-    line: newCursorNode.heading.range.from.line + cursorHeadingOffset,
+    line: finalCursorNode.heading.range.from.line + cursorHeadingOffset,
     ch: cursorHead.ch,
   });
 
+  // Restore the folds.
+  restoreSiblingSectionFolds(finalSiblings);
 
-  const newFolds = getFolds(view);
 
-  // Recalculate the folds based on the new sibling order and add them back.
-  for (const index in siblingFoldData) {
-    const siblingRelativeFolds = siblingFoldData[index].relativeFolds;
-    if (siblingRelativeFolds.length === 0) continue;
-    const siblingNewIndex = siblingFoldData[index].mapsTo!;
-    const newSiblingLine = siblingsAfterSort[siblingNewIndex].heading.range.from.line;
-    for (const relativeFold of siblingRelativeFolds) {
-      newFolds.push({
-        from: relativeFold.from + newSiblingLine,
-        to:   relativeFold.to   + newSiblingLine,
-      })
-    }
-  }
-
-  newFolds.sort((a, b) => a.from - b.from);
-  applyFolds(view, newFolds);
-
+  // Custom scroll.
   scrollActiveLineByTriggerBounds(view, {
     bounds: {top: 0.2, bottom: 0.7},
   });
