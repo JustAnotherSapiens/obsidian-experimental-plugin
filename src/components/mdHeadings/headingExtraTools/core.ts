@@ -22,6 +22,7 @@ import {
   insertTimestampedSmartHeadingSuggest,
 } from "./func/smartHeadingSuggest";
 import { insertSmartHeadingUnderHeading } from "./func/customSmartHeadings";
+import swapHeadingSection from "./func/swapHeadingSection";
 
 
 
@@ -54,6 +55,26 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
   addCommands(): void {
     const plugin = this.parent;
+
+    // Swap Heading Section Upwards
+    plugin.addCommand({
+      id: "swap-heading-section-upwards",
+      name: "Swap Heading Section Upwards",
+      icon: "arrow-up-wide-narrow",
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        swapHeadingSection(view, {upwards: true});
+      }
+    });
+
+    // Swap Heading Section Downwards
+    plugin.addCommand({
+      id: "swap-heading-section-downwards",
+      name: "Swap Heading Section Downwards",
+      icon: "arrow-down-narrow-wide",
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        swapHeadingSection(view, {upwards: false});
+      }
+    });
 
     // Custom Smart Heading: Timestamped H5 under H1/H2 'Captures'
     plugin.addCommand({

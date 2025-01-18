@@ -219,7 +219,7 @@ export function restoreActiveLineScrollFunc(view: FileView): (() => void) | unde
 ////////////////////////////////////////////////////////////////////////////////
 
 
-type ViewportFractions = {
+export type ViewportFractions = {
   top: number,
   bottom: number,
 }
@@ -267,7 +267,7 @@ function resolveScrollTrigger(triggerBounds: ViewportFractions, scrollerEl: HTML
 
 
 
-type ScrollTriggerSpecs = {
+export type ScrollTriggerSpecs = {
   bounds: ViewportFractions,
   targets?: ViewportFractions,
 }
