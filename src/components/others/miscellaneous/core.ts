@@ -1,8 +1,14 @@
-import BundlePlugin, { BundlePluginComponent } from "main";
+import BundlePlugin, { BundlePluginComponent } from 'main';
 
-import { Editor } from "obsidian";
+import {
+	Platform,
+	Editor,
+	MarkdownView,
+} from 'obsidian';
 
-import { moveCurrentTab } from "./utils";
+import  moveCurrentTab  from './func/moveCurrentTab';
+import openFileInGvim from './func/openFileInGvim';
+import toggleVimEnvironment from './func/toggleVimEnvironment';
 
 
 
@@ -33,60 +39,58 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
 
 		/* TOGGLE CONFIG OPTIONS */
 
+		// Commands that rely on the Node.js API won't work on mobile devices.
+		if (!Platform.isMobile) {
+
+			// Open Active File in GVim
+			plugin.addCommand({
+				id: 'open-active-file-in-gvim',
+				name: 'Open Active File in GVim',
+				icon: 'file-output',
+				editorCallback: (editor: Editor, view: MarkdownView) => {
+					openFileInGvim(plugin.app, view.file!, editor.getCursor('head'));
+				},
+			});
+
+		}
+
 		// Toggle Line Numbers
 		plugin.addCommand({
-			id: "toggle-line-numbers",
-			name: "Toggle line numbers",
-			icon: "list-ordered",
+			id: 'toggle-line-numbers',
+			name: 'Toggle line numbers',
+			icon: 'list-ordered',
       editorCallback: (editor: Editor) => {
         const vault = plugin.app.vault as any;
         // Already accounts for the case where the config was never set
-        vault.setConfig("showLineNumber", !vault.getConfig("showLineNumber"));
+        vault.setConfig('showLineNumber', !vault.getConfig('showLineNumber'));
         editor.refresh();
       },
 		});
 
 		// Toggle Vim Mode (and Vim-related plugins)
 		plugin.addCommand({
-			id: "toggle-vim-mode",
-			name: "Toggle Vim mode",
-			icon: "code",
-      // TODO: Make a togglePlugin function
-			callback: () => {
-				const vimPlugins = ["obsidian-vimrc-support"];
-				const app = plugin.app as any;
-				const vimMode = app.vault.getConfig("vimMode");
-				if (vimMode) {
-					vimPlugins.forEach((pluginId: string) => {
-						if (app.plugins.enabledPlugins.has(pluginId))
-							app.plugins.disablePluginAndSave(pluginId);
-					});
-				} else {
-					vimPlugins.forEach((pluginId: string) => {
-						if (app.plugins.manifests.hasOwnProperty(pluginId))
-							app.plugins.enablePluginAndSave(pluginId);
-					});
-				}
-				app.vault.setConfig("vimMode", !vimMode);
-			}
+			id: 'toggle-vim-mode',
+			name: 'Toggle Vim mode',
+			icon: 'code',
+			callback: async () => await toggleVimEnvironment(plugin.app),
 		});
 
 		/* MOVE CURRENT TAB */
 
-		// Move current tab left
-		plugin.addCommand({
-			id: "move-current-tab-left",
-			name: "Move current tab left",
-			icon: "chevrons-left",
-			callback: () => moveCurrentTab.call(plugin, "left"),
-		});
-
 		// Move current tab right
 		plugin.addCommand({
-			id: "move-current-tab-right",
-			name: "Move current tab right",
-			icon: "chevrons-right",
-			callback: () => moveCurrentTab.call(plugin, "right"),
+			id: 'move-current-tab-right',
+			name: 'Move current tab right',
+			icon: 'chevrons-right',
+			callback: () => moveCurrentTab(plugin.app, {forwards: true}),
+		});
+
+		// Move current tab left
+		plugin.addCommand({
+			id: 'move-current-tab-left',
+			name: 'Move current tab left',
+			icon: 'chevrons-left',
+			callback: () => moveCurrentTab(plugin.app, {forwards: false}),
 		});
 
   }
