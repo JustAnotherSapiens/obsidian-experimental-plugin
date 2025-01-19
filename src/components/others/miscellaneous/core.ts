@@ -1,12 +1,16 @@
 import BundlePlugin, { BundlePluginComponent } from 'main';
 
 import {
+	Platform,
 	Editor,
+	MarkdownView,
 } from 'obsidian';
 
 import  moveCurrentTab  from './func/moveCurrentTab';
 import toggleVimEnvironment from './func/toggleVimEnvironment';
 import togglePluginSuggest from './func/togglePluginSuggest';
+import openFileInGvim from './func/openFileInGvim';
+
 
 
 
@@ -36,6 +40,21 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
     const plugin = this.parent;
 
 		/* TOGGLE CONFIG OPTIONS */
+
+		// Commands that rely on the Node.js API won't work on mobile devices.
+		if (!Platform.isMobile) {
+
+			// Open Active File in GVim
+			plugin.addCommand({
+				id: 'open-active-file-in-gvim',
+				name: 'Open Active File in GVim',
+				icon: 'file-output',
+				editorCallback: (editor: Editor, view: MarkdownView) => {
+					openFileInGvim(plugin.app, view.file!, editor.getCursor('head'));
+				},
+			});
+
+		}
 
 		// Toggle Line Numbers
 		plugin.addCommand({
