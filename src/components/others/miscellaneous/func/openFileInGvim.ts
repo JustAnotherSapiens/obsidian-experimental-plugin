@@ -18,13 +18,13 @@ function isTemplaterFile(app: App, fileVaultPath: string) {
 
   const plugins = (app as any).plugins.plugins;
   if (!plugins.hasOwnProperty(pluginID)) {
-    console.warn(`Plugin '${pluginID}' not found.`);
+    console.debug(`'${pluginID}' not found. Unable to check if file is a template.`);
     return false;
   }
 
   const settings = plugins[pluginID].settings;
   if (!settings.hasOwnProperty(folderSettingID)) {
-    console.warn(`Template folder not found in '${pluginID}' settings.`);
+    console.debug(`Template folder not found in '${pluginID}' settings.`);
     return false;
   }
 

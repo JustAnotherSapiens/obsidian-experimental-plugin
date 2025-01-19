@@ -1,4 +1,4 @@
-import BundlePlugin, { BundlePluginComponent } from "main";
+import BundlePlugin, { BundlePluginComponent } from 'main';
 
 import {
   Setting,
@@ -12,17 +12,17 @@ import {
   MarkdownView,
   Editor,
   moment,
-} from "obsidian";
+} from 'obsidian';
 
-import cutHeadingSection from "./func/cutHeadingSection";
-import sortSiblingHeadings from "./func/sortSiblingHeadings";
-import { transformSiblingHeadingDates } from "./func/transformDates";
+import cutHeadingSection from './func/cutHeadingSection';
+import sortSiblingHeadings from './func/sortSiblingHeadings';
+import { transformSiblingHeadingDates } from './func/transformDates';
 import {
   insertSmartHeadingSuggest,
   insertTimestampedSmartHeadingSuggest,
-} from "./func/smartHeadingSuggest";
-import { insertSmartHeadingUnderHeading } from "./func/customSmartHeadings";
-import swapHeadingSection from "./func/swapHeadingSection";
+} from './func/smartHeadingSuggest';
+import { insertSmartHeadingUnderHeading } from './func/customSmartHeadings';
+import swapHeadingSection from './func/swapHeadingSection';
 
 
 
@@ -58,9 +58,9 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
     // Swap Heading Section Upwards
     plugin.addCommand({
-      id: "swap-heading-section-upwards",
-      name: "Swap Heading Section Upwards",
-      icon: "arrow-up-wide-narrow",
+      id: 'swap-heading-section-upwards',
+      name: 'Swap Heading Section Upwards',
+      icon: 'arrow-up-wide-narrow',
       editorCallback: (editor: Editor, view: MarkdownView) => {
         swapHeadingSection(view, {upwards: true});
       }
@@ -68,9 +68,9 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
     // Swap Heading Section Downwards
     plugin.addCommand({
-      id: "swap-heading-section-downwards",
-      name: "Swap Heading Section Downwards",
-      icon: "arrow-down-narrow-wide",
+      id: 'swap-heading-section-downwards',
+      name: 'Swap Heading Section Downwards',
+      icon: 'arrow-down-narrow-wide',
       editorCallback: (editor: Editor, view: MarkdownView) => {
         swapHeadingSection(view, {upwards: false});
       }
@@ -144,9 +144,9 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
     // Cut Heading Section
     plugin.addCommand({
-      id: "cut-heading-section",
-      name: "Cut Heading Section",
-      icon: "scissors",
+      id: 'cut-heading-section',
+      name: 'Cut Heading Section',
+      icon: 'scissors',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         cutHeadingSection(editor);
       }
@@ -154,9 +154,9 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
     // Sort Sibling Headings
     plugin.addCommand({
-      id: "sort-sibling-headings",
-      name: "Sort Sibling Headings",
-      icon: "sort-asc",
+      id: 'sort-sibling-headings',
+      name: 'Sort Sibling Headings',
+      icon: 'arrow-down-a-z',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         await sortSiblingHeadings(plugin.app, editor, view);
       }
@@ -164,9 +164,9 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
     // Transform Sibling Headings Timestamps
     plugin.addCommand({
-      id: "transform-sibling-headings-timestamps",
-      name: "Transform Sibling Headings Timestamps",
-      icon: "calendar",
+      id: 'transform-sibling-headings-timestamps',
+      name: 'Transform Sibling Headings Timestamps',
+      icon: 'calendar',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         await transformSiblingHeadingDates(plugin.app, view, {
           excludeTimezoneOffsetFormats: plugin.settings.excludeTimezoneOffsetFormats,
@@ -185,11 +185,11 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
 
-    containerEl.createEl("h3", {text: "Heading Extra Tools Settings"});
+    containerEl.createEl('h3', {text: 'Heading Extra Tools Settings'});
 
     new Setting(containerEl)
-      .setName("Smart Heading Skew Upwards")
-      .setDesc("Skew the Smart Heading insertion upwards.")
+      .setName('Smart Heading Skew Upwards')
+      .setDesc('Skew the Smart Heading insertion upwards.')
       .addToggle((toggle: ToggleComponent) => {
         toggle.setValue(plugin.settings.smartHeadingSkewUpwards);
         toggle.onChange(async (value: boolean) => {
@@ -199,8 +199,8 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
       });
 
     new Setting(containerEl)
-      .setName("Exclude Timezone Offset Formats")
-      .setDesc("Exclude timezone offset formats in the transformed timestamps.")
+      .setName('Exclude Timezone Offset Formats')
+      .setDesc('Exclude timezone offset formats in the transformed timestamps.')
       .addToggle((toggle: ToggleComponent) => {
         toggle.setValue(plugin.settings.excludeTimezoneOffsetFormats);
         toggle.onChange(async (value: boolean) => {

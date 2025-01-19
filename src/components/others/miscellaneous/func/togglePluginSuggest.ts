@@ -67,11 +67,10 @@ async function togglePlugin(appPlugins: any, pluginId: string) {
     status = 'ON';
   }
   else {
-    console.error(moment().format(), `Invalid Plugin ID: ${pluginId}`);
+    console.error(`Invalid Plugin ID: ${pluginId}`);
     return;
   }
 
-  console.debug(moment().format(),`'${pluginId}' was toggled ${status}.`);
   new Notice(`${status}  ${pluginId}`, 3000);
 }
 

@@ -89,9 +89,9 @@ function getRestoreFoldsAtRangesFunction(
 
 function scrollForSwapHeadingSection(view: MarkdownView, upwards: boolean): void {
 
-  const gUpperBound = 0.25;
+  const gUpperBound = 1/8;
   const gMidTarget = 0.4;
-  const gLowerBound = 0.6;
+  const gLowerBound = 3/4;
 
   let scrollTriggerSpecs: ScrollTriggerSpecs;
 

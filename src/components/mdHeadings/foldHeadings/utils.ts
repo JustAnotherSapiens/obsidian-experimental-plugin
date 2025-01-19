@@ -4,23 +4,20 @@ import {
   TFile,
   MarkdownView,
   Editor,
-} from "obsidian";
+} from 'obsidian';
 
 import {
-  scrollToCursor,
   scrollActiveLineByTriggerBounds,
   restoreActiveLineScroll,
-} from "utils/obsidian/scroll";
+} from 'utils/obsidian/scroll';
 
-import { getSetting } from "utils/obsidian/settings";
-
-import { runQuickSuggest } from "suggests/quickSuggest";
+import { runQuickSuggest } from 'suggests/quickSuggest';
 
 import {
   HeadingNode,
   HeadingTree,
   MarkdownLevel,
-} from "../headingExtractor/utils/dataStructures";
+} from '../headingExtractor/utils/dataStructures';
 
 
 
@@ -33,13 +30,11 @@ export type FoldInfo = {
 
 
 
-/**
- * NOTE: This function calls an async function (scrollToCursor)
- */
 export function cleanToggleFold(editor: Editor, view: MarkdownView) {
-  editor.exec("toggleFold");
-  // In this particular case the built-in scrollIntoView does the job.
-  scrollToCursor(editor);
+  editor.exec('toggleFold');
+  scrollActiveLineByTriggerBounds(view, {
+    bounds: {top: 0, bottom: 7/8}
+  }, true);
 }
 
 
@@ -76,7 +71,7 @@ export function loadFoldInfo(app: App, source: MarkdownView | TFile | string): F
 
 
 export function saveFoldInfo(app: App, source: MarkdownView | TFile | string, foldInfo: FoldInfo): void {
-  console.debug("saveFoldInfo args:", source, foldInfo);
+  console.debug('saveFoldInfo args:', source, foldInfo);
   if (typeof source === 'string') {
     (app as any).foldManager.savePath(source, foldInfo);
   } else {
@@ -89,7 +84,7 @@ export function saveFoldInfo(app: App, source: MarkdownView | TFile | string, fo
 
 export async function foldingHeadingsByLevel(app: App, view: MarkdownView, opts: {unfold: boolean}): Promise<void> {
 
-  const foldText = opts.unfold ? "Unfold" : "Fold";
+  const foldText = opts.unfold ? 'Unfold' : 'Fold';
 
   const level = await runQuickSuggest(app,
     [1, 2, 3, 4, 5, 6],
@@ -173,7 +168,7 @@ function getHeadingNodeAtLine(editor: Editor, line: number): HeadingNode | undef
 
 export function toggleChildrenHeadingsFolds(editor: Editor, view: MarkdownView) {
 
-  const cursorNode = getHeadingNodeAtLine(editor, editor.getCursor("head").line);
+  const cursorNode = getHeadingNodeAtLine(editor, editor.getCursor('head').line);
   if (!cursorNode) return;
 
   const targetNodes = cursorNode.children;
@@ -199,7 +194,7 @@ export function toggleChildrenHeadingsFolds(editor: Editor, view: MarkdownView) 
 
 export function toggleSiblingHeadingsFolds(editor: Editor, view: MarkdownView) {
 
-  const cursorNode = getHeadingNodeAtLine(editor, editor.getCursor("head").line);
+  const cursorNode = getHeadingNodeAtLine(editor, editor.getCursor('head').line);
   if (!cursorNode) return;
 
   const targetNodes = cursorNode.getLevelSiblings();

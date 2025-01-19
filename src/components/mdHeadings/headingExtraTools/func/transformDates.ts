@@ -4,24 +4,24 @@ import {
   MarkdownView,
   Editor,
   moment,
-} from "obsidian";
+} from 'obsidian';
 
 import {
   DATE_FORMATS,
   DateTimeFormat,
   getMatchedDate,
-} from "utils/time";
+} from 'utils/time';
 
 import {
   HeadingTree,
-} from "components/mdHeadings/headingExtractor/utils/dataStructures";
+} from 'components/mdHeadings/headingExtractor/utils/dataStructures';
 
-import { runQuickSuggest } from "suggests/quickSuggest";
+import { runQuickSuggest } from 'suggests/quickSuggest';
 
 import {
   getFolds,
   applyFolds,
-} from "components/mdHeadings/foldHeadings/utils";
+} from 'components/mdHeadings/foldHeadings/utils';
 
 
 
@@ -37,7 +37,7 @@ export async function promptForDateFormat(app: App, args: {
 
   if (args.excludeTimezoneOffsetFormats) {
     dateFormats = dateFormats.filter(
-      (format: DateTimeFormat) => !format.name.toLocaleLowerCase().includes("timezone")
+      (format: DateTimeFormat) => !format.name.toLocaleLowerCase().includes('timezone')
     );
   }
 
@@ -54,7 +54,7 @@ export async function promptForDateFormat(app: App, args: {
   }
 
   if (dateFormats.length === 0) {
-    new Notice("No date formats available for selection.", 3500);
+    new Notice('No date formats available for selection.', 3500);
     return;
   } else if (dateFormats.length === 1) {
     return dateFormats[0];
@@ -74,12 +74,12 @@ export async function promptForDateFormat(app: App, args: {
 
 // TODO: Implement this function.
 export async function transformListDates(app: App, editor: Editor, view: MarkdownView) {
-  const cursorHead = editor.getCursor("head");
+  const cursorHead = editor.getCursor('head');
   const cursorLine = editor.getLine(cursorHead.line);
 
   const timeFormat = getMatchedDate(cursorLine);
   if (!timeFormat) {
-    new Notice("No valid date format found.", 5000);
+    new Notice('No valid date format found.', 5000);
     return;
   }
 
@@ -91,25 +91,25 @@ export async function transformListDates(app: App, editor: Editor, view: Markdow
 export async function transformSiblingHeadingDates(app: App, view: MarkdownView, flags: {excludeTimezoneOffsetFormats: boolean}) {
   const editor = view.editor;
   const tree = new HeadingTree(editor.getValue());
-  const cursorHead = editor.getCursor("head");
+  const cursorHead = editor.getCursor('head');
 
   const cursorNode = tree.getNodeAtLine(cursorHead.line);
   if (!cursorNode) {
-    new Notice("Cursor is not at a heading.", 5000);
+    new Notice('Cursor is not at a heading.', 5000);
     return;
   }
 
   const refTimeFormat = cursorNode.heading.header.timeFormat;
   if (!refTimeFormat) {
-    new Notice("Cursor heading has no valid time format.", 5000);
+    new Notice('Cursor heading has no valid time format.', 5000);
     return;
   }
 
-  let filterRegexStr = "";
+  let filterRegexStr = '';
   if (refTimeFormat.name.match(/\bdate\b/)) {
-    filterRegexStr = "\\bdate\\b";
+    filterRegexStr = '\\bdate\\b';
   } else {
-    filterRegexStr = "\\bdatetime\\b";
+    filterRegexStr = '\\bdatetime\\b';
   }
 
   const transformTimeFormat = await promptForDateFormat(app, {
@@ -148,7 +148,7 @@ export async function transformSiblingHeadingDates(app: App, view: MarkdownView,
     changes: changes,
     selection: {from: {
       line: cursorHead.line,
-      ch: cursorNode.heading.header.definer.length,
+      ch: 0,
     }},
   });
 
