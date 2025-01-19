@@ -1,14 +1,12 @@
 import BundlePlugin, { BundlePluginComponent } from 'main';
 
 import {
-	Platform,
 	Editor,
-	MarkdownView,
 } from 'obsidian';
 
 import  moveCurrentTab  from './func/moveCurrentTab';
-import openFileInGvim from './func/openFileInGvim';
 import toggleVimEnvironment from './func/toggleVimEnvironment';
+import togglePluginSuggest from './func/togglePluginSuggest';
 
 
 
@@ -39,21 +37,6 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
 
 		/* TOGGLE CONFIG OPTIONS */
 
-		// Commands that rely on the Node.js API won't work on mobile devices.
-		if (!Platform.isMobile) {
-
-			// Open Active File in GVim
-			plugin.addCommand({
-				id: 'open-active-file-in-gvim',
-				name: 'Open Active File in GVim',
-				icon: 'file-output',
-				editorCallback: (editor: Editor, view: MarkdownView) => {
-					openFileInGvim(plugin.app, view.file!, editor.getCursor('head'));
-				},
-			});
-
-		}
-
 		// Toggle Line Numbers
 		plugin.addCommand({
 			id: 'toggle-line-numbers',
@@ -65,6 +48,14 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
         vault.setConfig('showLineNumber', !vault.getConfig('showLineNumber'));
         editor.refresh();
       },
+		});
+
+		// Toggle Plugin Suggest
+		plugin.addCommand({
+			id: 'toggle-plugin-suggest',
+			name: 'Toggle Plugin Suggest',
+			icon: 'code',
+			callback: async () => await togglePluginSuggest(plugin.app),
 		});
 
 		// Toggle Vim Mode (and Vim-related plugins)
@@ -101,5 +92,4 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
   }
 
 }
-
 
