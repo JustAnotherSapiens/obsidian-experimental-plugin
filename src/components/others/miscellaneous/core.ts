@@ -11,7 +11,11 @@ import  moveCurrentTab  from './func/moveCurrentTab';
 import toggleVimEnvironment from './func/toggleVimEnvironment';
 import togglePluginSuggest from './func/togglePluginSuggest';
 import openFileInGvim from './func/openFileInGvim';
-import insertTextAtCursor from './proto/textInsertions';
+import insertTextAtCursor from './func/textInsertions';
+import {
+	customExplorerDirectorySuggest,
+	customVSCodeProjectSuggest,
+} from './func/customDataSuggests';
 
 
 
@@ -41,8 +45,6 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
   addCommands(): void {
     const plugin = this.parent;
 
-		/* TOGGLE CONFIG OPTIONS */
-
 		plugin.addCommand({
 			id: 'insert-iso-timestamp-short',
 			name: 'Insert ISO 8601 Timestamp Short',
@@ -65,6 +67,22 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
 		// Commands that rely on the Node.js API won't work on mobile devices.
 		if (!Platform.isMobile) {
 
+			// Custom VS Code Project Suggest
+			plugin.addCommand({
+				id: 'custom-vs-code-project-suggest',
+				name: 'Custom VS Code Project Suggest',
+				icon: 'folder-code',
+				callback: async () => await customVSCodeProjectSuggest(plugin.app),
+			});
+
+			// Custom Explorer Directory Suggest
+			plugin.addCommand({
+				id: 'custom-explorer-directory-suggest',
+				name: 'Custom Explorer Directory Suggest',
+				icon: 'folder-output',
+				callback: async () => await customExplorerDirectorySuggest(plugin.app),
+			});
+
 			// Open Active File in GVim
 			plugin.addCommand({
 				id: 'open-active-file-in-gvim',
@@ -76,6 +94,8 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
 			});
 
 		}
+
+		/* TOGGLE CONFIG OPTIONS */
 
 		// Toggle Line Numbers
 		plugin.addCommand({

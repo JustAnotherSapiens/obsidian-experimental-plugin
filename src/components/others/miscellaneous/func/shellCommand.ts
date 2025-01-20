@@ -1,3 +1,5 @@
+import { App, FileSystemAdapter } from 'obsidian';
+
 
 // Inspired by the Templater UserSystemFunctions.ts
 // https://github.com/SilentVoid13/Templater/blob/master/src/core/functions/user_functions/UserSystemFunctions.ts
@@ -22,6 +24,38 @@ export function shellCommand(command: string, options: any = {}) {
   return outputStream;
 }
 
+
+
+export function shellCommandFromVault(app: App, command: string) {
+
+  if (!(app.vault.adapter instanceof FileSystemAdapter)) {
+    console.error('app.vault.adapter is not an instance of FileSystemAdapter');
+    return;
+  }
+  const vaultPath = app.vault.adapter.getBasePath().replace(/\\/g, '/');
+
+  shellCommand(command, {
+    timeout: 1000 * 10,
+    cwd: vaultPath,
+  });
+
+}
+
+
+export async function shellCommandPromiseFromVault(app: App, command: string) {
+
+  if (!(app.vault.adapter instanceof FileSystemAdapter)) {
+    console.error('app.vault.adapter is not an instance of FileSystemAdapter');
+    return;
+  }
+  const vaultPath = app.vault.adapter.getBasePath().replace(/\\/g, '/');
+
+  await shellCommandPromise(command, {
+    timeout: 1000 * 10,
+    cwd: vaultPath,
+  });
+
+}
 
 
 
