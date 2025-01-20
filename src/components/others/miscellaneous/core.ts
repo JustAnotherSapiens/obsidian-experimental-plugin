@@ -4,12 +4,14 @@ import {
 	Platform,
 	Editor,
 	MarkdownView,
+	moment,
 } from 'obsidian';
 
 import  moveCurrentTab  from './func/moveCurrentTab';
 import toggleVimEnvironment from './func/toggleVimEnvironment';
 import togglePluginSuggest from './func/togglePluginSuggest';
 import openFileInGvim from './func/openFileInGvim';
+import insertTextAtCursor from './proto/textInsertions';
 
 
 
@@ -40,6 +42,25 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
     const plugin = this.parent;
 
 		/* TOGGLE CONFIG OPTIONS */
+
+		plugin.addCommand({
+			id: 'insert-iso-timestamp-short',
+			name: 'Insert ISO 8601 Timestamp Short',
+			icon: 'watch',
+			editorCallback: (editor: Editor) => {
+				insertTextAtCursor(editor, moment().format('YYYYMMDD[T]HHmmss'));
+			},
+		});
+
+		// Insert ISO 8601 Timestamp
+		plugin.addCommand({
+			id: 'insert-iso-timestamp',
+			name: 'Insert ISO 8601 Timestamp',
+			icon: 'watch',
+			editorCallback: (editor: Editor) => {
+				insertTextAtCursor(editor, moment().format('YYYY-MM-DD[T]HH:mm:ss'));
+			},
+		});
 
 		// Commands that rely on the Node.js API won't work on mobile devices.
 		if (!Platform.isMobile) {
