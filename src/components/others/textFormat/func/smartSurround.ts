@@ -2,7 +2,7 @@ import {
   Editor,
   EditorRange,
   IconName,
-} from "obsidian";
+} from 'obsidian';
 
 
 
@@ -16,69 +16,76 @@ type SurroundPair = {
 
 export const DEFAULT_SURROUND_PAIRS: SurroundPair[] = [
   {
-    name: "Bold",
-    start: "**",
-    end: "**",
-    icon: "bold",
+    name: 'Bold',
+    start: '**',
+    end: '**',
+    icon: 'bold',
   },
   {
-    name: "Italic",
-    start: "*",
-    end: "*",
-    icon: "italic",
+    name: 'Italic',
+    start: '*',
+    end: '*',
+    icon: 'italic',
   },
   {
-    name: "Highlight",
-    start: "==",
-    end: "==",
-    icon: "highlighter",
+    name: 'Highlight',
+    start: '==',
+    end: '==',
+    icon: 'highlighter',
   },
   {
-    name: "Strikethrough",
-    start: "~~",
-    end: "~~",
-    icon: "strikethrough",
+    name: 'Strikethrough',
+    start: '~~',
+    end: '~~',
+    icon: 'strikethrough',
   },
   {
-    name: "Code",
-    start: "`",
-    end: "`",
-    icon: "code",
+    name: 'Code',
+    start: '`',
+    end: '`',
+    icon: 'code',
   },
   {
-    name: "Comment",
-    start: "%%",
-    end: "%%",
-    icon: "message-square-text",
+    name: 'Comment',
+    start: '%%',
+    end: '%%',
+    icon: 'message-square-text',
   },
   {
-    name: "Inline Math",
-    start: "$",
-    end: "$",
-    icon: "square-sigma",
+    name: 'Inline Math',
+    start: '$',
+    end: '$',
+    icon: 'square-sigma',
   },
   {
-    name: "Block Math",
-    start: "$$",
-    end: "$$",
-    icon: "sigma",
+    name: 'Block Math',
+    start: '$$',
+    end: '$$',
+    icon: 'sigma',
   },
   {
-    name: "Underline",
-    start: "<u>",
-    end: "</u>",
-    icon: "underline",
+    name: 'Underline',
+    start: '<u>',
+    end: '</u>',
+    icon: 'underline',
   },
 ];
 
 
 
+function regexEscape(str: string) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+
 export function smartSurround(
   editor: Editor, pair: SurroundPair, linewise: boolean = true
 ) {
+
+  // Full lines by default
   const editRange: EditorRange = {
-    from: {line: editor.getCursor("from").line, ch: 0},
-    to: {line: editor.getCursor("to").line, ch: Infinity},
+    from: {line: editor.getCursor('from').line, ch: 0},
+    to: {line: editor.getCursor('to').line, ch: Infinity},
   };
 
   // Get text to edit
@@ -91,22 +98,27 @@ export function smartSurround(
   let changes = [];
   let endCursorPos = editRange.from;
 
-  const getPairRegex = (flags: string = "") => {
-    return new RegExp(`(?:${pair.start}\|${pair.end})`, flags);
+  const getPairRegex = (flags: string = '') => {
+    return new RegExp(`(?:${regexEscape(pair.start)}\|${regexEscape(pair.end)})`, flags);
   };
 
+
   // Unstrike
-  // TODO: Add a stack-based algorithm to avoid removing only one of the pair
+  // TODO: Add a stack-based algorithm to avoid removing only one of the pairs
+  // 1. Calculate the ranges of valid "syntaxed" regions.
+  // 2. If the cursor is in one of them, then remove only that region's syntax.
+  // 3. Otherwise, remove each valid syntaxed region's syntax.
   if (editText.match(getPairRegex())) {
-    changes.push({text: editText.replace(getPairRegex('g'), ""), ...editRange});
+    changes.push({text: editText.replace(getPairRegex('g'), ''), ...editRange});
   }
+
 
   // Strike single line selection
   else if (oneLineSelection || !linewise) {
     changes.push({
       text: editText.replace(/^(\s*)(.*?)(\s*)$/, `$1${pair.start}$2${pair.end}$3`),
-      from: editor.getCursor("from"),
-      to: editor.getCursor("to"),
+      from: editor.getCursor('from'),
+      to: editor.getCursor('to'),
     });
     endCursorPos = editor.getCursor();
     endCursorPos.ch += (pair.start.length + pair.end.length);

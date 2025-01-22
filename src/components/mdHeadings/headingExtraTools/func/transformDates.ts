@@ -88,6 +88,8 @@ export async function transformListDates(app: App, editor: Editor, view: Markdow
 
 
 
+// TODO: Instead of prompting for a format, cycle them through.
+//       Or select in a toggle menu the formats you want to select (or cycle) from.
 export async function transformSiblingHeadingDates(app: App, view: MarkdownView, flags: {excludeTimezoneOffsetFormats: boolean}) {
   const editor = view.editor;
   const tree = new HeadingTree(editor.getValue());

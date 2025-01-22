@@ -21,26 +21,55 @@ export const DATE_FORMATS: Array<DateTimeFormat> = [
     format: "YYYY-MM-DD[T]HH:mm:ss",
     regex: /(?<!\b[1-7] )\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?![-+]\d{2}:?\d{2}|Z)/,
   },
+
   {
     name: "2. Standard date",
     format: "YYYY-MM-DD",
     regex: /(?<!\b[1-7] )\d{4}-\d{2}-\d{2}(?![ T]\d{2}:?\d{2}(?::?\d{2})?)/,
   },
+
   {
     name: "3. Weekday & datetime",
     format: "E YYYY-MM-DD HH:mm:ss",
     regex: /[1-7] \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/,
   },
+
   {
     name: "4. Weekday & date",
     format: "E YYYY-MM-DD",
     regex: /[1-7] \d{4}-\d{2}-\d{2}(?![ T]\d{2}:?\d{2}(?::?\d{2})?)/,
   },
+
+  // {
+  //   name: "5. Week datetime",
+  //   format: "YYYY-[W]WW-E HH:mm:ss",
+  //   regex: /(?<!\b[1-7] )\d{4}-W\d{2}-[1-7] \d{2}:\d{2}:\d{2}/,
+  // },
+
+  // {
+  //   name: "6. Week date",
+  //   format: "YYYY-[W]WW-E",
+  //   regex: /(?<!\b[1-7] )\d{4}-W\d{2}-[1-7](?![ T]\d{2}:?\d{2}(?::?\d{2})?)/,
+  // },
+
   {
-    name: "5. Standard datetime & timezone",
+    name: "7. Standard datetime & timezone",
     format: "YYYY-MM-DD[T]HH:mm:ssZ",
     regex: /(?<!\b[1-7] )\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:?\d{2}|Z)/,
   },
+
+  {
+    name: "8. Weekday & datetime & timezone",
+    format: "E YYYY-MM-DD HH:mm:ss Z",
+    regex: /[1-7] \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} ([-+]\d{2}:?\d{2}|Z)/,
+  },
+
+  // {
+  //   name: "9. Week datetime & timezone",
+  //   format: "YYYY-[W]WW-E HH:mm:ss",
+  //   regex: /(?<!\b[1-7] )\d{4}-W\d{2}-[1-7] \d{2}:\d{2}:\d{2} ([-+]\d{2}:?\d{2}|Z)/,
+  // },
+
 ];
 
 

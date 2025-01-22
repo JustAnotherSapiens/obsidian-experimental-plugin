@@ -3,7 +3,7 @@ import BundlePlugin, { BundlePluginComponent } from "main";
 import {
   DEFAULT_SURROUND_PAIRS,
   smartSurround,
-} from "./utils";
+} from "./func/smartSurround";
 
 
 

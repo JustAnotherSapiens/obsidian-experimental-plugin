@@ -81,12 +81,16 @@ export default class BundlePlugin extends Plugin {
 
 
   async loadSettings() {
+
+    // Any GLOBAL settings can be declared here.
     let bundleSettings: {[key: string]: any} = {
       showSuggestInstructions: true,
     };
+
     this.components.forEach((component: BundlePluginComponent) => {
       bundleSettings = { ...bundleSettings, ...component.settings };
     });
+
     this.settings = Object.assign({}, bundleSettings, await this.loadData());
   }
 
@@ -145,7 +149,7 @@ class BundleSettingTab extends PluginSettingTab {
 			});
 			banner.createEl("p", {
 				cls: "warning-banner-text",
-				text: "This plugin is still in development. Use it at your own risk!"
+				text: "The functionality in this plugin is experimental. Use it at your own risk!"
 			});
 		});
 	

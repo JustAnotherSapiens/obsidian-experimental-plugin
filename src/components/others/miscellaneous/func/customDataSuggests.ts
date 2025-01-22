@@ -19,7 +19,7 @@ function getCustomData(fileName: string) {
     return;
   }
 
-  const filePath = `${dataPath}\\${fileName}`;
+  const filePath = `${dataPath}\\.plugin\\${fileName}`;
 
   const fs = require('fs');
 
