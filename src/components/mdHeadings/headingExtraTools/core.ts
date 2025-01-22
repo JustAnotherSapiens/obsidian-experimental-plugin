@@ -14,6 +14,8 @@ import {
   moment,
 } from 'obsidian';
 
+import { getSetting } from "utils/obsidian/settings";
+
 import cutHeadingSection from './func/cutHeadingSection';
 import sortSiblingHeadings from './func/sortSiblingHeadings';
 import { transformSiblingHeadingDates } from './func/transformDates';
@@ -23,6 +25,10 @@ import {
 } from './func/smartHeadingSuggest';
 import { insertSmartHeadingUnderHeading } from './func/customSmartHeadings';
 import swapHeadingSection from './func/swapHeadingSection';
+import {
+  shiftSiblingHeadingLevel,
+  siblingHeadingLevelSuggest,
+} from './func/changeSiblingHeadingLevel';
 
 
 
@@ -33,6 +39,7 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
   settings: {
     excludeTimezoneOffsetFormats: boolean;
     smartHeadingSkewUpwards: boolean;
+    shiftSiblingHeadingsWrapAround: boolean;
   };
 
 
@@ -40,7 +47,8 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
     this.parent = plugin;
     this.settings = {
       excludeTimezoneOffsetFormats: false,
-      smartHeadingSkewUpwards: true
+      smartHeadingSkewUpwards: true,
+      shiftSiblingHeadingsWrapAround: false,
     };
   }
 
@@ -55,6 +63,38 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
 
   addCommands(): void {
     const plugin = this.parent;
+
+    // Increase Sibling Heading Level
+    plugin.addCommand({
+      id: 'increase-sibling-heading-level',
+      name: 'Increase Sibling Heading Level',
+      icon: 'hash',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        const wrapAround = getSetting('shiftSiblingHeadingsWrapAround');
+        shiftSiblingHeadingLevel(view,{step: +1, wrapAround});
+      }
+    });
+
+    // Decrease Sibling Heading Level
+    plugin.addCommand({
+      id: 'decrease-sibling-heading-level',
+      name: 'Decrease Sibling Heading Level',
+      icon: 'hash',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        const wrapAround = getSetting('shiftSiblingHeadingsWrapAround');
+        shiftSiblingHeadingLevel(view,{step: -1, wrapAround});
+      }
+    });
+
+    // Sibling Heading Level Suggest
+    plugin.addCommand({
+      id: 'sibling-heading-level-suggest',
+      name: 'Sibling Heading Level Suggest',
+      icon: 'hash',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        await siblingHeadingLevelSuggest(plugin.app, view);
+      }
+    });
 
     // Swap Heading Section Upwards
     plugin.addCommand({
@@ -186,6 +226,17 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
     const plugin = this.parent;
 
     containerEl.createEl('h3', {text: 'Heading Extra Tools Settings'});
+
+    new Setting(containerEl)
+      .setName('Wrap Around Sibling Headings Level Change')
+      .setDesc('Wrap around when increasing/decreasing sibling headings level (H5 -> H6 -> H1 ...)')
+      .addToggle((toggle: ToggleComponent) => {
+        toggle.setValue(plugin.settings.shiftSiblingHeadingsWrapAround);
+        toggle.onChange(async (value: boolean) => {
+          plugin.settings.shiftSiblingHeadingsWrapAround = value;
+          await plugin.saveSettings();
+        });
+      });
 
     new Setting(containerEl)
       .setName('Smart Heading Skew Upwards')
