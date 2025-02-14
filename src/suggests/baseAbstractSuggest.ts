@@ -214,24 +214,31 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
     this.scope = new Scope();
 
     registerKeybindings(this.scope, [
-      // DEFAULT
-      [[], "Escape", async () => {
-        if (this.inputEl.value === "") await this.close();
-        else await this.updateInputAndResults("");
-      }],
+
+      // Close
+      [[], "Escape", async () => await this.close()],
+
+      // Clear text input
+      [["Ctrl"], "u", async () => await this.updateInputAndResults("")],
+      [["Alt"],  "u", async () => await this.updateInputAndResults("")],
+
+      // Select item
       [[], "Enter", async (event) => {
         if (this.renderedResults.length === 0) return;
         await this.enterAction(this.renderedResults[this.selectionIndex], event);
       }],
+
+      // Move selection up/down
       [[], "ArrowDown", () => this.setSelectedResultEl(this.selectionIndex + 1)],
       [[],   "ArrowUp", () => this.setSelectedResultEl(this.selectionIndex - 1)],
-      // CUSTOM
       [["Alt"], "j", () => this.setSelectedResultEl(this.selectionIndex + 1)],
       [["Alt"], "k", () => this.setSelectedResultEl(this.selectionIndex - 1)],
+
+      // Toggle custom functionality
       [["Alt"], "f", () => this.toggleFuzzySearch()],
       [["Alt"], ".", () => this.toggleInstructionsVisibility()],
+
       // TODO: Add default hotkeys to scroll down and up by one result page.
-      // TODO: Add <C-U>/<A-U> to clear the input.
     ]);
   }
 
