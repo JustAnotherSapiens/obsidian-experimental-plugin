@@ -97,6 +97,19 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
 
 		/* TOGGLE CONFIG OPTIONS */
 
+		// Toggle Readable Line Length
+		plugin.addCommand({
+			id: 'toggle-readable-line-length',
+			name: 'Toggle readable line length',
+			icon: 'glasses',
+      editorCallback: (editor: Editor) => {
+        const vault = plugin.app.vault as any;
+        // Already accounts for the case where the config was never set
+        vault.setConfig('readableLineLength', !vault.getConfig('readableLineLength'));
+        editor.refresh();
+      },
+		});
+
 		// Toggle Line Numbers
 		plugin.addCommand({
 			id: 'toggle-line-numbers',
