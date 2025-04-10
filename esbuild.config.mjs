@@ -1,6 +1,8 @@
-import esbuild from "esbuild";
-import process from "process";
-import builtins from "builtin-modules";
+import process from 'process';
+
+import esbuild from 'esbuild';
+import builtins from 'builtin-modules';
+
 
 const banner =
 `/*
@@ -9,11 +11,11 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
-const prod = (process.argv[2] === "production");
-const testBuild = (process.argv[2] === "test" || process.argv[3] === "test");
+const production = (process.argv[2] === 'production');
+const testBuild = (process.argv[2] === 'test' || process.argv[3] === 'test');
 
-const entryPoint = !testBuild ? "src/main.ts" : "tests/main.test.ts";
-const outFile = !testBuild ? "main.js" : "main.test.js";
+const entryPoint = !testBuild ? 'src/main.ts' : 'tests/main.test.ts';
+const outFile = !testBuild ? 'main.js' : 'main.test.js';
 
 const context = await esbuild.context({
 	banner: {
@@ -22,25 +24,25 @@ const context = await esbuild.context({
 	entryPoints: [entryPoint],
 	bundle: true,
 	external: [
-		"obsidian",
-		"electron",
-		"@codemirror/autocomplete",
-		"@codemirror/collab",
-		"@codemirror/commands",
-		"@codemirror/language",
-		"@codemirror/lint",
-		"@codemirror/search",
-		"@codemirror/state",
-		"@codemirror/view",
-		"@lezer/common",
-		"@lezer/highlight",
-		"@lezer/lr",
+		'obsidian',
+		'electron',
+		'@codemirror/autocomplete',
+		'@codemirror/collab',
+		'@codemirror/commands',
+		'@codemirror/language',
+		'@codemirror/lint',
+		'@codemirror/search',
+		'@codemirror/state',
+		'@codemirror/view',
+		'@lezer/common',
+		'@lezer/highlight',
+		'@lezer/lr',
 		...builtins],
-	format: "cjs",
-	target: "es2018",
-	logLevel: "info",
+	format: 'cjs',
+	target: 'es2018',
+	logLevel: 'info',
 	// SOURCE MAP
-	sourcemap: prod ? false : "inline",
+	sourcemap: production ? false : 'inline',
 	sourcesContent: false, // Do not include full source code in the source map
 	// OPTIMIZATION
 	treeShaking: true,
@@ -48,7 +50,7 @@ const context = await esbuild.context({
 	outfile: outFile,
 });
 
-if (prod) {
+if (production) {
 	await context.rebuild();
 	process.exit(0);
 } else {

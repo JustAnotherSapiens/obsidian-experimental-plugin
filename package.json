@@ -5,7 +5,7 @@
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"test": "node esbuild.config.mjs test",
+		"test": "node --import tsx --test --trace-warnings src/**/*.test.ts",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"bump": "node project-bump.mjs && git add package.json manifest.json versions.json"
 	},
@@ -20,6 +20,7 @@
 		"esbuild": "^0.25.2",
 		"obsidian": "1.5.7",
 		"tslib": "2.4.0",
+		"tsx": "^4.19.3",
 		"typescript": "4.7.4"
 	}
 }
