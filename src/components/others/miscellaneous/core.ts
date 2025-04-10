@@ -16,6 +16,7 @@ import {
 	customExplorerDirectorySuggest,
 	customVSCodeProjectSuggest,
 } from './func/customDataSuggests';
+import { getLinkToNewUniqueFile } from './func/uniqueFileCreation';
 
 
 
@@ -23,8 +24,7 @@ import {
 export default class MiscellaneousComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
-  settings: {
-  };
+	settings: Record<string, unknown>;
 
 
   constructor(plugin: BundlePlugin) {
@@ -45,6 +45,38 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
   addCommands(): void {
     const plugin = this.parent;
 
+		/* TEXT INSERTIONS */
+
+		// Insert New Unique File Link (.md)
+		plugin.addCommand({
+			id: 'insert-new-markdown-file-link',
+			name: 'Insert New File Link (Markdown)',
+			icon: 'file-plus',
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				if (!view.file) return;
+				const fileLink = await getLinkToNewUniqueFile(this.parent.app, {
+					sourcePath: view.file.path,
+					extension: '.md'
+				});
+				insertTextAtCursor(editor, fileLink);
+			},
+		});
+
+		// Insert New Unique File Link (.canvas)
+		plugin.addCommand({
+			id: 'insert-new-canvas-file-link',
+			name: 'Insert New File Link (Canvas)',
+			icon: 'map-plus',
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				if (!view.file) return;
+				const fileLink = await getLinkToNewUniqueFile(this.parent.app, {
+					sourcePath: view.file.path,
+					extension: '.canvas'
+				});
+				insertTextAtCursor(editor, fileLink);
+			},
+		});
+
 		plugin.addCommand({
 			id: 'insert-iso-timestamp-short',
 			name: 'Insert ISO 8601 Timestamp Short',
@@ -63,6 +95,8 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
 				insertTextAtCursor(editor, moment().format('YYYY-MM-DD[T]HH:mm:ss'));
 			},
 		});
+
+		/* INTERACTION WITH THIRD-PARTY APPS */
 
 		// Commands that rely on the Node.js API won't work on mobile devices.
 		if (!Platform.isMobile) {
