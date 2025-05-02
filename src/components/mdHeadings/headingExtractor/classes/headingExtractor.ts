@@ -217,7 +217,7 @@ export default class HeadingExtractor {
 
     const folds = getFolds(fileView);
 
-    let foldTypes: {
+    const foldTypes: {
       endAltered: Fold[],
       extracted: Fold[],
       shifted: Fold[],
@@ -231,7 +231,7 @@ export default class HeadingExtractor {
       unaffected: [],
     };
 
-    let isLineInEditRange = (line: number) => line >= editRange.from.line && line < editRange.to.line;
+    const isLineInEditRange = (line: number) => line >= editRange.from.line && line < editRange.to.line;
 
     // Classify Folds
     for (const fold of folds) {
@@ -328,7 +328,7 @@ export default class HeadingExtractor {
       {text: '', from: {...extractionRange.from}, to: {...extractionRange.to}},
     ];
 
-    let extractionText = extractionNode.getHeadingContents(this.editor);
+    const extractionText = extractionNode.getHeadingContents(this.editor);
     let insertionText = extractionText;
 
     if (extractionNode.heading.hasLastLine) {
@@ -445,7 +445,7 @@ export default class HeadingExtractor {
     }
 
     const insertionFileFolds = insertionFileFoldInfo.folds;
-    let insertionFileFoldTypes: {endAltered: Fold[], shifted: Fold[], unaffected: Fold[]} = {
+    const insertionFileFoldTypes: {endAltered: Fold[], shifted: Fold[], unaffected: Fold[]} = {
       endAltered: [],
       shifted: [],
       unaffected: [],
@@ -491,7 +491,7 @@ export default class HeadingExtractor {
   }) {
     const {foldTypes, mainOffset, updatedFileText, extraction} = args;
 
-    let updatedFolds = this.fixCommonSideEffectFoldAlterations({
+    const updatedFolds = this.fixCommonSideEffectFoldAlterations({
       folds: {...foldTypes},
       updatedMarkdown: updatedFileText,
       offset: mainOffset,
@@ -513,7 +513,7 @@ export default class HeadingExtractor {
     extractionRange: EditorRange,
   ) {
     const folds = getFolds(extractionFileView);
-    let foldTypes: {
+    const foldTypes: {
       endAltered: Fold[],
       extracted: Fold[],
       shifted: Fold[],
@@ -666,12 +666,12 @@ export default class HeadingExtractor {
     const newTree = new HeadingTree(args.updatedMarkdown);
     const newTreeNodes = newTree.flatten();
 
-    let fixedFolds: Fold[] = [];
-    let untrackedFolds: Fold[] = [];
+    const fixedFolds: Fold[] = [];
+    const untrackedFolds: Fold[] = [];
 
     // Fix End Altered Folds by setting the `to` property to the last line of the heading.
     for (const fold of args.folds.endAltered) {
-      let node = newTreeNodes.find((node) => node.heading.range.from.line === fold.from);
+      const node = newTreeNodes.find((node) => node.heading.range.from.line === fold.from);
       if (!node) { untrackedFolds.push(fold); continue; }
       fixedFolds.push({
         from: node.heading.range.from.line,

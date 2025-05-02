@@ -135,7 +135,7 @@ export class HeadingNode {
 
 
   getRawSiblings(): HeadingNode[] {
-    let siblings = [this as HeadingNode];
+    const siblings = [this as HeadingNode];
     let refNode = this as HeadingNode;
     while (refNode.prev) {
       siblings.unshift(refNode.prev);
@@ -267,7 +267,7 @@ export class HeadingTree {
 
   breadthFirstTraversal(callback: (node: HeadingNode) => void, topNode?: HeadingNode) {
     if (!topNode) topNode = this.root;
-    let queue: HeadingNode[] = [...topNode.children];
+    const queue: HeadingNode[] = [...topNode.children];
     while (queue.length !== 0) {
       const node = queue.shift()!;
       callback(node);
@@ -376,7 +376,7 @@ export class HeadingTree {
 
 
   flatten(filter?: (node: HeadingNode) => boolean, topNode?: HeadingNode): HeadingNode[] {
-    let nodes: HeadingNode[] = [];
+    const nodes: HeadingNode[] = [];
     if (!filter) {
       this.traverse(node => nodes.push(node), topNode);
     } else {

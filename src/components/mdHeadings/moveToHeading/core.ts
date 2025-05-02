@@ -1,4 +1,4 @@
-import BundlePlugin, { BundlePluginComponent } from "main";
+import BundlePlugin, { BundlePluginComponent } from 'main';
 
 import {
   Setting,
@@ -10,13 +10,13 @@ import {
   Notice,
   MarkdownView,
   Editor,
-} from "obsidian";
+} from 'obsidian';
 
-import moveCursorToHeading from "./utils/moveCursor";
+import moveCursorToHeading from './utils/moveCursor';
 
 
 
-type SiblingMode = "strictSibling" | "looseSibling";
+type SiblingMode = 'strictSibling' | 'looseSibling';
 
 
 
@@ -38,8 +38,8 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
   constructor(plugin: BundlePlugin) {
     this.parent = plugin;
     this.settings = {
-      // levelZeroBehavior: "snap-contiguous",
-      siblingMode: "looseSibling",
+      // levelZeroBehavior: 'snap-contiguous',
+      siblingMode: 'looseSibling',
 
       moveToHeading_scrollTriggerBounds: [0.0, 0.7],
 
@@ -66,9 +66,9 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 
 		// Toggle Wrap Around
 		plugin.addCommand({
-			id: "toggle-global-wrap-around",
-			name: "Toggle wrap around globally",
-			icon: "arrow-right",
+			id: 'toggle-global-wrap-around',
+			name: 'Toggle wrap around globally',
+			icon: 'arrow-right',
 			callback: async () => {
 				const wrapAround = plugin.settings.globalWrapAround;
 				if (wrapAround) {
@@ -89,16 +89,16 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 
 		// Toggle Sibling Mode
 		plugin.addCommand({
-			id: "toggle-sibling-mode",
-			name: "Toggle sibling mode (loose/strict)",
-			icon: "arrow-right",
+			id: 'toggle-sibling-mode',
+			name: 'Toggle sibling mode (loose/strict)',
+			icon: 'arrow-right',
 			callback: async () => {
 				const siblingMode = plugin.settings.siblingMode;
-				if (siblingMode === "strictSibling") {
-					plugin.settings.siblingMode = "looseSibling";
+				if (siblingMode === 'strictSibling') {
+					plugin.settings.siblingMode = 'looseSibling';
 				}
-				else if (siblingMode === "looseSibling") {
-					plugin.settings.siblingMode = "strictSibling";
+				else if (siblingMode === 'looseSibling') {
+					plugin.settings.siblingMode = 'strictSibling';
 				}
 				new Notice(`Sibling Mode: ${plugin.settings.siblingMode}`, 3000);
 				await plugin.saveSettings();
@@ -109,9 +109,9 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 
 		// Move cursor to next sibling heading down
 		plugin.addCommand({
-			id: "sibling-heading-down",
-			name: "Move cursor to next sibling heading down",
-			icon: "arrow-down",
+			id: 'sibling-heading-down',
+			name: 'Move cursor to next sibling heading down',
+			icon: 'arrow-down',
       repeatable: true,
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				const siblingMode = plugin.settings.siblingMode;
@@ -121,9 +121,9 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 
 		// Move cursor to next sibling heading up
 		plugin.addCommand({
-			id: "sibling-heading-up",
-			name: "Move cursor to next sibling heading up",
-			icon: "arrow-up",
+			id: 'sibling-heading-up',
+			name: 'Move cursor to next sibling heading up',
+			icon: 'arrow-up',
       repeatable: true,
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				const siblingMode = plugin.settings.siblingMode;
@@ -133,65 +133,65 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 
 		// Move cursor to next contiguous heading down
 		plugin.addCommand({
-			id: "contiguous-heading-down",
-			name: "Move cursor to contiguous heading down",
-			icon: "arrow-down",
+			id: 'contiguous-heading-down',
+			name: 'Move cursor to contiguous heading down',
+			icon: 'arrow-down',
       repeatable: true,
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, "contiguous", {backwards: false});
+        moveCursorToHeading(editor, view, 'contiguous', {backwards: false});
 			}
 		});
 
 		// Move cursor to next contiguous heading up
 		plugin.addCommand({
-			id: "contiguous-heading-up",
-			name: "Move cursor to contiguous heading up",
-			icon: "arrow-up",
+			id: 'contiguous-heading-up',
+			name: 'Move cursor to contiguous heading up',
+			icon: 'arrow-up',
       repeatable: true,
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				moveCursorToHeading(editor, view, "contiguous", {backwards: true});
+				moveCursorToHeading(editor, view, 'contiguous', {backwards: true});
 			}
 		});
 
     // Move cursor to highest heading upwards
     plugin.addCommand({
-      id: "highest-heading-up",
-      name: "Move cursor to highest heading upwards",
-      icon: "arrow-up",
+      id: 'highest-heading-up',
+      name: 'Move cursor to highest heading upwards',
+      icon: 'arrow-up',
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, "highest", {backwards: true});
+        moveCursorToHeading(editor, view, 'highest', {backwards: true});
       }
     });
 
 
     // Move cursor to highest heading downwards
     plugin.addCommand({
-      id: "highest-heading-down",
-      name: "Move cursor to highest heading downwards",
-      icon: "arrow-down",
+      id: 'highest-heading-down',
+      name: 'Move cursor to highest heading downwards',
+      icon: 'arrow-down',
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, "highest", {backwards: false});
+        moveCursorToHeading(editor, view, 'highest', {backwards: false});
       }
     });
 
     // Move cursor to higher heading upwards
     plugin.addCommand({
-      id: "higher-heading-up",
-      name: "Move cursor to higher heading upwards (parent)",
-      icon: "arrow-up",
+      id: 'higher-heading-up',
+      name: 'Move cursor to higher heading upwards (parent)',
+      icon: 'arrow-up',
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, "higher", {backwards: true});
+        moveCursorToHeading(editor, view, 'higher', {backwards: true});
       }
     });
 
 
     // Move cursor to higher heading downwards
     plugin.addCommand({
-      id: "higher-heading-down",
-      name: "Move cursor to higher heading downwards",
-      icon: "arrow-down",
+      id: 'higher-heading-down',
+      name: 'Move cursor to higher heading downwards',
+      icon: 'arrow-down',
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, "higher", {backwards: false});
+        moveCursorToHeading(editor, view, 'higher', {backwards: false});
       }
     });
 
@@ -201,28 +201,28 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
 
-		containerEl.createEl("h3", {text: "Heading Movement Settings"});
+		containerEl.createEl('h3', {text: 'Heading Movement Settings'});
 
 		/* Global Settings */
 
 		// Sibling Mode
 		new Setting(containerEl)
-		  .setName("Sibling mode")
+      .setName('Sibling mode')
 			.then((setting: Setting) => {
 				const fragment = document.createDocumentFragment();
 				fragment.append(
-					fragment.createEl("b", {text: "Strict: "}),
-					"Same heading level and parent required.",
-					fragment.createEl("br"),
-					fragment.createEl("b", {text: "Loose: "}),
-					"Only same heading level required.",
+					fragment.createEl('b', {text: 'Strict: '}),
+					'Same heading level and parent required.',
+					fragment.createEl('br'),
+					fragment.createEl('b', {text: 'Loose: '}),
+					'Only same heading level required.',
 				);
 				setting.setDesc(fragment);
 			})
 			.addDropdown((dropdown: DropdownComponent) => {
 				dropdown.addOptions({
-					"strictSibling": "Strict",
-					"looseSibling":  "Loose",
+					'strictSibling': 'Strict',
+					'looseSibling':  'Loose',
 				});
 				dropdown.setValue(plugin.settings.siblingMode);
 				dropdown.onChange(async (value: SiblingMode) => {
@@ -233,12 +233,12 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 
 
     // SCROLL TRIGGER BOUNDS
-		containerEl.createEl("h4", {text: "Scroll Trigger Bounds"});
+		containerEl.createEl('h4', {text: 'Scroll Trigger Bounds'});
 
     // Top Bound
     new Setting(containerEl)
-      .setName("Top Bound")
-      .setDesc("Top fraction bound of the viewport.")
+      .setName('Top Bound')
+      .setDesc('Top fraction bound of the viewport.')
       .addSlider((slider: SliderComponent) => {
         slider.setLimits(0, 1, 0.01);
         slider.setDynamicTooltip();
@@ -251,8 +251,8 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 
     // Bottom Bound
     new Setting(containerEl)
-      .setName("Bottom Bound")
-      .setDesc("Bottom fraction bound of the viewport (should be greater than the top bound).")
+      .setName('Bottom Bound')
+      .setDesc('Bottom fraction bound of the viewport (should be greater than the top bound).')
       .addSlider((slider: SliderComponent) => {
         slider.setLimits(0, 1, 0.01);
         slider.setDynamicTooltip();
@@ -265,10 +265,10 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 
 
 		/* Wrap Around Settings */
-    containerEl.createEl("h5", {text: "Wrap around..."});
+    containerEl.createEl('h5', {text: 'Wrap around...'});
 
 		new Setting(containerEl)
-		  .setName("...for contiguous headings")
+      .setName('...for contiguous headings')
 			.addToggle((toggle: ToggleComponent) => {
 				toggle.setValue(plugin.settings.contiguousWrapAround);
 				toggle.onChange(async (value: boolean) => {
@@ -278,7 +278,7 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 			});
 
 		new Setting(containerEl)
-		  .setName("...for loose siblings")
+      .setName('...for loose siblings')
 			.addToggle((toggle: ToggleComponent) => {
 				toggle.setValue(plugin.settings.looseSiblingWrapAround);
 				toggle.onChange(async (value: boolean) => {
@@ -288,7 +288,7 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 			});
 
 		new Setting(containerEl)
-		  .setName("...for strict siblings")
+      .setName('...for strict siblings')
 			.addToggle((toggle: ToggleComponent) => {
 				toggle.setValue(plugin.settings.strictSiblingWrapAround);
 				toggle.onChange(async (value: boolean) => {

@@ -7,8 +7,7 @@ import { showCurrentDateAndTime } from "./utils/notice";
 export default class TimeComponent implements BundlePluginComponent {
 
   parent: BundlePlugin;
-  settings: {
-  };
+  settings: Record<string, unknown>;
 
 
   constructor(plugin: BundlePlugin) {

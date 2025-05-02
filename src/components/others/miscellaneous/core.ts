@@ -7,7 +7,7 @@ import {
 	moment,
 } from 'obsidian';
 
-import  moveCurrentTab  from './func/moveCurrentTab';
+import moveCurrentTab from './func/moveCurrentTab';
 import toggleVimEnvironment from './func/toggleVimEnvironment';
 import togglePluginSuggest from './func/togglePluginSuggest';
 import openFileInGvim from './func/openFileInGvim';
@@ -77,15 +77,6 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
 			},
 		});
 
-		plugin.addCommand({
-			id: 'insert-iso-timestamp-short',
-			name: 'Insert ISO 8601 Timestamp Short',
-			icon: 'watch',
-			editorCallback: (editor: Editor) => {
-				insertTextAtCursor(editor, moment().format('YYYYMMDD[T]HHmmss'));
-			},
-		});
-
 		// Insert ISO 8601 Timestamp
 		plugin.addCommand({
 			id: 'insert-iso-timestamp',
@@ -93,6 +84,16 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
 			icon: 'watch',
 			editorCallback: (editor: Editor) => {
 				insertTextAtCursor(editor, moment().format('YYYY-MM-DD[T]HH:mm:ss'));
+			},
+		});
+
+		// Insert ISO 8601 Timestamp (Short)
+		plugin.addCommand({
+			id: 'insert-iso-timestamp-short',
+			name: 'Insert ISO 8601 Timestamp Short',
+			icon: 'watch',
+			editorCallback: (editor: Editor) => {
+				insertTextAtCursor(editor, moment().format('YYYYMMDD[T]HHmmss'));
 			},
 		});
 
@@ -157,10 +158,10 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
       },
 		});
 
-		// Toggle Plugin Suggest
+		// Toggle Plugin (Suggest)
 		plugin.addCommand({
 			id: 'toggle-plugin-suggest',
-			name: 'Toggle Plugin Suggest',
+			name: 'Toggle Plugin (Suggest)',
 			icon: 'code',
 			callback: async () => await togglePluginSuggest(plugin.app),
 		});

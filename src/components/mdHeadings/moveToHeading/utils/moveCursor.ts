@@ -65,9 +65,9 @@ export default function moveCursorToHeading(
   }
 
   const headingLevel = !inCodeBlock ? getHeadingLevel(lines[startLine]) : 0;
-  let backwards = opts?.backwards;
+  const backwards = opts?.backwards;
 
-  let wrapAround = wrapableMovementModes.includes(mode)
+  const wrapAround = wrapableMovementModes.includes(mode)
                    ? getSetting(`${mode}WrapAround`)
                    : false;
 

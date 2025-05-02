@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"test": "node --import tsx --test --trace-warnings src/**/*.test.ts",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
 		"bump": "node project-bump.mjs && git add package.json manifest.json versions.json"
 	},
 	"keywords": [],

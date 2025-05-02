@@ -22,7 +22,8 @@ function getStartLineOffset(args: CursorMoveArgs): number {
 
 
 export function searchContiguousHeading(args: CursorMoveArgs, wrapSearch: boolean = false): number {
-  let {lines, inCodeBlock, backwards} = args;
+  const {lines, backwards} = args;
+  let inCodeBlock = args.inCodeBlock;
   const offset = getStartLineOffset(args);
   const step = backwards ? -1 : 1;
   let nextHeadingLine = -1;
@@ -46,7 +47,8 @@ export function searchContiguousHeading(args: CursorMoveArgs, wrapSearch: boolea
 
 
 export function searchHigherHeading(args: CursorMoveArgs): number {
-  let {lines, startLine, inCodeBlock, headingLevel, backwards} = args;
+  const {lines, startLine, headingLevel, backwards} = args;
+  let inCodeBlock = args.inCodeBlock;
   const regex = new RegExp(`^#{1,${headingLevel - 1}} `);
   const offset = getStartLineOffset(args);
   const step = backwards ? -1 : 1;
@@ -76,12 +78,13 @@ export function searchHighestHeading(args: CursorMoveArgs): number {
 
 // The returned lines array is sorted from the startLine outwards.
 function getRelativeHighestHeadings(args: CursorMoveArgs): {lines: number[], level: number} {
-  let {lines, startLine, inCodeBlock, headingLevel, backwards} = args;
-  let offset = getStartLineOffset(args);
-  let step = backwards ? -1 : 1;
-  let condition = backwards
-                  ? (i: number) => i >= 0
-                  : (i: number) => i < lines.length;
+  const {lines, startLine, headingLevel, backwards} = args;
+  let inCodeBlock = args.inCodeBlock;
+  const offset = getStartLineOffset(args);
+  const step = backwards ? -1 : 1;
+  const condition = backwards ?
+    (i: number) => i >= 0 :
+    (i: number) => i < lines.length;
 
   let highestLevel = headingLevel ? headingLevel : 6;
   let headingRegex = new RegExp(`^(#{1,${highestLevel}}) `);
@@ -93,7 +96,7 @@ function getRelativeHighestHeadings(args: CursorMoveArgs): {lines: number[], lev
       inCodeBlock = !inCodeBlock; continue;
     } else if (inCodeBlock) continue;
 
-    let match = lines[i].match(headingRegex);
+    const match = lines[i].match(headingRegex);
     if (!match) continue;
 
     if (match[1].length < highestLevel) {
@@ -115,7 +118,8 @@ function getRelativeHighestHeadings(args: CursorMoveArgs): {lines: number[], lev
 
 
 export function searchLooseSiblingHeading(args: CursorMoveArgs, wrapSearch: boolean = false): number {
-  let {lines, inCodeBlock, backwards} = args;
+  const {lines, backwards} = args;
+  let inCodeBlock = args.inCodeBlock;
   const siblingHeadingRegex = new RegExp(`^#{${args.headingLevel}} `);
   const offset = getStartLineOffset(args);
   const step = backwards ? -1 : 1;
@@ -141,7 +145,8 @@ export function searchLooseSiblingHeading(args: CursorMoveArgs, wrapSearch: bool
 
 // To be used when args.headingLevel > 1
 export function searchStrictSiblingHeading(args: CursorMoveArgs, wrapSearch: boolean = false): number {
-  let {lines, inCodeBlock, backwards} = args;
+  const {lines, backwards} = args;
+  let inCodeBlock = args.inCodeBlock;
   const equalOrHigherHeadingRegex = new RegExp(`^#{1,${args.headingLevel}} `);
   const headingString = '#'.repeat(args.headingLevel) + ' ';
   const offset = getStartLineOffset(args);
@@ -174,7 +179,8 @@ export function searchStrictSiblingHeading(args: CursorMoveArgs, wrapSearch: boo
 
 // To be used when args.headingLevel > 1
 function getSiblingHeadingSectionBounds(args: CursorMoveArgs): {start: number, end: number} {
-  let {lines, inCodeBlock, headingLevel} = args;
+  const {lines, headingLevel} = args;
+  let inCodeBlock = args.inCodeBlock;
   const superiorHeadingRegex = new RegExp(`^#{1,${headingLevel - 1}} `);
 
   let upperHeadingLine = -1;
@@ -211,7 +217,8 @@ function getSiblingHeadingSectionBounds(args: CursorMoveArgs): {start: number, e
 ////////////////////////////////////////
 
 export function searchLastChildHeading(args: CursorMoveArgs): number {
-  let {lines, inCodeBlock, headingLevel} = args;
+  const {lines, headingLevel} = args;
+  let inCodeBlock = args.inCodeBlock;
   let lastChildHeadingLine = -1;
   let lowestChildLevel = 6;
   for (let i = args.startLine + 1; i < lines.length; i++) {

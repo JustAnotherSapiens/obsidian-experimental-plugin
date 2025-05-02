@@ -80,7 +80,7 @@ async function dateTransformInSelection(tp: any, editor: Editor) {
   if (!transformFormat) return;
 
   // Get the changes to be made.
-  let changes = [];
+  const changes = [];
 
   const offset = editor.posToOffset(editRange.from);
   for (const match of rangeText.matchAll(new RegExp(fromDate.regex, "g"))) {
@@ -136,7 +136,7 @@ async function getHeadingsDateChanges(
 
   // Return changes for all the sibling headings if the user chose to.
   if (transformAllSiblingHeadings) {
-    let changes = [];
+    const changes = [];
     const siblingHeadings = getSiblingHeadings(fileHeadings, headingIdx);
     for (let i = 0; i < siblingHeadings.length; i++) {
       const siblingLine = siblingHeadings[i].position.start.line;
