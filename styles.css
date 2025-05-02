@@ -1,21 +1,36 @@
 
-/* General */
+/* SETTINGS TAB */
 
-/* Plugin Notice */
-
-.experimental-plugin-notice {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  & > :first-child { margin-top: 0; }
-  & > :last-child { margin-bottom: 0; }
-  & > * { margin: .3em 0; }
+.shrink-input-setting {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  & input {
+    width: 100%; /* 'display' and 'boxSizing' may also be useful */
+  }
 }
 
+.scroll-fraction-setting {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  & input.slider {
+    width: 100%;
+  }
+}
 
-/* SettingTab Elements */
+.scroll-threshold-setting-control {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  width: 100%;
+}
 
-/* warning-banner div */
+.break-trigger-time-item-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  & > input {
+    grid-column: span 2;
+  }
+}
 
 .warning-banner {
   background-color: var(--color-base-10);
@@ -29,16 +44,6 @@
   align-items: center;
   & > * {
     margin: 2px 2px;
-  }
-}
-
-/* break-trigger-time Setting */
-
-.break-trigger-time-item-control {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  & > input {
-    grid-column: span 2;
   }
 }
 
@@ -56,7 +61,38 @@
   *    i.e. it is treated as if it had 2 flex items)
 */
 
-/* Suggest */
+
+/* PLUGIN NOTICE */
+
+.experimental-plugin-notice {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  & > :first-child { margin-top: 0; }
+  & > :last-child { margin-bottom: 0; }
+  & > * { margin: .3em 0; }
+}
+
+
+/* PROMPT MODAL */
+
+.modal-prompt-div {
+    display: flex;
+}
+
+.modal-prompt-input {
+    flex-grow: 1;
+}
+
+.modal-button-div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+
+/* SUGGEST */
 
 .suggest-input-container {
   padding-right: var(--size-4-3);
@@ -95,7 +131,7 @@
 }
 
 
-/* Heading Extractor */
+/* HEADING EXTRACTOR */
 
 .target-file-container {
   width: 100%;
@@ -143,31 +179,4 @@
   & .setting-item-info {
     margin-right: 0;
   }
-}
-
-
-/* Settings */
-
-.shrink-input-setting {
-  display: grid;
-  grid-template-columns: 3fr 1fr;
-  & input {
-    width: 100%; /* 'display' and 'boxSizing' may also be useful */
-  }
-}
-
-
-.scroll-fraction-setting {
-  display: grid;
-  grid-template-columns: 2fr 3fr;
-  & input.slider {
-    width: 100%;
-  }
-}
-
-.scroll-threshold-setting-control {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  width: 100%;
 }
