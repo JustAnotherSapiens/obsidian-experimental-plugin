@@ -22,6 +22,7 @@ import HeadingExtraToolsComponent from "components/mdHeadings/headingExtraTools/
 
 import TextFormatComponent from "components/others/textFormat/core";
 import MiscellaneousComponent from "components/others/miscellaneous/core";
+import ReferencingComponent from "components/others/referencing/core";
 
 import TimeComponent from "components/experimental/time/core";
 import SuggestComponent from "components/experimental/suggest/core";
@@ -55,6 +56,7 @@ export default class BundlePlugin extends Plugin {
 
       new TextFormatComponent(this),
       new MiscellaneousComponent(this),
+      new ReferencingComponent(this),
 
       new TimeComponent(this),
       new SuggestComponent(this),
