@@ -14,6 +14,9 @@ type SettingKey = string;
 
 
 
+// WARNING: Must NOT be called at the top scope, only within functions (so that
+// all the required objects are defined)
+// TODO: Remove the 'this.app' reference
 export function getSetting(setting: SettingKey): any {
   return this.app.plugins.plugins[PLUGIN_ID].settings[setting];
 }

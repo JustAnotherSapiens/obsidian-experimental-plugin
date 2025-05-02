@@ -1,3 +1,4 @@
+// https://github.com/search?q=repo%3ASilentVoid13/Templater%20navigator&type=code
 
 export function copyToClipboard(text: string) {
   if (typeof require === 'undefined') return;

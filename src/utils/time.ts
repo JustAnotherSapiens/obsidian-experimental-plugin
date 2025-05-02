@@ -1,8 +1,4 @@
-// TODO: Remove the "obsidian" dependency.
-import {
-  Notice,
-  moment,
-} from "obsidian";
+import { moment } from "obsidian";
 
 
 
@@ -98,9 +94,36 @@ export function getMatchedDate(text: string, args?: {
 
   if (!args.verbose) return;
 
-  // If no date was found, show a notice and return.
-  const message = "None of the supported date formats were found.";
-  console.log(moment().format("YYYY-MM-DD HH:mm:ss"), message);
-  new Notice(message, 3500);
+  console.debug(moment().format('YYYY-MM-DD HH:mm:ss Z'), `No supported date format found in:\n${text}`);
+
 }
 
+
+
+/* DURATION FORMAT CONVERSION */
+
+export function iso8601DurationToReadableFormat(iso8601Duration: string) {
+  const duration = moment.duration(iso8601Duration);
+  const hours = duration.hours();
+  const minutes = duration.minutes();
+  const seconds = duration.seconds();
+  let durationStr = '';
+  if (hours) durationStr += (hours + 'h ');
+  if (minutes) durationStr += (minutes + 'm ');
+  if (seconds) durationStr += (seconds + 's');
+  return durationStr.trim();
+}
+
+
+export function iso8601DurationToTimeFormat(iso8601Duration: string) {
+  const zeroPad = (num: number) => {
+    return num.toString().padStart(2, '0');
+  };
+  const duration = moment.duration(iso8601Duration);
+  const hours = duration.hours();
+  let durationStr =
+    zeroPad(duration.minutes()) + ':' +
+    zeroPad(duration.seconds());
+  if (hours) durationStr = hours.toString() + ':' + durationStr;
+  return durationStr;
+}
