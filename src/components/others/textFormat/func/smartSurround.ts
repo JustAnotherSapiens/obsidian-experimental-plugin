@@ -74,7 +74,7 @@ export const DEFAULT_SURROUND_PAIRS: SurroundPair[] = [
 
 
 function regexEscape(str: string) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
 
@@ -92,14 +92,14 @@ export function smartSurround(
   const isSingleLine = editRange.from.line === editRange.to.line;
   const oneLineSelection = isSingleLine && editor.somethingSelected();
   const editText = oneLineSelection ?
-                   editor.getSelection() :
-                   editor.getRange(editRange.from, editRange.to);
+    editor.getSelection() :
+    editor.getRange(editRange.from, editRange.to);
 
-  let changes = [];
+  const changes = [];
   let endCursorPos = editRange.from;
 
   const getPairRegex = (flags: string = '') => {
-    return new RegExp(`(?:${regexEscape(pair.start)}\|${regexEscape(pair.end)})`, flags);
+    return new RegExp(`(?:${regexEscape(pair.start)}|${regexEscape(pair.end)})`, flags);
   };
 
 
@@ -126,8 +126,8 @@ export function smartSurround(
 
   // Smart strike
   else {
-    let smartRegex = /^((?:\s*>{1,6} )?\s*(?:(?:[-*+]|\d{1,6}\.) )?\s*)(.*?)(\s*)$/;
-    let lines = editText.split('\n');
+    const smartRegex = /^((?:\s*>{1,6} )?\s*(?:(?:[-*+]|\d{1,6}\.) )?\s*)(.*?)(\s*)$/;
+    const lines = editText.split('\n');
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].trim() === '') continue;
       else {
