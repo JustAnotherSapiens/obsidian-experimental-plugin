@@ -14,7 +14,7 @@ if you want to view the source, please visit the github repository of this plugi
 const production = (process.argv[2] === 'production');
 const testBuild = (process.argv[2] === 'test' || process.argv[3] === 'test');
 
-const entryPoint = !testBuild ? 'src/main.ts' : 'tests/main.test.ts';
+const entryPoint = !testBuild ? 'src/main.ts' : 'test/main.test.ts';
 const outFile = !testBuild ? 'main.js' : 'main.test.js';
 
 const context = await esbuild.context({

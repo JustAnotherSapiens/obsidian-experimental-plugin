@@ -20,6 +20,9 @@ node_modules
 # They should be uploaded to GitHub releases instead.
 main.js
 
+# Don't include the compiled main.test.js file.
+main.test.js
+
 # Exclude sourcemaps
 *.map
 
