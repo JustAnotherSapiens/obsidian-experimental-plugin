@@ -1,21 +1,33 @@
 
+// Explicit import of all test files
 import 'utils/time.test';
+import 'components/others/textFormat/func/clean.test';
+
+
+// SAMPLE TEST STRUCTURE:
 
 // import { describe, it } from 'node:test';
 // import assert from 'assert';
 
-// describe('Sample tests', () => {
-//   it('should work', () => {
-//     assert.strictEqual(1, 1);
-//   });
+// describe('FunctionName', () => {
+//   const validCases: [string, string][] = [
+//     ["input1", "expectedOutput1"],
+//     ["input2", "expectedOutput2"],
+//     // Add more test cases as needed
+//   ];
 
-//   it('should be ok', () => {
-//     assert.strictEqual(2, 2);
-//   });
-
-//   describe('Nested sample test', () => {
-//     it('should work', () => {
-//       assert.strictEqual(3, 3);
+//   validCases.forEach(([input, expected]) => {
+//     it(`should convert "${input}" to "${expected}"`, () => {
+//       const actual = input; // Replace with the actual function call
+//       assert.strictEqual(actual, expected);
 //     });
 //   });
+
+//   it('should throw an error for invalid input', () => {
+//     assert.throws(() => {
+//       // Replace with the actual function call that should throw an error
+//       throw new Error("Invalid input");
+//     }, /Invalid input/);
+//   });
+
 // });

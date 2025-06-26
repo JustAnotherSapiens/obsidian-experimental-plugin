@@ -12,13 +12,16 @@ import {
 } from './func/smartSurround';
 
 import {
-  cleanAndNormalizeSelection
-} from './func/textCleaning';
+  cleanAndNormalizeText,
+  removeWikiLinks,
+} from './func/clean';
 
 import {
 	sortLinesInSelection,
 	regexSortLinesInSelection,
-} from '../textFormat/func/textEditing';
+} from './func/sort';
+
+import { replaceSelectionOrCursorLine } from 'utils/obsidian/editor';
 
 import { runQuickPromptModal } from 'modals/promptModal';
 import { runQuickSuggest } from 'suggests/quickSuggest';
@@ -63,7 +66,7 @@ export default class TextFormatComponent implements BundlePluginComponent {
 				const ascending = await runQuickSuggest(plugin.app,
 					[true, false],
 					(item: boolean) => item ? 'Yes' : 'No',
-					'Ascending sort?'
+					'Ascending? (0-9, A-Z, a-z)'
 				);
 				if (ascending === null) return;
 
@@ -85,7 +88,7 @@ export default class TextFormatComponent implements BundlePluginComponent {
 				const ascending = await runQuickSuggest(plugin.app,
 					[true, false],
 					(item: boolean) => item ? 'Yes' : 'No',
-					'Ascending sort?'
+					'Ascending? (0-9, A-Z, a-z)'
 				);
 				if (ascending === null) return;
 
@@ -101,7 +104,17 @@ export default class TextFormatComponent implements BundlePluginComponent {
       name: 'Clean and Normalize selected text',
       icon: 'square-equal',
       editorCallback: (editor: Editor) => {
-        cleanAndNormalizeSelection(editor);
+        replaceSelectionOrCursorLine(editor, cleanAndNormalizeText);
+      }
+    });
+
+    // Remove Wiki links
+    plugin.addCommand({
+      id: 'remove-wiki-links-in-selection',
+      name: 'Remove WikiLinks in Selection',
+      icon: 'link-2-off',
+      editorCallback: (editor: Editor) => {
+        replaceSelectionOrCursorLine(editor, removeWikiLinks);
       }
     });
 

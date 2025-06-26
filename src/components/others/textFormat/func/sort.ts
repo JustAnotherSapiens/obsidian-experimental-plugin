@@ -1,9 +1,32 @@
 import {
-  App,
   Notice,
   Editor,
   EditorRangeOrCaret,
 } from 'obsidian';
+
+
+
+type SortArgs = {
+  ascending: boolean;
+  inPlace?: boolean;
+};
+
+
+// NOTE:
+// `sort()` mutates the original array
+// `toSorted()` returns a new array (baseline ES2023+)
+export function sortLines(lines: string[], args: SortArgs, compareFn: (a: string, b:string) => number): string[] {
+  // const lineSortFn = args.inPlace ? lines.sort : lines.toSorted;
+  const lineSortFn = args.inPlace ? lines.sort : lines.slice().sort;
+  return args.ascending ?
+    lineSortFn(compareFn) :
+    lineSortFn((a, b) => compareFn(b, a));
+}
+
+
+export function sortLinesByLocale(lines: string[], args: SortArgs): string[] {
+  return sortLines(lines, args, (a: string, b: string) => a.localeCompare(b));
+}
 
 
 
@@ -85,3 +108,4 @@ export function regexSortLinesInSelection(editor: Editor, args: {pattern: string
     selection: endSelection,
   });
 }
+
