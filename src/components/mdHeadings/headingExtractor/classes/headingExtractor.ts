@@ -11,7 +11,7 @@ import {
   EditorPosition,
 } from 'obsidian';
 
-import { posToIdx } from "utils/obsidian/editor";
+import { posToIdx } from 'utils/obsidian/editor';
 
 import HeadingSelectorSuggest from './suggests/headingSelector';
 import {
@@ -21,7 +21,7 @@ import {
 import {
   HeadingNode,
   HeadingTree,
-} from "../utils/dataStructures";
+} from '../utils/dataStructures';
 
 import {
   Fold,
@@ -30,19 +30,21 @@ import {
   loadFoldInfo,
   saveFoldInfo,
   FoldInfo,
-} from "../../foldHeadings/utils";
+} from '../../foldHeadings/utils';
 
 import {
   restoreActiveLineScrollFunc,
-} from "utils/obsidian/scroll";
+} from 'utils/obsidian/scroll';
 
 
 
 type ExtractorFlags = {
   extractAtCursor: boolean;
   endAtInsertion: boolean;
-  startFlat?: boolean;
+  // startFlat?: boolean;
   skewUpwards?: boolean;
+  expandInsertionTree?: boolean;
+  includeExtractionLevelHeadings?: boolean;
 };
 
 
@@ -56,11 +58,11 @@ type FileContext = {
 
 async function getMarkdownFileContext(app: App, targetFile: TFile): Promise<FileContext | undefined> {
   if (!targetFile) {
-    console.debug("getMarkdownFileContext: Target File is undefined.");
+    console.debug('getMarkdownFileContext: Target File is undefined.');
     return;
   }
 
-  const activeViews = app.workspace.getLeavesOfType("markdown").map(
+  const activeViews = app.workspace.getLeavesOfType('markdown').map(
     (leaf: WorkspaceLeaf) => (leaf.view as MarkdownView)
   );
   const activeFiles = activeViews.map((view: MarkdownView) => view.file as TFile);
@@ -109,7 +111,7 @@ export default class HeadingExtractor {
     if (this.extractionNode) return;
     let headingNode: HeadingNode | undefined;
     if (extractAtCursor) {
-      headingNode = this.tree.getNodeAtLine(this.editor.getCursor("head").line);
+      headingNode = this.tree.getNodeAtLine(this.editor.getCursor('head').line);
     } else {
       const suggest = new HeadingSelectorSuggest(this.app, {sources: {editor: this.editor}});
       suggest.setTree(this.tree);
@@ -120,16 +122,18 @@ export default class HeadingExtractor {
 
 
   async extractAndInsertHeading(targetFile: TFile, flags: ExtractorFlags): Promise<void> {
-    console.debug("--- NEW EXTRACT AND INSERT HEADING ---");
+    console.debug('--- NEW EXTRACT AND INSERT HEADING ---');
     await this.resolveExtractionNode(flags.extractAtCursor);
     if (!this.extractionNode) return;
 
     const insertionSuggest = new HeadingInsertionDataSuggest(
       this.app, {
         sources: {file: targetFile},
+        mdLevelLimit: this.extractionNode.heading.level.bySyntax,
+        expand: flags.expandInsertionTree ?? true,
         sourceNode: this.extractionNode,
-        expand: flags.startFlat,
         skewUpwards: flags.skewUpwards,
+        includeSiblingHeadings: flags.includeExtractionLevelHeadings ?? false,
       }
     );
 
@@ -167,7 +171,7 @@ export default class HeadingExtractor {
 
     // Insertion Under Higher Level Heading Section
     if (insertionReferenceNode.heading.level.bySyntax < extractionNode.heading.level.bySyntax) {
-      console.debug("HeadingExtractor::Insertion Calculated Under Higher Level Heading Section");
+      console.debug('HeadingExtractor::Insertion Calculated Under Higher Level Heading Section');
 
       if (insertionIsUpwards) {
         const firstHigherEqualChildNode = insertionReferenceNode.children.find(
@@ -191,7 +195,7 @@ export default class HeadingExtractor {
 
     // Insertion Next to Same Level Heading
     } else {
-      console.debug("HeadingExtractor::Insertion Calculated Next to Same Level Heading");
+      console.debug('HeadingExtractor::Insertion Calculated Next to Same Level Heading');
 
       if (insertionIsUpwards) {
         insertionPosition = {...insertionReferenceNode.heading.range.from};
@@ -332,7 +336,7 @@ export default class HeadingExtractor {
     let insertionText = extractionText;
 
     if (extractionNode.heading.hasLastLine) {
-      insertionText += "\n";
+      insertionText += '\n';
       if (extractionRange.from.line > 0) {
         extractionChanges.push({
           text: '',
@@ -346,7 +350,7 @@ export default class HeadingExtractor {
     if (!insertionPosition) return;
 
     if (insertionPosition.line === insertionSuggest.getTree().lineCount) {
-      insertionText = "\n" + insertionText.slice(0, -1);
+      insertionText = '\n' + insertionText.slice(0, -1);
     }
 
     return {
@@ -384,12 +388,12 @@ export default class HeadingExtractor {
     // Calculate whether the net movement is upwards or downwards
     const isNetMovementUpwards = extractionRange.from.line > insertionPosition.line;
 
-    // The final "\n" character produces an unwanted empty string in the split array.
-    const insertionLineCount = insertionText.split("\n").length - 1;
+    // The final '\n' character produces an unwanted empty string in the split array.
+    const insertionLineCount = insertionText.split('\n').length - 1;
 
 
     // Calculate the FINAL CURSOR POSITION
-    const initialCursorPosition = this.editor.getCursor("head");
+    const initialCursorPosition = this.editor.getCursor('head');
     let finalCursorPosition: EditorPosition;
 
     if (flags.endAtInsertion) {
@@ -612,8 +616,8 @@ export default class HeadingExtractor {
 
 
     // Get Extraction File UPDATED FOLDS
-    // The last split element is an empty string due to the final "\n" character.
-    const extractionLineCount = extractionText.split("\n").length - 1;
+    // The last split element is an empty string due to the final '\n' character.
+    const extractionLineCount = extractionText.split('\n').length - 1;
     const extractionFileUpdatedFolds = this.getExtractionFileUpdatedFolds({
       foldTypes: extractionFileFoldTypes,
       mainOffset: -extractionLineCount,
@@ -625,8 +629,8 @@ export default class HeadingExtractor {
 
 
     // Get Insertion File UPDATED FOLDS
-    // The last split element is an empty string due to the final "\n" character.
-    const insertionLineCount = insertionText.split("\n").length - 1;
+    // The last split element is an empty string due to the final '\n' character.
+    const insertionLineCount = insertionText.split('\n').length - 1;
     const insertionFileUpdatedFolds = this.getInsertionFileUpdatedFolds({
       foldTypes: insertionFileFoldTypes,
       mainOffset: insertionLineCount,
@@ -645,7 +649,7 @@ export default class HeadingExtractor {
     if (!insertionFileContext.view) {
       saveFoldInfo(this.app, insertionFileContext.file, {
         folds: insertionFileUpdatedFolds,
-        lines: newInsertionFileText.split("\n").length, // The last "\n" is the final line.
+        lines: newInsertionFileText.split('\n').length, // The last '\n' is the final line.
       });
     } else {
       applyFolds(insertionFileContext.view, insertionFileUpdatedFolds);

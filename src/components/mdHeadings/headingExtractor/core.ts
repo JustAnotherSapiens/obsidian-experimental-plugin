@@ -38,7 +38,8 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
   settings: {
     targetFileMethod: TargetFileMethod;
     targetFilePath: string;
-    suggestStartFlat: boolean;
+    expandInsertionTree: boolean;
+    includeExtractionLevelHeadings: boolean;
     insertionSkewedUpwards: boolean;
   };
   targetFile: TFile | null;
@@ -50,7 +51,8 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
     this.settings = {
       targetFileMethod: 'active',
       targetFilePath: '',
-      suggestStartFlat: true,
+      expandInsertionTree: true,
+      includeExtractionLevelHeadings: false,
       insertionSkewedUpwards: false,
     };
   }
@@ -128,8 +130,9 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
         await extractor.extractAndInsertHeading(this.targetFile, {
           extractAtCursor: true,
           endAtInsertion: false,
-          startFlat: plugin.settings.suggestStartFlat,
+          expandInsertionTree: plugin.settings.expandInsertionTree,
           skewUpwards: plugin.settings.insertionSkewedUpwards,
+          includeExtractionLevelHeadings: plugin.settings.includeExtractionLevelHeadings,
         });
 
       },
@@ -141,51 +144,123 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
   addSettings(containerEl: HTMLElement): void {
     const plugin = this.parent;
 
+
+    type Keybinding = {
+      keys: string;
+      description: string;
+    };
+
+    const abstractSuggestKeybindings: Keybinding[] = [
+      { keys: 'Alt + J/K', description: 'Navigate Down / Navigate Up' },
+      { keys: 'Alt + F', description: 'Toggle Fuzzy Search' },
+      { keys: 'Alt + S', description: 'Toggle Strict Case' },
+      { keys: 'Alt + .', description: 'Toggle Instructions' },
+      { keys: 'Alt + U', description: 'Clear Input' },
+      { keys: 'Esc', description: 'Close' },
+    ];
+
+    const headingTreeKeybindings: Keybinding[] = [
+      { keys: 'Alt + L/H', description: 'Step Into / Step Out' },
+      { keys: 'Alt + D', description: 'Toggle Expand Heading Tree' },
+    ];
+
+    const headingInsertionDataKeybindings: Keybinding[] = [
+      { keys: 'Enter / Click', description: 'Append, Insert After' },
+      { keys: 'Shift + Enter / Right Click', description: 'Prepend, Insert Before' },
+      { keys: 'Alt + I', description: 'Toggle Include Extraction Level Headings' },
+    ];
+
+    // TODO: Give better styling to the keybindings table.
+    function createKeybindingsTable(bindings: Keybinding[]): HTMLTableElement {
+      const table = document.createElement('table');
+      table.style.borderCollapse = 'collapse';
+
+      const header = table.insertRow();
+      ['Keys', 'Description'].forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        th.style.border = '1px solid black';
+        th.style.padding = '4px';
+        header.appendChild(th);
+      });
+
+      bindings.forEach(binding => {
+        const row = table.insertRow();
+        [binding.keys, binding.description].forEach(text => {
+          const cell = row.insertCell();
+          cell.textContent = text;
+          cell.style.border = '1px solid black';
+          cell.style.padding = '4px';
+        });
+      });
+
+      return table;
+    }
+
     containerEl.createEl('h3', {text: 'Heading Extractor'});
 
+    // containerEl.createEl('h4', {text: 'Keybindings'});
+    containerEl.createEl('br');
+
+    containerEl.createEl('h5', {text: 'General Suggest Keybindings'});
+    const abstractSuggestTable = createKeybindingsTable(abstractSuggestKeybindings);
+    containerEl.appendChild(abstractSuggestTable);
+    containerEl.createEl('br');
+
+    containerEl.createEl('h5', {text: 'Heading Tree Keybindings'});
+    const headingTreeTable = createKeybindingsTable(headingTreeKeybindings);
+    containerEl.appendChild(headingTreeTable);
+    containerEl.createEl('br');
+
+    containerEl.createEl('h5', {text: 'Heading Extractor Keybindings'});
+    const headingInsertionDataTable = createKeybindingsTable(headingInsertionDataKeybindings);
+    containerEl.appendChild(headingInsertionDataTable);
+    containerEl.createEl('br');
+
+    // const keybindingsTable = createKeybindingsTable(keybindings);
+    // containerEl.appendChild(keybindingsTable);
+
+    // containerEl.createSpan('', (el) => {
+    //   el.createEl('b', {text: 'NOTE: '});
+    //   const kb = (...keys: string[]) => hotkeyHTML(...keys);
+    //   el.innerHTML = `Use ${kb('Alt', 'l')} to step into a heading and ${kb('Alt', 'h')} to step out of a heading.<br><br>${kb('Alt', 'j')} and ${kb('Alt', 'k')} can be used to navigate the results; just as ${kb('ArrowUp')} and ${kb('ArrowDown')}.`;
+    // });
+
+    containerEl.createEl('h4', {text: 'On Suggest Open'});
+
     new Setting(containerEl)
-      .setName('Heading selector start flat')
-      .then((setting: Setting) => {
-        setting.setDesc(createFragment((el) => {
-          el.createSpan({text:
-            'When opening a heading selector, the immediate list of results will be all the headings at the Target File.'
-          });
-          el.createEl('br');
-          el.createSpan({text:
-            'If this setting is off, the immediate list of results will be the top-level headings of the Target File.'
-          });
-          el.createEl('br');
-          el.createEl('br');
-          el.createSpan('', (el) => {
-            el.createEl('b', {text: 'NOTE: '});
-            const kb = (...keys: string[]) => hotkeyHTML(...keys);
-            el.innerHTML = `Use ${kb('Alt', 'l')} to step into a heading and ${kb('Alt', 'h')} to step out of a heading.<br><br>${kb('Alt', 'j')} and ${kb('Alt', 'k')} can be used to navigate the results; just as ${kb('ArrowUp')} and ${kb('ArrowDown')}.`;
-          });
-        }));
-      })
+      .setName('Expand Heading Tree on Open')
       .addToggle((toggle: ToggleComponent) => {
-        toggle.setValue(plugin.settings.suggestStartFlat);
+        toggle.setValue(plugin.settings.expandInsertionTree ?? false);
         toggle.onChange(async (value: boolean) => {
-          plugin.settings.suggestStartFlat = value;
+          plugin.settings.expandInsertionTree = value;
           await plugin.saveSettings();
         });
       });
+
+    new Setting(containerEl)
+      .setName('Include Extraction Level Headings on Open')
+      .addToggle((toggle: ToggleComponent) => {
+        toggle.setValue(plugin.settings.includeExtractionLevelHeadings ?? true);
+        toggle.onChange(async (value: boolean) => {
+          plugin.settings.includeExtractionLevelHeadings = value;
+          await plugin.saveSettings();
+        });
+      })
+
+
+    containerEl.createEl('h4', {text: 'Insertion Adjustments'});
 
     new Setting(containerEl)
       .setName('Insertion skewed upwards')
       .then((setting: Setting) => {
         setting.setDesc(createFragment((el) => {
           el.createSpan({ text:
-            'With respect to the extracted heading level, the insertion position will be determined as follows:'
+            'Insert at upmost available position under a parent heading, or above a sibling heading.'
           });
-          el.createEl('ul', '', (ul) => { ul.innerHTML = `
-            <li>If a higher-in-hierarchy heading is selected, the insertion will be at the upmost available position within this heading section.</li>
-            <li>If a heading at the same level is selected, the insertion will be directly above it.</li>
-            <li>It is not possible to select lower-in-hierarchy headings for insertion.</li>
-          `;});
           el.createEl('br');
           el.createSpan({ text:
-            'If this setting is off, the behavior is analogous, but downwards.'
+            'If this setting is off, the insertion will be at the lowest available position under a parent heading, or below a sibling heading.'
           });
         }));
       })
@@ -196,6 +271,8 @@ export default class HeadingExtractorComponent implements BundlePluginComponent 
           await plugin.saveSettings();
         });
       });
+
+    containerEl.createEl('h4', {text: 'Target File'});
 
     const setTargetFileSetter = () => new Setting(containerEl)
       .setName('Set Target File from:')

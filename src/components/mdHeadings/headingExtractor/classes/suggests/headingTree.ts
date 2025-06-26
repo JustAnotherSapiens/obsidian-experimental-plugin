@@ -7,18 +7,18 @@ import {
 } from 'obsidian';
 
 import registerKeybindings from 'utils/obsidian/keybindings';
-import IconButton from "utils/obsidian/classes/iconButton";
+import IconButton from 'utils/obsidian/classes/iconButton';
 
 import BaseAbstractSuggest from 'suggests/baseAbstractSuggest';
-import { simpleHighlight, fuzzyHighlight } from "suggests/utils/display";
+import { simpleHighlight, fuzzyHighlight } from 'suggests/utils/display';
 
-import { mdHeadingHTML } from "components/mdHeadings/utils/display";
+import { mdHeadingHTML } from 'components/mdHeadings/utils/display';
 
 import {
   MarkdownLevel,
   HeadingNode,
   HeadingTree,
-} from "../../utils/dataStructures";
+} from '../../utils/dataStructures';
 
 
 
@@ -58,9 +58,9 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
 
 
   constructor(app: App, args: HeadingTreeArgs) {
-    super(app, "heading-tree-suggest");
+    super(app, 'heading-tree-suggest');
 
-    this.setPlaceholder("Select a Heading...");
+    this.setPlaceholder('Select a Heading...');
     this.file = args.sources.file;
     this.editor = args.sources.editor;
     this.markdownText = args.sources.markdownText;
@@ -70,10 +70,10 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
 
     this.flags.expandHeadingTree = args.expand ?? false;
 
-    this.iconButtons.set("expandHeadingTree", new IconButton({
+    this.iconButtons.set('expandHeadingTree', new IconButton({
       parentEl: this.iconContainerEl,
-      iconId: "expand",
-      tooltip: "Expand Heading Tree",
+      iconId: 'expand',
+      tooltip: 'Expand Heading Tree <Alt+D>',
       isActive: this.flags.expandHeadingTree,
       clickCallback: () => this.toggleExpandHeadingTree(),
     }));
@@ -82,15 +82,15 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
 
 
   private toggleExpandHeadingTree(): void {
-    this.toggleIconButton("expandHeadingTree");
+    this.toggleIconButton('expandHeadingTree');
   }
 
 
   async onOpen(): Promise<void> {
     registerKeybindings(this.scope, [
-      [["Alt"],  "l", async () => await this.stepInto(this.renderedResults[this.selectionIndex])],
-      [["Alt"],  "h", async () => await this.stepOut()],
-      [["Alt"],  "d", () => this.toggleExpandHeadingTree()],
+      [['Alt'],  'l', async () => await this.stepInto(this.renderedResults[this.selectionIndex])],
+      [['Alt'],  'h', async () => await this.stepOut()],
+      [['Alt'],  'd', () => this.toggleExpandHeadingTree()],
     ]);
   }
 
@@ -123,7 +123,7 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
 
 
   getTree(): HeadingTree {
-    if (!this.tree) throw new Error("HeadingTreeSuggest::Tree not yet built.");
+    if (!this.tree) throw new Error('HeadingTreeSuggest::Tree not yet built.');
     return this.tree;
   }
 
@@ -140,17 +140,17 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
       this.markdownText = this.editor.getValue();
 
     else if (this.file) {
-      const activeViews = this.app.workspace.getLeavesOfType("markdown").map(
+      const activeViews = this.app.workspace.getLeavesOfType('markdown').map(
         (leaf: WorkspaceLeaf) => (leaf.view as MarkdownView)
       );
       const activeFiles = activeViews.map((view: MarkdownView) => view.file as TFile);
       const targetFileIndex = activeFiles.indexOf(this.file);
       if (targetFileIndex !== -1) {
-        console.debug("HeadingTreeSuggest::File contents read from WORKSPACE VIEW EDITOR");
+        console.debug('HeadingTreeSuggest::File contents read from WORKSPACE VIEW EDITOR');
         this.editor = activeViews[targetFileIndex].editor;
         this.markdownText = this.editor.getValue();
       } else {
-        console.debug("HeadingTreeSuggest::File contents read from DISK");
+        console.debug('HeadingTreeSuggest::File contents read from DISK');
         this.markdownText = await this.app.vault.read(this.file);
       }
     }
@@ -178,7 +178,7 @@ export default abstract class HeadingTreeSuggest extends BaseAbstractSuggest<Hea
     this.referenceNode = result;
     this.selectionIndexStack.push(this.selectionIndex);
     this.selectionQueryStack.push(this.query);
-    await this.updateInputAndResults("");
+    await this.updateInputAndResults('');
     return true;
   }
 

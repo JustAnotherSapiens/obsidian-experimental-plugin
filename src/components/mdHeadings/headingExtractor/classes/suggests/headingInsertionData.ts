@@ -1,21 +1,22 @@
-import { App, TFile } from "obsidian";
+import { App, TFile } from 'obsidian';
 
-import { breadcrumbsHTML } from "utils/display";
+import { breadcrumbsHTML } from 'utils/display';
 
-import registerKeybindings from "utils/obsidian/keybindings";
-import IconButton from "utils/obsidian/classes/iconButton";
+import registerKeybindings from 'utils/obsidian/keybindings';
+import IconButton from 'utils/obsidian/classes/iconButton';
 
-import BaseAbstractSuggest from "suggests/baseAbstractSuggest";
+import BaseAbstractSuggest from 'suggests/baseAbstractSuggest';
 
-import HeadingTreeSuggest, { HeadingTreeArgs } from "./headingTree";
-import { MarkdownLevel, HeadingNode } from "../../utils/dataStructures";
+import HeadingTreeSuggest, { HeadingTreeArgs } from './headingTree';
+import { MarkdownLevel, HeadingNode } from '../../utils/dataStructures';
 
 
 
 
 type HeadingInsertionArgs = HeadingTreeArgs & {
-  skewUpwards?: boolean;
   sourceNode: HeadingNode;
+  skewUpwards?: boolean;
+  includeSiblingHeadings?: boolean;
 };
 
 
@@ -27,9 +28,9 @@ type HeadingInsertionArgs = HeadingTreeArgs & {
 // TODO: Change the CSS class names to match the new naming convention.
 function addFileBanner<T>(suggest: BaseAbstractSuggest<T>, file?: TFile) {
   if (!file) return;
-  const bannerEl = createDiv("target-file-container");
+  const bannerEl = createDiv('target-file-container');
 
-  createDiv({ cls: "target-file-display", parent: bannerEl }, (el) => {
+  createDiv({ cls: 'target-file-display', parent: bannerEl }, (el) => {
     el.innerHTML = breadcrumbsHTML(file!.path.slice(0, -3));
   });
 
@@ -61,12 +62,12 @@ export class HeadingInsertionDataSuggest extends HeadingTreeSuggest {
     this.mdLevel = this.sourceNode.heading.level.bySyntax;
 
     // Add icon button to toggle inclusion of sibling headings.
-    this.flags.includeSiblingHeadings = true;
+    this.flags.includeSiblingHeadings = args.includeSiblingHeadings ?? false;
 
-    this.iconButtons.set("includeSiblingHeadings", new IconButton({
+    this.iconButtons.set('includeSiblingHeadings', new IconButton({
       parentEl: this.iconContainerEl,
-      iconId: "list-tree",
-      tooltip: "Include Same Level Headings",
+      iconId: 'list-tree',
+      tooltip: 'Include Same Level Headings <Alt+I>',
       isActive: this.flags.includeSiblingHeadings,
       clickCallback: () => this.toggleIncludeSiblingHeadings(),
     }));
@@ -74,20 +75,23 @@ export class HeadingInsertionDataSuggest extends HeadingTreeSuggest {
     this.resolveResultsFilter();
 
     this.instructions = [
-      {command: "<A-j/k>", purpose: "Navigate"},
-      {command: "<A-l>", purpose: "Step Into"},
-      {command: "<A-h>", purpose: "Step Out"},
-      {command: "<A-d>", purpose: "Toggle Expand"},
-      {command: "<A-i>", purpose: "Toggle Include Siblings"},
-      {command: "<Enter>/<Click>", purpose: "Append, Insert After"},
-      {command: "<S-Enter>/<R_Click>", purpose: "Prepend, Insert Before"},
-      {command: "<Esc>", purpose: "Clear/Close"},
+      {command: '<A-j/k>', purpose: 'Navigate'},
+      {command: '<A-l>', purpose: 'Step Into'},
+      {command: '<A-h>', purpose: 'Step Out'},
+      {command: '<Enter>/<Click>', purpose: 'Append, Insert After'},
+      {command: '<S-Enter>/<R_Click>', purpose: 'Prepend, Insert Before'},
+      {command: '<Esc>', purpose: 'Close'},
+      {command: '<A-u>', purpose: 'Clear Input'},
+      {command: '<A-d>', purpose: 'Toggle Expand'},
+      {command: '<A-i>', purpose: 'Toggle Include Siblings'},
+      {command: '<A-f>', purpose: 'Toggle Fuzzy Search'},
+      {command: '<A-.>', purpose: 'Toggle Instructions'},
     ];
   }
 
 
   private toggleIncludeSiblingHeadings() {
-    this.toggleIconButton("includeSiblingHeadings", () => {
+    this.toggleIconButton('includeSiblingHeadings', () => {
       this.resolveResultsFilter();
     });
   }
@@ -132,7 +136,7 @@ export class HeadingInsertionDataSuggest extends HeadingTreeSuggest {
 
     this.addRightClickAndShiftEnterActions();
     registerKeybindings(this.scope, [
-      [["Alt"], "i", () => this.toggleIncludeSiblingHeadings()],
+      [['Alt'], 'i', () => this.toggleIncludeSiblingHeadings()],
     ]);
 
   }
@@ -140,14 +144,14 @@ export class HeadingInsertionDataSuggest extends HeadingTreeSuggest {
 
   private addRightClickAndShiftEnterActions() {
     // Right Click Action
-    this.resultsEl.on("contextmenu", ".suggestion-item", (event, element) => {
+    this.resultsEl.on('contextmenu', '.suggestion-item', (event, element) => {
       this.setSelectedResultEl(this.resultsEl.indexOf(element));
       this.resolveInsertionDataAndClose(this.renderedResults[this.selectionIndex], !this.skewUpwards);
     }, {capture: true});
 
     // Shift + Enter Action
     registerKeybindings(this.scope, [
-      [["Shift"], "Enter", () => {
+      [['Shift'], 'Enter', () => {
         if (this.renderedResults.length === 0) return;
         this.resolveInsertionDataAndClose(this.renderedResults[this.selectionIndex], !this.skewUpwards);
       }],
