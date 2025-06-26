@@ -16,6 +16,7 @@ import {
 
 import { getSetting } from "utils/obsidian/settings";
 
+import selectHeadingSectionText from './func/selectHeadingSectionText';
 import cutHeadingSection from './func/cutHeadingSection';
 import sortSiblingHeadings from './func/sortSiblingHeadings';
 import { transformSiblingHeadingDates } from './func/transformDates';
@@ -116,6 +117,28 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
       }
     });
 
+    // Custom Smart Heading: Timestamped H5 under H1/H2 'Captures' with YAML
+    plugin.addCommand({
+      id: 'insert-smart-timestamped-h5-under-captures-with-yaml',
+      name: 'Insert Smart Timestamped H5 under Captures with YAML',
+      icon: 'watch',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        insertSmartHeadingUnderHeading(plugin.app, view, {
+          insertionHeading: {
+            level: 5,
+            title: moment().format('YYYY-MM-DD[T]HH:mm:ss'),
+            contents: '```yaml\n```\n\n',
+          },
+          referenceHeading: {
+            validLevels: [1, 2],
+            titlePattern: 'Captur[ea]s',
+          },
+          ignoreSelection: false,
+          skewUpwards: plugin.settings.smartHeadingSkewUpwards,
+        });
+      }
+    });
+
     // Custom Smart Heading: Timestamped H5 under H1/H2 'Captures'
     plugin.addCommand({
       id: 'insert-smart-timestamped-h5-under-captures',
@@ -179,6 +202,16 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const skewUpwards = plugin.settings.smartHeadingSkewUpwards;
         insertTimestampedSmartHeadingSuggest(plugin.app, view, skewUpwards);
+      }
+    });
+
+    // Select Heading Section Text
+    plugin.addCommand({
+      id: 'select-heading-section-text',
+      name: 'Select Heading Section Text',
+      icon: 'text-select',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        selectHeadingSectionText(editor);
       }
     });
 
