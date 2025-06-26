@@ -1,4 +1,5 @@
-import { moment } from "obsidian";
+// import { moment } from "obsidian";
+import moment from 'moment';
 
 
 
@@ -102,17 +103,30 @@ export function getMatchedDate(text: string, args?: {
 
 /* DURATION FORMAT CONVERSION */
 
-export function iso8601DurationToReadableFormat(iso8601Duration: string) {
-  const duration = moment.duration(iso8601Duration);
-  const hours = duration.hours();
-  const minutes = duration.minutes();
-  const seconds = duration.seconds();
-  let durationStr = '';
-  if (hours) durationStr += (hours + 'h ');
-  if (minutes) durationStr += (minutes + 'm ');
-  if (seconds) durationStr += (seconds + 's');
-  return durationStr.trim();
+export function iso8601DurationToReadableFormat(isoDuration: string): string {
+  const regex =
+    /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;
+  const match = isoDuration.match(regex);
+
+  if (!match) {
+    throw new Error("Invalid ISO 8601 duration format");
+  }
+
+  const [, years, months, weeks, days, hours, minutes, seconds] = match;
+
+  const parts: string[] = [];
+
+  if (years) parts.push(`${parseInt(years)}y`);
+  if (months) parts.push(`${parseInt(months)}mo`);
+  if (weeks) parts.push(`${parseInt(weeks)}w`);
+  if (days) parts.push(`${parseInt(days)}d`);
+  if (hours) parts.push(`${parseInt(hours)}h`);
+  if (minutes) parts.push(`${parseInt(minutes)}m`);
+  if (seconds) parts.push(`${parseFloat(seconds)}s`);
+
+  return parts.join(' ');
 }
+
 
 
 export function iso8601DurationToTimeFormat(iso8601Duration: string) {

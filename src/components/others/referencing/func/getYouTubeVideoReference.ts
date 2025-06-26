@@ -5,6 +5,8 @@ import { iso8601DurationToReadableFormat } from 'utils/time';
 
 import { getYouTubeParsedItems } from '../youtubeAPI/getYouTubeItems';
 
+import { getSetting } from 'utils/obsidian/settings';
+
 
 
 export const VIDEO_REFERENCE_PARSERS: Record<string, CallableFunction> = {
@@ -31,15 +33,9 @@ export default async function getYouTubeVideoReference(app: App, idSource: strin
   const referenceSelection = await runQuickSuggest(app,
     Object.keys(VIDEO_REFERENCE_PARSERS),
     (key: string) => `${key}:\n${VIDEO_REFERENCE_PARSERS[key](sampleVideo)}`,
-    "Select VIDEO reference style..."
+    'Select VIDEO reference style...'
   );
   if (!referenceSelection) return;
-
-  // if (referenceSelection === 'thumbnail') {
-  //   return parsedVideos.map(
-  //     (video: any) => videoReferenceParsers.thumbnail(app, video)
-  //   );
-  // }
 
   return parsedVideos.map(
     (video: any) => VIDEO_REFERENCE_PARSERS[referenceSelection](video)
@@ -49,20 +45,22 @@ export default async function getYouTubeVideoReference(app: App, idSource: strin
 
 
 function videoApaReference(video: any) {
-  const date = moment(video.publishedAt).format("YYYY, MMMM D");
+  const date = moment(video.publishedAt).format('YYYY, MMMM D');
   const channel = video.channel.title.trim();
   let title = video.title.trim();
   if (title.slice(-1) === ".") title = title.slice(0, -1);
-  return `${channel}. (${date}). _${title}_ [Video]. YouTube. ${video.url}`;
+  return `${channel}. (${date}). _${title}_ [Video]. YouTube. ${video.url}`
+    + (getSetting('appendDurationToApaMla') ? ` (${iso8601DurationToReadableFormat(video.duration)})` : '');
 }
 
 
 function videoMlaReference(video: any) {
-  const date = moment(video.publishedAt).format("D MMM. YYYY");
+  const date = moment(video.publishedAt).format('D MMM. YYYY');
   const channel = video.channel.title.trim();
   let title = video.title;
-  if (!title.match(/(?:[.!?])$/)) title += ".";
-  return `"${title}" _YouTube_, uploaded by ${channel}, ${date}, ${video.url}.`;
+  if (!title.match(/(?:[.!?])$/)) title += '.';
+  return `"${title}" _YouTube_, uploaded by ${channel}, ${date}, ${video.url}.`
+    + (getSetting('appendDurationToApaMla') ? ` (${iso8601DurationToReadableFormat(video.duration)})` : '');
 }
 
 
@@ -74,10 +72,10 @@ function videoMdLinkedReference(video: any) {
 
 
 function videoMdLinkedSortReference(video: any) {
-  const date = moment(video.publishedAt).format("YYYY-MM-DD");
+  const date = moment(video.publishedAt).format('YYYY-MM-DD');
   const channel = video.channel.title.trim();
   const channelUrl = video.channel.url;
-  const title = video.title.trim().replace(/([[\]()])/g, '\\$1');
+  const title = video.title.trim().replace(/\[([^\]]*)\]/g, '($1)');
   let refStr = `${date} [${channel}](${channelUrl}): [${title}](${video.url})`;
   if (video.duration)
     refStr += ` (${iso8601DurationToReadableFormat(video.duration)})`;
@@ -86,7 +84,7 @@ function videoMdLinkedSortReference(video: any) {
 
 
 function videoPlainSortReference(video: any) {
-  const date = moment(video.publishedAt).format("YYYY-MM-DD");
+  const date = moment(video.publishedAt).format('YYYY-MM-DD');
   const channel = video.channel.title.trim();
   const title = video.title.trim();
   let refStr = `${date} ${channel}: _${title}_`;
@@ -138,7 +136,7 @@ function videoPlainSongReference(video: any) {
 
 
 function videoMdHeadingAndAPAReference(video: any) {
-  const title = video.title.trim().replace(/([[\]()])/g, '\\$1');
+  const title = video.title.trim().replace(/\[([^\]]*)\]/g, '($1)');
   let heading = `### [${title}](${video.url})`;
   if (video.duration)
     heading += ` (${iso8601DurationToReadableFormat(video.duration)})`;
@@ -150,6 +148,17 @@ function videoMdHeadingAndAPAReference(video: any) {
 function videoThumbnailReference(video: any) {
   return `![](${video.thumbnail})`
 }
+
+
+
+/* CODE CEMENTERY */
+
+// if (referenceSelection === 'thumbnail') {
+//   return parsedVideos.map(
+//     (video: any) => videoReferenceParsers.thumbnail(app, video)
+//   );
+// }
+
 
 // async function videoThumbnailReference(app: App, video: any) {
 //   const thumbnails = video.thumbnails;

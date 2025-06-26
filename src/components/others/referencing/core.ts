@@ -25,6 +25,7 @@ export default class ReferencingComponent implements BundlePluginComponent {
   parent: BundlePlugin;
   settings: {
     googleApiKey: string;
+    appendDurationToApaMla: boolean;
   };
 
 
@@ -32,6 +33,7 @@ export default class ReferencingComponent implements BundlePluginComponent {
     this.parent = plugin;
     this.settings = {
       googleApiKey: '',
+      appendDurationToApaMla: false,
 
       // textSetting: '',
       // toggleSetting: false,
@@ -60,14 +62,10 @@ export default class ReferencingComponent implements BundlePluginComponent {
       else return await navigator.clipboard.readText();
     };
 
-    const appendToCursor = (editor: Editor, text: string) => {
+    // Append text to the current cursor line
+    const appendToCursorLine = (editor: Editor, text: string) => {
       const cursorLine = editor.getCursor('to').line;
-      editor.setLine(cursorLine, editor.getLine(cursorLine) + '\n' + text);
-    };
-
-    const prependToCursor = (editor: Editor, text: string) => {
-      const cursorLine = editor.getCursor('from').line;
-      editor.setLine(cursorLine, text + '\n' + editor.getLine(cursorLine));
+      editor.setLine(cursorLine, editor.getLine(cursorLine) + text);
     };
 
 
@@ -80,7 +78,7 @@ export default class ReferencingComponent implements BundlePluginComponent {
         const text = await getImplicitTextSource(editor);
         const references = await getYouTubeVideoReference(plugin.app, text);
         if (!references) return;
-        appendToCursor(editor, references.join('\n'));
+        appendToCursorLine(editor, references.join('\n'));
       }
     });
 
@@ -93,7 +91,7 @@ export default class ReferencingComponent implements BundlePluginComponent {
         const text = await getImplicitTextSource(editor);
         const references = await getYouTubePlaylistReference(plugin.app, text);
         if (!references) return;
-        appendToCursor(editor, references.join('\n'));
+        appendToCursorLine(editor, references.join('\n'));
       }
     });
 
@@ -116,7 +114,19 @@ export default class ReferencingComponent implements BundlePluginComponent {
         }
         if (references.length === 0) return;
 
-        appendToCursor(editor, references.join('\n'));
+        appendToCursorLine(editor, references.join('\n'));
+      }
+    });
+
+    // Toggle append duration to APA/MLA references
+    plugin.addCommand({
+      id: 'toggle-append-duration-to-apa-mla',
+      name: 'Toggle Append Duration to APA/MLA References',
+      icon: 'clock',
+      callback: async () => {
+        plugin.settings.appendDurationToApaMla = !plugin.settings.appendDurationToApaMla;
+        await plugin.saveSettings();
+        new Notice(`Append duration to APA/MLA references ${plugin.settings.appendDurationToApaMla ? 'ENABLED' : 'DISABLED'}.`);
       }
     });
 
@@ -146,6 +156,17 @@ export default class ReferencingComponent implements BundlePluginComponent {
 				});
 			});
 
+    // Append duration to APA/MLA references
+    new Setting(containerEl)
+      .setName('Append duration to APA/MLA references')
+      .setDesc('If enabled, the duration of YouTube videos will be appended to APA and MLA references.')
+      .addToggle((toggle: ToggleComponent) => {
+        toggle.setValue(plugin.settings.appendDurationToApaMla);
+        toggle.onChange(async (value: boolean) => {
+          plugin.settings.appendDurationToApaMla = value;
+          await plugin.saveSettings();
+        });
+      });
 
 
 		// // Text Setting
