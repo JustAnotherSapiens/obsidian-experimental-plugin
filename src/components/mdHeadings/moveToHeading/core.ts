@@ -14,6 +14,8 @@ import {
 
 import moveCursorToHeading from './utils/moveCursor';
 
+import { getSetting } from 'utils/obsidian/settings';
+
 
 
 type SiblingMode = 'strictSibling' | 'looseSibling';
@@ -114,8 +116,13 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 			icon: 'arrow-down',
       repeatable: true,
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				const siblingMode = plugin.settings.siblingMode;
-        moveCursorToHeading(editor, view, siblingMode, {backwards: false});
+				const mode = plugin.settings.siblingMode;
+				moveCursorToHeading(view, {
+					mode: mode,
+					backwards: false,
+					wrapAround: getSetting(plugin.app, `${mode}WrapAround`),
+					scrollBounds: getSetting(plugin.app, 'moveToHeading_scrollTriggerBounds')
+				});
 			}
 		});
 
@@ -126,8 +133,13 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 			icon: 'arrow-up',
       repeatable: true,
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				const siblingMode = plugin.settings.siblingMode;
-        moveCursorToHeading(editor, view, siblingMode, {backwards: true});
+				const mode = plugin.settings.siblingMode;
+				moveCursorToHeading(view, {
+					mode: mode,
+					backwards: true,
+					wrapAround: getSetting(plugin.app, `${mode}WrapAround`),
+					scrollBounds: getSetting(plugin.app, 'moveToHeading_scrollTriggerBounds')
+				});
 			}
 		});
 
@@ -138,7 +150,13 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 			icon: 'arrow-down',
       repeatable: true,
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, 'contiguous', {backwards: false});
+				const mode = 'contiguous';
+				moveCursorToHeading(view, {
+					mode: mode,
+					backwards: false,
+					wrapAround: getSetting(plugin.app, `${mode}WrapAround`),
+					scrollBounds: getSetting(plugin.app, 'moveToHeading_scrollTriggerBounds')
+				});
 			}
 		});
 
@@ -149,7 +167,13 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
 			icon: 'arrow-up',
       repeatable: true,
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				moveCursorToHeading(editor, view, 'contiguous', {backwards: true});
+				const mode = 'contiguous';
+				moveCursorToHeading(view, {
+					mode: mode,
+					backwards: true,
+					wrapAround: getSetting(plugin.app, `${mode}WrapAround`),
+					scrollBounds: getSetting(plugin.app, 'moveToHeading_scrollTriggerBounds')
+				});
 			}
 		});
 
@@ -159,7 +183,12 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
       name: 'Move cursor to highest heading upwards',
       icon: 'arrow-up',
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, 'highest', {backwards: true});
+				const mode = 'highest';
+				moveCursorToHeading(view, {
+					mode: mode,
+					backwards: true,
+					scrollBounds: getSetting(plugin.app, 'moveToHeading_scrollTriggerBounds')
+				});
       }
     });
 
@@ -170,7 +199,12 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
       name: 'Move cursor to highest heading downwards',
       icon: 'arrow-down',
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, 'highest', {backwards: false});
+				const mode = 'highest';
+				moveCursorToHeading(view, {
+					mode: mode,
+					backwards: false,
+					scrollBounds: getSetting(plugin.app, 'moveToHeading_scrollTriggerBounds')
+				});
       }
     });
 
@@ -180,7 +214,12 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
       name: 'Move cursor to higher heading upwards (parent)',
       icon: 'arrow-up',
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, 'higher', {backwards: true});
+				const mode = 'higher';
+				moveCursorToHeading(view, {
+					mode: mode,
+					backwards: true,
+					scrollBounds: getSetting(plugin.app, 'moveToHeading_scrollTriggerBounds')
+				});
       }
     });
 
@@ -191,7 +230,12 @@ export default class MoveToHeadingComponent implements BundlePluginComponent {
       name: 'Move cursor to higher heading downwards',
       icon: 'arrow-down',
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        moveCursorToHeading(editor, view, 'higher', {backwards: false});
+				const mode = 'higher';
+				moveCursorToHeading(view, {
+					mode: mode,
+					backwards: false,
+					scrollBounds: getSetting(plugin.app, 'moveToHeading_scrollTriggerBounds')
+				});
       }
     });
 

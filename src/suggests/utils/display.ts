@@ -1,7 +1,7 @@
 import {
   ACCENT_COLOR,
   DEBUG_COLOR,
-} from "utils/display";
+} from 'utils/display';
 
 
 
@@ -26,7 +26,7 @@ export function scoredText(score: number, text: string): string {
 
 
 
-// CODE CEMENTERY
+// CODE GRAVEYARD
 
 // type DashedString<T extends string> =
 //   T extends `${infer F}${infer R}`
@@ -35,9 +35,9 @@ export function scoredText(score: number, text: string): string {
 // type RemoveLastDash<S extends string> = S extends `${infer R}-` ? R : S;
 // type CamelToDashedCase<T extends string> = RemoveLastDash<DashedString<T>>;
 
-// type Test = CamelToDashedCase<"FooBarBaz">; // "foo-bar-baz"
-// type Test0 = CamelToDashedCase<"FontWeight">; // "font-weight"
-// type Test1 = CamelToDashedCase<"paddingRight">; // "padding-right"
-// type Test2 = CamelToDashedCase<"color">; // "color"
-// type Test3 = CamelToDashedCase<"Margin">; // "margin"
+// type Test = CamelToDashedCase<'FooBarBaz'>; // 'foo-bar-baz'
+// type Test0 = CamelToDashedCase<'FontWeight'>; // 'font-weight'
+// type Test1 = CamelToDashedCase<'paddingRight'>; // 'padding-right'
+// type Test2 = CamelToDashedCase<'color'>; // 'color'
+// type Test3 = CamelToDashedCase<'Margin'>; // 'margin'
 

@@ -26,5 +26,5 @@ export function cleanAndNormalizeText(text: string): string {
 // NOTE: Named capturing groups are only available when targeting 'ES2018' or later
 // Remove links like "[text](url)" leaving just the text part.
 export function removeWikiLinks(text: string): string {
-  return text.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+  return text.replace(/\[(?<text>[^\]]*)\]\([^)]*\)/g, '$<text>');
 }

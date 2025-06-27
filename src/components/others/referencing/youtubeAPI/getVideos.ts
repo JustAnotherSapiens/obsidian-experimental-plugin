@@ -23,12 +23,13 @@ export function getYouTubeVideoIDs(text: string) {
 
 
 // https://developers.google.com/youtube/v3/docs/videos/list
-export async function getYouTubeVideos(idSource: string): Promise<any[] | undefined> {
+export async function getYouTubeVideos(apiKey: string, idSource: string): Promise<any[] | undefined> {
 
   const ids = getYouTubeVideoIDs(idSource);
   if (!ids) return;
 
   const response = await requestYouTubeAPI({
+    apiKey: apiKey,
     target: 'videos',
     requestedParts: ['id', 'status', 'contentDetails', 'snippet', 'statistics'],
     queryParameters: { id: ids.join(',') },

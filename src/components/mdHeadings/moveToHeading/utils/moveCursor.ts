@@ -1,13 +1,10 @@
 import {
   MarkdownView,
-  Editor,
-} from "obsidian";
-
-import { getSetting } from "utils/obsidian/settings";
+} from 'obsidian';
 
 import {
   scrollActiveLineByTriggerBounds,
-} from "utils/obsidian/scroll";
+} from 'utils/obsidian/scroll';
 
 import {
   searchContiguousHeading,
@@ -16,12 +13,12 @@ import {
   searchLooseSiblingHeading,
   searchStrictSiblingHeading,
   searchLastChildHeading,
-} from "./searchHeading";
+} from './searchHeading';
 
 import {
   getHeadingLevel,
   isCodeBlockEnd,
-} from "components/mdHeadings/utils/helpers";
+} from 'components/mdHeadings/utils/helpers';
 
 
 
@@ -35,8 +32,6 @@ export type CursorMoveArgs = {
 }
 
 
-const wrapableMovementModes = ["contiguous", "looseSibling", "strictSibling"];
-
 const movementFunctions = {
   contiguous: contiguousHeading,
   higher: higherHeading,
@@ -49,13 +44,21 @@ const movementFunctions = {
 type MovementMode = keyof typeof movementFunctions;
 
 
+export type CursorToHeadingOptions = {
+  mode: MovementMode;
+  backwards: boolean;
+  wrapAround?: boolean;
+  scrollBounds: [number, number];
+};
+
+
 
 export default function moveCursorToHeading(
-  editor: Editor,
   view: MarkdownView,
-  mode: MovementMode,
-  opts?: {backwards: boolean}
+  opts: CursorToHeadingOptions
 ) {
+  const editor = view.editor;
+
   const lines = editor.getValue().split('\n');
   const startLine = editor.getCursor().line;
 
@@ -65,24 +68,20 @@ export default function moveCursorToHeading(
   }
 
   const headingLevel = !inCodeBlock ? getHeadingLevel(lines[startLine]) : 0;
-  const backwards = opts?.backwards;
+  const backwards = opts.backwards;
 
-  const wrapAround = wrapableMovementModes.includes(mode)
-                   ? getSetting(`${mode}WrapAround`)
-                   : false;
+  const wrapAround = opts.wrapAround ?? false;
 
-  const args: CursorMoveArgs = {
+  const movementLine = movementFunctions[opts.mode]({
     lines, startLine, inCodeBlock, headingLevel, backwards, wrapAround
-  };
-
-  const movementLine = movementFunctions[mode](args);
+  });
   if (movementLine === -1 || movementLine === startLine) return;
 
   editor.setCursor({line: movementLine, ch: 0});
   scrollActiveLineByTriggerBounds(view, {
     bounds: {
-      top: getSetting("moveToHeading_scrollTriggerBounds")[0],
-      bottom: getSetting("moveToHeading_scrollTriggerBounds")[1],
+      top: opts.scrollBounds[0],
+      bottom: opts.scrollBounds[1],
     },
   });
 

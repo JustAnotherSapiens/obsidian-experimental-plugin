@@ -23,12 +23,13 @@ export function getYouTubePlaylistIDs(text: string) {
 
 
 // https://developers.google.com/youtube/v3/docs/playlists/list
-export async function getYouTubePlaylists(idSource: string): Promise<any[] | undefined> {
+export async function getYouTubePlaylists(apiKey: string, idSource: string): Promise<any[] | undefined> {
 
   const ids = getYouTubePlaylistIDs(idSource);
   if (!ids) return;
 
   const response = await requestYouTubeAPI({
+    apiKey: apiKey,
     target: 'playlists',
     queryParameters: { id: ids.join(',') },
   });

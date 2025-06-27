@@ -20,8 +20,8 @@ type YouTubeAPIBasicTarget = Exclude<YouTubeAPITarget, 'playlistItems'>;
 
 
 
-export async function getYouTubeParsedItems(idSource: string, target: YouTubeAPIBasicTarget) {
-  const items = await getYouTubeItems(idSource, target);
+export async function getYouTubeParsedItems(apiKey: string, idSource: string, target: YouTubeAPIBasicTarget) {
+  const items = await getYouTubeItems(apiKey, idSource, target);
   if (!items) return;
 
   const itemParser = getDefaultYouTubeItemParser(target);
@@ -37,11 +37,12 @@ function getDefaultYouTubeItemParser(target: YouTubeAPIBasicTarget) {
   }
 }
 
-export async function getYouTubeItems(idSource: string, target: YouTubeAPIBasicTarget) {
+// TODO: Pass the API key here
+export async function getYouTubeItems(apiKey: string, idSource: string, target: YouTubeAPIBasicTarget) {
   switch (target) {
-    case 'videos': return await getYouTubeVideos(idSource); 
-    case 'playlists': return await getYouTubePlaylists(idSource);
-    case 'channels': return await getYouTubeChannels(idSource);
+    case 'videos': return await getYouTubeVideos(apiKey, idSource); 
+    case 'playlists': return await getYouTubePlaylists(apiKey, idSource);
+    case 'channels': return await getYouTubeChannels(apiKey, idSource);
   }
 }
 

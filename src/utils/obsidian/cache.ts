@@ -1,22 +1,24 @@
 import {
+  moment,
+  App,
   CachedMetadata,
   HeadingCache,
   TFile,
-} from "obsidian";
+} from 'obsidian';
 
 
 
 const metadataProperties = [
-  "links",
-  "embeds",
-  "tags",
-  "headings",
-  "sections",
-  "listItems",
-  "frontmatter",
-  "frontmatterPosition",
-  "frontmatterLinks",
-  "blocks",
+  'links',
+  'embeds',
+  'tags',
+  'headings',
+  'sections',
+  'listItems',
+  'frontmatter',
+  'frontmatterPosition',
+  'frontmatterLinks',
+  'blocks',
 ] as const;
 type MetadataProperty = typeof metadataProperties[number];
 
@@ -24,32 +26,33 @@ type MetadataProperty = typeof metadataProperties[number];
 
 // TODO: Find a reliable way to ensure that the file is properly indexed
 //       up to the latest changes before reading the cache.
-export async function getActiveFileCache(property?: MetadataProperty) {
+export async function getActiveFileCache(app: App, property?: MetadataProperty) {
   try {
     // Not sure if this has any effect on the cache, but I believe
     // it's a good practice to save the file before reading it.
-    this.app.commands.executeCommandById('editor:save-file');
+    (app as any).commands.executeCommandById('editor:save-file');
 
-    const currentFile = this.app.workspace.getActiveFile() as TFile;
-    if (!currentFile) throw new Error("Couldn't get currentFile");
+    const currentFile = app.workspace.getActiveFile() as TFile;
+    if (!currentFile) throw new Error('Unable to get currentFile');
 
     // The execution of this function is recommended on the API docs
     // whenever we are planning to modify the file contents.
-    void await this.app.vault.adapter.read(currentFile.path);
+    void await app.vault.adapter.read(currentFile.path);
 
-    const fileCache = this.app.metadataCache.getFileCache(currentFile) as CachedMetadata;
-    if (!fileCache) throw new Error("Couldn't get fileCache");
+    const fileCache = app.metadataCache.getFileCache(currentFile) as CachedMetadata;
+    if (!fileCache) throw new Error('Unable to get fileCache');
 
     if (!property) return fileCache;
 
     const fileProperty = structuredClone(fileCache[property]);
-    if (!fileProperty) throw new Error(`Couldn't get file ${property} from cache`);
+    if (!fileProperty) throw new Error(`Unable to get file ${property} from cache`);
 
     return fileProperty;
 
   } catch (error) {
-    const timestamp = this.moment().format("YYYY-MM-DD[T]HH:mm:ss.SSS");
-    console.debug(timestamp, "getActiveFileCache() failed:", error.message);
+    if (!(error instanceof Error)) return;
+    const timestamp = moment().format('YYYY-MM-DD[T]HH:mm:ss.SSS');
+    console.debug(timestamp, 'getActiveFileCache() failed:', error.message);
   }
 }
 

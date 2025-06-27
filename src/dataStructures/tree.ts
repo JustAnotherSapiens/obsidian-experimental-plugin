@@ -14,28 +14,31 @@ export default abstract class Tree<T> {
   }
 
   flatten(): T[] {
-    let nodes: T[] = [];
+    const nodes: T[] = [];
     this.traverse(node => nodes.push(node));
     return nodes;
   }
 
   find(callback: (node: T) => boolean): T | undefined {
     let found: T | undefined;
+    const foundMsg = 'NODE_FOUND';
     try {
       this.traverse(node => {
         if (callback(node)) {
           found = node;
-          throw new Error('Node found!');
+          throw new Error(foundMsg);
         }
       });
     } catch (error) {
-      if (error.message !== 'Node found!') throw error;
+      if (!(error instanceof Error) || error.message !== foundMsg) {
+        throw error;
+      }
     }
     return found;
   }
 
   findMany(callback: (node: T) => boolean): T[] {
-    let found: T[] = [];
+    const found: T[] = [];
     this.traverse(node => {
       if (callback(node)) {
         found.push(node);

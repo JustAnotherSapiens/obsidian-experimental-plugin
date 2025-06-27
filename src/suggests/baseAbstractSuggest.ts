@@ -111,7 +111,7 @@ export default abstract class BaseAbstractSuggest<T> implements SuggestModal {
     this.flags = Object.assign({
       fuzzySearch: true,
       strictCase: false,
-      instructions: getSetting('showSuggestInstructions'),
+      instructions: getSetting(this.app, 'showSuggestInstructions'),
     }, flags);
 
     // NOTE: This element MUST exist before any IconButton gets created (either here or in a subclass).

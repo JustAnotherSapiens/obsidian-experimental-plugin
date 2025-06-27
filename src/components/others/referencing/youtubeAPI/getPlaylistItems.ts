@@ -4,8 +4,8 @@ import { parseYouTubePlaylistItem } from './defaultParsers';
 
 
 
-export async function getYouTubeParsedPlaylistItems(playlistId: string, count: number): Promise<any[] | undefined> {
-  const playlistItems = await getYouTubePlaylistItems(playlistId, count);
+export async function getYouTubeParsedPlaylistItems(apiKey: string, playlistId: string, count: number): Promise<any[] | undefined> {
+  const playlistItems = await getYouTubePlaylistItems(apiKey, playlistId, count);
   if (!playlistItems) return;
 
   return playlistItems.map(
@@ -16,7 +16,7 @@ export async function getYouTubeParsedPlaylistItems(playlistId: string, count: n
 
 
 // https://developers.google.com/youtube/v3/docs/playlistItems/list
-export async function getYouTubePlaylistItems(playlistId: string, count: number): Promise<any[] | undefined> {
+export async function getYouTubePlaylistItems(apiKey: string, playlistId: string, count: number): Promise<any[] | undefined> {
 
   const resultsPerPageLimit = 50;
 
@@ -27,6 +27,7 @@ export async function getYouTubePlaylistItems(playlistId: string, count: number)
   const maxResults = countFitsSinglePage ? count : spreadedResultsPerPage;
 
   const firstResponse = await requestYouTubeAPI({
+    apiKey: apiKey,
     target: 'playlistItems',
     queryParameters: {
       playlistId: playlistId,
@@ -48,6 +49,7 @@ export async function getYouTubePlaylistItems(playlistId: string, count: number)
       if (!nextPageToken) break;
 
       const nextPage = await requestYouTubeAPI({
+        apiKey: apiKey,
         target: 'playlistItems',
         queryParameters: {
           playlistId: playlistId,

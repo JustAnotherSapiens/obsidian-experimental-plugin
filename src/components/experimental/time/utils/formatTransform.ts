@@ -2,29 +2,32 @@
 //////////////////////////
 // DATE FORMAT TRANSFORM (Not ready for use)
 // TODO: Remove the `tp` object dependency (from Templater).
+// TODO: Remove getActiveFileCache() dependency (use HeadingTree instead).
 //////////////////////////
 
 
 import {
+  moment,
+  App,
   Editor,
   HeadingCache,
-} from "obsidian";
+} from 'obsidian';
 
 import {
   getActiveFileCache,
   getHeadingIndex,
-} from "utils/obsidian/cache";
+} from 'utils/obsidian/cache';
 
 import {
   DateTimeFormat,
   DATE_FORMATS,
   getMatchedDate,
-} from "utils/time";
+} from 'utils/time';
 
 
 
 // TODO: Export this function once it's ready for use.
-async function timeFormatTransform(tp: any, editor: Editor) {
+async function timeFormatTransform(app: App, tp: any, editor: Editor) {
 
   if (editor.somethingSelected()) {
     await dateTransformInSelection(tp, editor);
@@ -43,7 +46,7 @@ async function timeFormatTransform(tp: any, editor: Editor) {
   if (!newFormat) return;
 
   // Get the changes to be made.
-  let changes = await getHeadingsDateChanges(tp, editor, matchedDate, newFormat);
+  let changes = await getHeadingsDateChanges(app, tp, editor, matchedDate, newFormat);
   if (changes.length === 0) {
     changes = getLineDateChanges(editor, cursorLine, matchedDate, newFormat);
   }
@@ -57,7 +60,7 @@ async function timeFormatTransform(tp: any, editor: Editor) {
 }
 
 async function dateTransformInSelection(tp: any, editor: Editor) {
-  const editRange = {from: editor.getCursor("from"), to: editor.getCursor("to")};
+  const editRange = {from: editor.getCursor('from'), to: editor.getCursor('to')};
   const rangeText = editor.getRange(editRange.from, editRange.to);
 
   // Find all the matching date formats in the selection.
@@ -83,11 +86,11 @@ async function dateTransformInSelection(tp: any, editor: Editor) {
   const changes = [];
 
   const offset = editor.posToOffset(editRange.from);
-  for (const match of rangeText.matchAll(new RegExp(fromDate.regex, "g"))) {
+  for (const match of rangeText.matchAll(new RegExp(fromDate.regex, 'g'))) {
     changes.push({
       from: editor.offsetToPos(offset + match.index!),
       to: editor.offsetToPos(offset + match.index! + match[0].length),
-      text: this.moment(match[0], fromDate.format).format(transformFormat),
+      text: moment(match[0], fromDate.format).format(transformFormat),
     });
   }
 
@@ -116,6 +119,7 @@ async function getTransformFormat(tp: any, fromDate: DateTimeFormat) {
 
 
 async function getHeadingsDateChanges(
+  app: App,
   tp: any,
   editor: Editor,
   matchedDate: DateTimeFormat,
@@ -125,13 +129,13 @@ async function getHeadingsDateChanges(
 
   // Check if the cursor is on a heading.
   let headingIdx = -1;
-  const fileHeadings = await getActiveFileCache("headings") as HeadingCache[];
+  const fileHeadings = await getActiveFileCache(app, 'headings') as HeadingCache[];
   if (fileHeadings) headingIdx = getHeadingIndex(fileHeadings, cursorLine);
   if (headingIdx === -1) return [];
 
   // Prompt to tranform the date of all the sibling headings as well.
   const transformAllSiblingHeadings = await tp.system.suggester(
-    ["No", "Yes"], [false, true], false, "Transform all sibling headings?"
+    ['No', 'Yes'], [false, true], false, 'Transform all sibling headings?'
   );
 
   // Return changes for all the sibling headings if the user chose to.
@@ -146,7 +150,7 @@ async function getHeadingsDateChanges(
       changes.push({
         from: {line: siblingLine, ch: dateMatch.index!},
         to: {line: siblingLine, ch: dateMatch.index! + dateMatch[0].length},
-        text: this.moment(dateMatch[0], matchedDate.format).format(newFormat),
+        text: moment(dateMatch[0], matchedDate.format).format(newFormat),
       });
     }
     return changes;
@@ -158,7 +162,7 @@ async function getHeadingsDateChanges(
   return [{
     from: {line: cursorLine, ch: dateMatch.index!},
     to: {line: cursorLine, ch: dateMatch.index! + dateMatch[0].length},
-    text: this.moment(dateMatch[0], matchedDate.format).format(newFormat),
+    text: moment(dateMatch[0], matchedDate.format).format(newFormat),
   }];
 }
 
@@ -173,7 +177,7 @@ function getLineDateChanges(
   return [{
     from: {line, ch: match.index!},
     to: {line, ch: match.index! + match[0].length},
-    text: this.moment(match[0], matchedDate.format).format(newFormat),
+    text: moment(match[0], matchedDate.format).format(newFormat),
   }];
 }
 

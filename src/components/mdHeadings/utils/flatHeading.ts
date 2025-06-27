@@ -1,19 +1,19 @@
-import { App } from "obsidian";
+import { App } from 'obsidian';
 
-import { getSetting } from "utils/obsidian/settings";
+import { getSetting } from 'utils/obsidian/settings';
 
-import { scrollActiveLineByTriggerBounds } from "utils/obsidian/scroll";
+import { scrollActiveLineByTriggerBounds } from 'utils/obsidian/scroll';
 
-import { DateTimeFormat, getMatchedDate } from "utils/time";
+import { DateTimeFormat, getMatchedDate } from 'utils/time';
 
-import { createStyledEl } from "utils/display";
-import { simpleHighlight, fuzzyHighlight } from "suggests/utils/display";
-import { getHeadingColor } from "./display";
+import { createStyledEl } from 'utils/display';
+import { simpleHighlight, fuzzyHighlight } from 'suggests/utils/display';
+import { getHeadingColor } from './display';
 
-import { isCodeBlockEnd } from "./helpers";
+import { isCodeBlockEnd } from './helpers';
 
-import BaseAbstractSuggest from "suggests/baseAbstractSuggest";
-import ViewAbstractSuggest from "suggests/viewAbstractSuggest";
+import BaseAbstractSuggest from 'suggests/baseAbstractSuggest';
+import ViewAbstractSuggest from 'suggests/viewAbstractSuggest';
 
 
 
@@ -29,9 +29,9 @@ export type FlatHeading = {
 
 
 function getHeadingsArray(fileText: string): FlatHeading[] {
-  const textLines = fileText.split("\n");
+  const textLines = fileText.split('\n');
   let inCodeBlock = false;
-  let headings: FlatHeading[] = [];
+  const headings: FlatHeading[] = [];
 
   for (let i = 0; i < textLines.length; i++) {
     const textLine = textLines[i];
@@ -57,8 +57,8 @@ function getHeadingsArray(fileText: string): FlatHeading[] {
         const text = textLine.slice(match[0].length).trim();
         const title = textLine.slice(match[0].length + timestamp.length).trim();
         // if (text === title || text === timestamp)
-        //   console.log("Simple Display");
-        // else console.log("Complex Display");
+        //   console.log('Simple Display');
+        // else console.log('Complex Display');
         headings.push({raw, line, level, timestamp, text, title});
         continue;
       }
@@ -77,7 +77,7 @@ function getHeadingsArray(fileText: string): FlatHeading[] {
 export default class MoveToHeadingSuggest extends ViewAbstractSuggest<FlatHeading> {
 
   constructor(app: App) {
-    super(app, "move-to-heading-suggest");
+    super(app, 'move-to-heading-suggest');
     this.itemToString = (item) => item.text;
     setDisplayFunctionsAsFadedTimeHeading.bind(this)();
   }
@@ -96,7 +96,7 @@ export default class MoveToHeadingSuggest extends ViewAbstractSuggest<FlatHeadin
 
       if (!this.view?.contentEl) return;
 
-      const viewportFraction = getSetting("headingSelectionViewportFraction");
+      const viewportFraction = getSetting(this.app, 'headingSelectionViewportFraction');
       scrollActiveLineByTriggerBounds(this.view!, {
         bounds: {
           top: viewportFraction,
@@ -112,7 +112,7 @@ export default class MoveToHeadingSuggest extends ViewAbstractSuggest<FlatHeadin
 
 
 
-// CODE CEMENTERY
+// CODE GRAVEYARD
 
 // MoveToHeadingSuggest > enterAction :: Failed Attempt to add to Jump List
 
@@ -139,8 +139,8 @@ export default class MoveToHeadingSuggest extends ViewAbstractSuggest<FlatHeadin
 export function setDisplayFunctionsAsColoredHeading(this: BaseAbstractSuggest<FlatHeading>) {
 
   function coloredHeadingHTML(n: number, text: string): string {
-    const definer = createStyledEl("b", "#".repeat(n) + " ", {"font-size": "1em"}).outerHTML;
-    return createStyledEl("span", definer + text, {"color": getHeadingColor(n)}).outerHTML;
+    const definer = createStyledEl('b', '#'.repeat(n) + ' ', {'font-size': '1em'}).outerHTML;
+    return createStyledEl('span', definer + text, {'color': getHeadingColor(n)}).outerHTML;
   }
 
   this.defaultResultDisplay = (resultEl, item) => {
@@ -162,9 +162,9 @@ export function setDisplayFunctionsAsFadedTimeHeading(this: BaseAbstractSuggest<
     highlightFunction: (text: string) => string,
     resolveTitleAndTimeHTML: (title: string, time: string) => [string, string],
   ): string {
-    const definerEl = createStyledEl("b", "#".repeat(n) + " ", {
-      "color": getHeadingColor(n),
-      "font-size": "1em",
+    const definerEl = createStyledEl('b', '#'.repeat(n) + ' ', {
+      'color': getHeadingColor(n),
+      'font-size': '1em',
     });
     let resultHTML = definerEl.outerHTML;
 
@@ -177,11 +177,11 @@ export function setDisplayFunctionsAsFadedTimeHeading(this: BaseAbstractSuggest<
 
       if (timestamp) {
         const ghostDefinerEl = definerEl.cloneNode(true) as HTMLElement;
-        ghostDefinerEl.style.color = "transparent";
+        ghostDefinerEl.style.color = 'transparent';
 
-        const fadedTimeEl = createStyledEl("span", "", {
-          "color": "var(--text-muted)",
-          "font-size": "var(--font-smaller)"
+        const fadedTimeEl = createStyledEl('span', '', {
+          'color': 'var(--text-muted)',
+          'font-size': 'var(--font-smaller)'
         });
         fadedTimeEl.innerHTML = timeHTML;
 
@@ -201,7 +201,7 @@ export function setDisplayFunctionsAsFadedTimeHeading(this: BaseAbstractSuggest<
     let titleMatch: [number, number] | undefined;
     const titleOffset = timestampLength + 1;
 
-    let [matchStart, matchEnd] = match;
+    const [matchStart, matchEnd] = match;
 
     if (matchStart < timestampLength) {
       if (matchEnd < titleOffset) // Clean time match.
@@ -220,12 +220,12 @@ export function setDisplayFunctionsAsFadedTimeHeading(this: BaseAbstractSuggest<
   }
 
   function unambiguateHeaderMatches(matches: [number, number][], timestampLength: number) {
-    let timeMatches: [number, number][] = [];
-    let titleMatches: [number, number][] = [];
+    const timeMatches: [number, number][] = [];
+    const titleMatches: [number, number][] = [];
     const titleOffset = timestampLength + 1;
 
     for (let i = 0; i < matches.length; i++) {
-      let [matchStart, matchEnd] = matches[i];
+      const [matchStart, matchEnd] = matches[i];
 
       if (matchStart < timestampLength) {
         if (matchEnd < titleOffset) // Clean time match.

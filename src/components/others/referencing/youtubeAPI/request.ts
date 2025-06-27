@@ -1,34 +1,12 @@
 import {
-  App,
   Notice,
-  moment,
   requestUrl,
   RequestUrlResponse,
 } from 'obsidian';
 
-import { getSetting } from 'utils/obsidian/settings';
-
 
 
 const YOUTUBE_API_BASE_URL =  'https://www.googleapis.com/youtube/v3/';
-
-
-
-// TODO(TypeScript): Add this properly.
-type YouTubeAPIQueryParameters = {
-  // Required parameters
-  key: string; // API Key
-  part: string;
-  // Filters (exactly one of the following parameters)
-  id?: string;
-  playlistId?: string;
-  // Optional parameters
-  maxResults?: number; // unsigned integer
-  onBehalfOfContentOwner?: string;
-  pageToken?: string;
-  videoId?: string;
-};
-// type YouTubeApiQueryParam
 
 
 const YouTubeAPIRequestTargets = [
@@ -37,9 +15,12 @@ const YouTubeAPIRequestTargets = [
   'playlists',
   'playlistItems',
 ] as const;
+
 export type YouTubeAPITarget = typeof YouTubeAPIRequestTargets[number];
 
+
 export type YouTubeAPIRequestParameters = {
+  apiKey: string;
   target: YouTubeAPITarget;
   requestedParts?: string[];
   queryParameters: Record<string, string | number>;
@@ -52,11 +33,10 @@ export async function requestYouTubeAPI(args: YouTubeAPIRequestParameters): Prom
   let url = YOUTUBE_API_BASE_URL + args.target + '?';
 
   // Add the API key always as the first parameter.
-  const YOUTUBE_API_KEY = getSetting('googleApiKey');
-  if (YOUTUBE_API_KEY) {
-    url += `key=${YOUTUBE_API_KEY}&`;
+  if (args.apiKey) {
+    url += `key=${args.apiKey}&`;
   } else {
-    const message = `A Google API key is required for this operation.`;
+    const message = `A Google API key is required to request YouTube data.`;
     console.warn(message);
     new Notice(message, 5000);
     return;
@@ -105,4 +85,25 @@ export async function requestYouTubeAPI(args: YouTubeAPIRequestParameters): Prom
 
   return response;
 }
+
+
+
+
+// CODE GRAVEYARD
+
+// // TODO(TypeScript): Add this properly.
+// type YouTubeAPIQueryParameters = {
+//   // Required parameters
+//   key: string; // API Key
+//   part: string;
+//   // Filters (exactly one of the following parameters)
+//   id?: string;
+//   playlistId?: string;
+//   // Optional parameters
+//   maxResults?: number; // unsigned integer
+//   onBehalfOfContentOwner?: string;
+//   pageToken?: string;
+//   videoId?: string;
+// };
+// // type YouTubeApiQueryParam
 

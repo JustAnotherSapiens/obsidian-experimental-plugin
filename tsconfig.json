@@ -2,42 +2,47 @@
   "compilerOptions": {
 
     /* Language and Environment */
-    "target": "ES6",
-    "lib": [
-      "DOM",
-      "ES5",
-      "ES6",
-      "ES7"
-    ],
+    "target": "esnext", // TS type-checks modern syntax
 
     /* Modules */
-    "module": "ESNext",
+    "module": "esnext", // Required for preserving ESM (ECMAScript Modules)
     "moduleResolution": "node",
-    "baseUrl": "src",
+    "baseUrl": "src", // Base url for non-relative imports
 
     /* JavaScript Support */
-    "allowJs": true,
+    "allowJs": true, // Useful for quick appendage of .js files
 
     /* Emit */
-    "inlineSourceMap": true,
-    "importHelpers": true,
-    "inlineSources": true,
+    "noEmit": true, // No output file, only type checking
 
     /* Interop Constraints */
-    "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true, // Allow files without an 'import/export' statement
+    "allowSyntheticDefaultImports": true, // Useful for modules without default export ('assert', 'moment')
 
+    /* Completeness */
+    "skipLibCheck": true, // Skip type checking all .d.ts files (REQUIRED for obsidian.d.ts)
 
     /* Type Checking */
+    "alwaysStrict": true,
     "noImplicitAny": true,
-    "strictNullChecks": true,
+    "noImplicitThis": true, // No references to the 'this' global object
+    "strict": true,
+    // TODO: Abide by these rules
+    "noImplicitOverride": false, // To ensure override functions never get 'out of sync'
+    "noPropertyAccessFromIndexSignature": false, // Ensure consistency between `obj.key` and `obj['key']` syntax
+    "strictFunctionTypes": false, // Check function parameters more correctly
+    "strictPropertyInitialization": false // Raise error if class properties not set in the constructor
+
   },
 
+  /* Include only .ts files */
   "include": [
-    "**/*.ts"
+    "src/**/*.ts"
   ],
 
+  /* Exclude custom patterns */
   "exclude": [
-    "**/trash/**/*"
+    "**/trash/**/*",
+    "**/proto/**/*"
   ]
 }

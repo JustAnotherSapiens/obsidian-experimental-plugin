@@ -16,11 +16,11 @@ type SortArgs = {
 // `sort()` mutates the original array
 // `toSorted()` returns a new array (baseline ES2023+)
 export function sortLines(lines: string[], args: SortArgs, compareFn: (a: string, b:string) => number): string[] {
-  // const lineSortFn = args.inPlace ? lines.sort : lines.toSorted;
-  const lineSortFn = args.inPlace ? lines.sort : lines.slice().sort;
+  const lineSortFn = args.inPlace ? lines.sort : lines.toSorted;
+  // const lineSortFn = args.inPlace ? lines.sort : lines.slice().sort;
   return args.ascending ?
     lineSortFn(compareFn) :
-    lineSortFn((a, b) => compareFn(b, a));
+    lineSortFn((a: string, b: string) => compareFn(b, a));
 }
 
 

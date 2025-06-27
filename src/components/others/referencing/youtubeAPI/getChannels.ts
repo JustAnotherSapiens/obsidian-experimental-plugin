@@ -11,9 +11,10 @@ import { requestYouTubeAPI } from './request';
 // In any case it is more efficient to make 2 groups to only send 2 requests.
 
 
-async function requestYouTubeChannelIDs(target: 'videos' | 'playlists', ids: string[]) {
+async function requestYouTubeChannelIDs(apiKey: string, target: 'videos' | 'playlists', ids: string[]) {
 
   const response = await requestYouTubeAPI({
+    apiKey: apiKey,
     target: target,
     requestedParts: ['snippet'],
     queryParameters: { id: ids.join(',') },
@@ -27,19 +28,19 @@ async function requestYouTubeChannelIDs(target: 'videos' | 'playlists', ids: str
 
 
 
-function getYouTubeChannelIDs(text: string) {
+function getYouTubeChannelIDs(apiKey: string, text: string) {
 
   let ids: any[] = [];
 
   const videoIDs = getYouTubeVideoIDs(text);
   if (videoIDs) {
-    const channelIDs = requestYouTubeChannelIDs('videos', videoIDs);
+    const channelIDs = requestYouTubeChannelIDs(apiKey, 'videos', videoIDs);
     if (channelIDs) ids = ids.concat(channelIDs);
   }
 
   const playlistIDs = getYouTubePlaylistIDs(text);
   if (playlistIDs) {
-    const channelIDs = requestYouTubeChannelIDs('playlists', playlistIDs);
+    const channelIDs = requestYouTubeChannelIDs(apiKey, 'playlists', playlistIDs);
     if (channelIDs) ids = ids.concat(channelIDs);
   }
 
@@ -54,12 +55,13 @@ function getYouTubeChannelIDs(text: string) {
 
 
 // https://developers.google.com/youtube/v3/docs/channels
-export async function getYouTubeChannels(idSource: string): Promise<any[] | undefined> {
+export async function getYouTubeChannels(apiKey: string, idSource: string): Promise<any[] | undefined> {
 
-  const ids = getYouTubeChannelIDs(idSource);
+  const ids = getYouTubeChannelIDs(apiKey, idSource);
   if (!ids) return;
 
   const response = await requestYouTubeAPI({
+    apiKey: apiKey,
     target: 'channels',
     requestedParts: ['id', 'status', 'contentDetails', 'snippet', 'statistics'],
     queryParameters: { id: ids.join(',') },

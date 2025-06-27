@@ -1,9 +1,9 @@
-import { CursorMoveArgs } from "./moveCursor";
+import { CursorMoveArgs } from './moveCursor';
 
 import {
   getHeadingLevel,
   isCodeBlockEnd,
-} from "components/mdHeadings/utils/helpers";
+} from 'components/mdHeadings/utils/helpers';
 
 
 
@@ -167,7 +167,7 @@ export function searchStrictSiblingHeading(args: CursorMoveArgs, wrapSearch: boo
   if (siblingHeadingLine === -1 && args.wrapAround && !wrapSearch) {
     const {start, end} = getSiblingHeadingSectionBounds(args);
     args.startLine = backwards ? end : start;
-    console.log("start:", start, "end:", end);
+    console.log('start:', start, 'end:', end);
 
     return searchStrictSiblingHeading(args, true);
   }
@@ -242,7 +242,7 @@ export function searchLastChildHeading(args: CursorMoveArgs): number {
 
 
 
-// CODE CEMENTERY
+// CODE GRAVEYARD
 
 
 // function getHighestHeadings(args: MovementArgs) {

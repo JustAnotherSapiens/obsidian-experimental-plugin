@@ -12,7 +12,7 @@ import { VIDEO_REFERENCE_PARSERS } from './getYouTubeVideoReference';
 
 
 
-export default async function getYouTubePlaylistItemsReference(app: App, playlistId: string): Promise<string[] | undefined> {
+export default async function getYouTubePlaylistItemsReference(app: App, apiKey: string, playlistId: string): Promise<string[] | undefined> {
 
   const defaultItemCount = 30;
   const userCountInput = await runQuickPromptModal(app, {promptText: `video count? (default: ${defaultItemCount})`});
@@ -26,7 +26,7 @@ export default async function getYouTubePlaylistItemsReference(app: App, playlis
     }
   }
 
-  const parsedItems = await getYouTubeParsedPlaylistItems(playlistId, itemCount);
+  const parsedItems = await getYouTubeParsedPlaylistItems(apiKey, playlistId, itemCount);
   if (!parsedItems) return;
   const sampleItem = parsedItems[0];
 

@@ -106,16 +106,16 @@ export function parseYouTubePlaylistItem(data: any) {
 
 /* CHANNEL */
 export function parseYouTubeChannel(data: any) {
-  const youTubeUrl = "https://www.youtube.com";
+  const youTubeUrl = 'https://www.youtube.com';
   const channelSections = [
-    "featured",
-    "videos",
-    "streams",
-    "playlists",
-    "community",
-    "store",
-    "channels",
-    "about",
+    'featured',
+    'videos',
+    'streams',
+    'playlists',
+    'community',
+    'store',
+    'channels',
+    'about',
   ];
   const channel: any = {};
   channel.id = data.id;

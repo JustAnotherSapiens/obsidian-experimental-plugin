@@ -9,8 +9,10 @@ import {
 
 
 
+type CustomData = {display: string, path: string}[];
 
-function getCustomData(fileName: string) {
+
+function getCustomData(fileName: string): CustomData | undefined {
   const customEnvVariable = 'ObsidianCustomData';
 
   const dataPath = process.env[customEnvVariable];
@@ -21,6 +23,9 @@ function getCustomData(fileName: string) {
 
   const filePath = `${dataPath}\\.plugin\\${fileName}`;
 
+  // Using CommonJS notation because...
+  // Importing at top level could trigger errors on mobile?
+  // Since 'fs' requires NodeJS
   const fs = require('fs');
 
   if (!fs.existsSync(filePath)) {
@@ -37,8 +42,11 @@ function getCustomData(fileName: string) {
 export async function customExplorerDirectorySuggest(app: App) {
   const fileName = 'directoryPaths.json';
 
-  let fileDataArray: {display: string, path: string}[];
-  fileDataArray = getCustomData(fileName);
+  const fileDataArray = getCustomData(fileName);
+  if (!fileDataArray) {
+    console.debug('Undefined Custom Data');
+    return;
+  }
 
   const selectedFileData = await runQuickSuggest(app,
     fileDataArray,
@@ -52,6 +60,10 @@ export async function customExplorerDirectorySuggest(app: App) {
     await shellCommandPromiseFromVault(app, `explorer "${selectedFileData.path}"`);
 
   } catch (error) {
+    if (!(error instanceof Error)) {
+      console.debug('Unexpected error type:', typeof error)
+      return;
+    }
     // The explorer opens at the path properly, but it throws an Error.
     if (/^Command failed: /.test(error.message)) return;
 
@@ -65,8 +77,11 @@ export async function customExplorerDirectorySuggest(app: App) {
 export async function customVSCodeProjectSuggest(app: App) {
   const fileName = 'projectPaths.json';
 
-  let fileDataArray: {display: string, path: string}[];
-  fileDataArray = getCustomData(fileName);
+  const fileDataArray = getCustomData(fileName);
+  if (!fileDataArray) {
+    console.debug('Undefined Custom Data');
+    return;
+  }
 
   const selectedFileData = await runQuickSuggest(app,
     fileDataArray,

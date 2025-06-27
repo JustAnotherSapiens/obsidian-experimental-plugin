@@ -1,6 +1,7 @@
 import { App, moment } from 'obsidian';
 import { runQuickSuggest } from 'suggests/quickSuggest';
 import { getYouTubeParsedItems } from '../youtubeAPI/getYouTubeItems';
+import { getSetting } from 'utils/obsidian/settings';
 
 
 
@@ -18,9 +19,9 @@ const playlistReferenceParsers: Record<string, CallableFunction> = {
 
 
 
-export default async function getYouTubePlaylistReference(app: App, idSource: string): Promise<string[] | undefined> {
+export default async function getYouTubePlaylistReference(app: App, apiKey: string, idSource: string): Promise<string[] | undefined> {
 
-  const parsedPlaylists = await getYouTubeParsedItems(idSource, 'playlists');
+  const parsedPlaylists = await getYouTubeParsedItems(apiKey, idSource, 'playlists');
   if (!parsedPlaylists) return;
   const samplePlaylist = parsedPlaylists[0];
 
@@ -28,7 +29,7 @@ export default async function getYouTubePlaylistReference(app: App, idSource: st
   const referenceSelection = await runQuickSuggest(app,
     Object.keys(playlistReferenceParsers),
     (key: string) => `${key}:\n${playlistReferenceParsers[key](samplePlaylist)}`,
-    "Select PLAYLIST reference style..."
+    'Select PLAYLIST reference style...'
   );
   if (!referenceSelection) return;
 
@@ -40,10 +41,10 @@ export default async function getYouTubePlaylistReference(app: App, idSource: st
 
 
 function playlistMlaReference(playlist: any) {
-  const date = moment(playlist.publishedAt).format("D MMM. YYYY");
+  const date = moment(playlist.publishedAt).format('D MMM. YYYY');
   const channel = playlist.channel.title;
   let title = playlist.title;
-  if (!title.match(/(?:[.!?])$/)) title += ".";
+  if (!title.match(/(?:[.!?])$/)) title += '.';
   return `"${title}" _YouTube_, created by ${channel}, ${date}, ${playlist.url}.`;
 }
 
@@ -54,7 +55,7 @@ function playlistMdLinkedReference(playlist: any) {
 
 
 function playlistMdLinkedSortReference(playlist: any) {
-  const date = moment(playlist.publishedAt).format("YYYY-MM-DD");
+  const date = moment(playlist.publishedAt).format('YYYY-MM-DD');
   const channel = playlist.channel.title;
   const channelUrl = playlist.channel.url;
   const title = playlist.title.trim().replace(/([[\]()])/g, '\\$1');
@@ -63,7 +64,7 @@ function playlistMdLinkedSortReference(playlist: any) {
 
 
 function playlistCleanSortReference(playlist: any) {
-  const date = moment(playlist.publishedAt).format("YYYY-MM-DD");
+  const date = moment(playlist.publishedAt).format('YYYY-MM-DD');
   const channel = playlist.channel.title;
   const title = playlist.title.trim();
   return `${date} ${channel}: _${title}_ (${playlist.videoCount} videos). ${playlist.url}`;

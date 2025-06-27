@@ -1,18 +1,18 @@
 // UNUSED
 
-import { App, MarkdownView } from "obsidian";
+import { App, MarkdownView } from 'obsidian';
 
 
 
 export function getOpenMarkdownViews(app: App): MarkdownView[] {
   return app.workspace
-    .getLeavesOfType("markdown")
+    .getLeavesOfType('markdown')
     .map((leaf) => leaf.view as MarkdownView);
 }
 
 
-export function getActiveView(): MarkdownView {
-  return this.app.workspace.getActiveViewOfType(MarkdownView);
+export function getActiveView(app: App): MarkdownView | null {
+  return app.workspace.getActiveViewOfType(MarkdownView);
 }
 
 

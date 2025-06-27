@@ -5,22 +5,20 @@
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
-		"test": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production test && node --test main.test.js --trace-warnings",
+		"build": "tsc && node esbuild.config.mjs production",
+		"test": "tsc && node esbuild.config.mjs production test && node --test main.test.js",
 		"bump": "node project-bump.mjs && git add package.json manifest.json versions.json"
 	},
 	"keywords": [],
 	"author": "JustAnotherSapiens",
 	"license": "MIT",
 	"devDependencies": {
-		"@types/node": "^16.18.39",
-		"@typescript-eslint/eslint-plugin": "5.29.0",
-		"@typescript-eslint/parser": "5.29.0",
-		"builtin-modules": "3.3.0",
-		"esbuild": "^0.25.2",
+		"@types/node": "^24.0.4",
+		"@typescript-eslint/eslint-plugin": "^8.35.0",
+		"@typescript-eslint/parser": "^8.35.0",
+		"builtin-modules": "^5.0.0",
+		"esbuild": "^0.25.5",
 		"obsidian": "1.5.7",
-		"tslib": "2.4.0",
-		"tsx": "^4.19.3",
-		"typescript": "4.7.4"
+		"typescript": "^5.8.3"
 	}
 }

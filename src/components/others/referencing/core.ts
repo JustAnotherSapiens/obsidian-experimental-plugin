@@ -4,9 +4,6 @@ import {
   Setting,
   TextComponent,
   ToggleComponent,
-  DropdownComponent,
-  ButtonComponent,
-  SliderComponent,
   App,
   Notice,
   MarkdownView,
@@ -17,6 +14,8 @@ import { getYouTubeParsedItems } from './youtubeAPI/getYouTubeItems';
 import getYouTubeVideoReference from './func/getYouTubeVideoReference';
 import getYouTubePlaylistReference from './func/getYouTubePlaylistReference';
 import getYouTubePlaylistItemsReference from './func/getYouTubePlaylistItemsReference';
+
+import { getSetting } from 'utils/obsidian/settings';
 
 
 
@@ -34,11 +33,6 @@ export default class ReferencingComponent implements BundlePluginComponent {
     this.settings = {
       googleApiKey: '',
       appendDurationToApaMla: false,
-
-      // textSetting: '',
-      // toggleSetting: false,
-      // dropdownSetting: 'dropdownValue1',
-      // sliderSetting: 0.5,
     };
   }
 
@@ -76,7 +70,8 @@ export default class ReferencingComponent implements BundlePluginComponent {
       icon: 'youtube',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const text = await getImplicitTextSource(editor);
-        const references = await getYouTubeVideoReference(plugin.app, text);
+        const apiKey = getSetting(plugin.app, 'googleApiKey')
+        const references = await getYouTubeVideoReference(plugin.app, apiKey, text);
         if (!references) return;
         appendToCursorLine(editor, references.join('\n'));
       }
@@ -89,7 +84,8 @@ export default class ReferencingComponent implements BundlePluginComponent {
       icon: 'list-video',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const text = await getImplicitTextSource(editor);
-        const references = await getYouTubePlaylistReference(plugin.app, text);
+        const apiKey = getSetting(plugin.app, 'googleApiKey')
+        const references = await getYouTubePlaylistReference(plugin.app, apiKey, text);
         if (!references) return;
         appendToCursorLine(editor, references.join('\n'));
       }
@@ -103,12 +99,14 @@ export default class ReferencingComponent implements BundlePluginComponent {
       icon: 'list-video',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const text = await getImplicitTextSource(editor);
-        const playlists = await getYouTubeParsedItems(text, 'playlists');
+        const apiKey = getSetting(plugin.app, 'googleApiKey')
+
+        const playlists = await getYouTubeParsedItems(apiKey, text, 'playlists');
         if (!playlists) return;
 
         let references: any[] = [];
         for (const playlist of playlists) {
-          const playlistItemsRefs = await getYouTubePlaylistItemsReference(plugin.app, playlist.id);
+          const playlistItemsRefs = await getYouTubePlaylistItemsReference(plugin.app, apiKey, playlist.id);
           if (!playlistItemsRefs) continue;
           references = references.concat(playlistItemsRefs);
         }
@@ -167,89 +165,6 @@ export default class ReferencingComponent implements BundlePluginComponent {
           await plugin.saveSettings();
         });
       });
-
-
-		// // Text Setting
-		// new Setting(containerEl)
-		// 	.setName('Text Setting')
-		// 	.setDesc('Setting of a TextComponent')
-		// 	.addText((textField: TextComponent) => {
-		// 		textField.setPlaceholder('TextComponent placeholder example');
-    //     // 'textSetting' MUST be defined in the component's constructor
-		// 		textField.setValue(plugin.settings.textSetting);
-		// 		textField.onChange(async (value: string) => {
-		// 			plugin.settings.textSetting = value;
-		// 			await plugin.saveSettings();
-		// 		});
-		// 	});
-
-
-		// // Toggle Setting
-		// new Setting(containerEl)
-		// 	.setName('Toggle Setting')
-		// 	.setDesc('Setting of a ToggleComponent')
-		// 	.addToggle((toggle: ToggleComponent) => {
-		// 		toggle.setTooltip('ToggleComponent tooltip example');
-    //     // 'toggleSetting' MUST be defined in the component's constructor
-		// 		toggle.setValue(plugin.settings.toggleSetting);
-		// 		toggle.onChange(async (value: boolean) => {
-		// 			plugin.settings.toggleSetting = value;
-		// 			await plugin.saveSettings();
-		// 		});
-		// 	});
-
-
-		// // Dropdown Setting
-		// new Setting(containerEl)
-		// 	.setName('Dropdown Setting')
-		// 	.setDesc('Setting of a DropdownComponent')
-		// 	.addDropdown((dropdown: DropdownComponent) => {
-    //     dropdown.addOption('dropdownValue1', 'dropdownValueDisplay1');
-    //     dropdown.addOption('dropdownValue2', 'dropdownValueDisplay2');
-
-    //     // 'dropdownSetting' MUST be defined in the component's constructor
-		// 		// WARNING: Never call setValue before adding all dropdown options
-		// 		dropdown.setValue(plugin.settings.dropdownSetting);
-
-    //     // ALWAYS add validation logic before setting 'dropdownSetting' globally
-		// 		dropdown.onChange(async (value: string) => {
-		// 			plugin.settings.dropdownSetting = value;
-		// 			await plugin.saveSettings();
-		// 		});
-		// 	});
-
-
-    // // Slider Setting
-    // new Setting(containerEl)
-		// 	.setName('Slider Setting')
-		// 	.setDesc('Setting of a SliderComponent')
-    //   .addSlider((slider: SliderComponent) => {
-    //     slider.setLimits(0, 1, 0.01); // Fuzzy logic value example
-    //     slider.setDynamicTooltip();
-    //     // 'sliderSetting' MUST be defined in the component's constructor
-    //     slider.setValue(plugin.settings.sliderSetting);
-    //     slider.onChange(async (value: number) => {
-    //       plugin.settings.sliderSetting = value;
-    //       await plugin.saveSettings();
-    //     });
-    //   });
-
-
-
-    // Button Setting
-    // new Setting(containerEl)
-		// 	.setName('Button Setting')
-		// 	.setDesc('Setting of a ButtonComponent')
-    //   .addButton((button: ButtonComponent) => {
-    //     button.setButtonText('Button0');
-    //     // button.onClick(myCustomFunction.bind(this));
-    //   })
-    //   .addButton((button: ButtonComponent) => {
-    //     button
-    //       .setButtonText('Button1')
-    //       .onClick(() => {});
-    //   });
-
 
 
   }

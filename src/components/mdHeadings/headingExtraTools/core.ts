@@ -14,7 +14,7 @@ import {
   moment,
 } from 'obsidian';
 
-import { getSetting } from "utils/obsidian/settings";
+import { getSetting } from 'utils/obsidian/settings';
 
 import selectHeadingSectionText from './func/selectHeadingSectionText';
 import cutHeadingSection from './func/cutHeadingSection';
@@ -71,7 +71,7 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
       name: 'Increase Sibling Heading Level',
       icon: 'hash',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const wrapAround = getSetting('shiftSiblingHeadingsWrapAround');
+        const wrapAround = getSetting(plugin.app, 'shiftSiblingHeadingsWrapAround');
         shiftSiblingHeadingLevel(view,{step: +1, wrapAround});
       }
     });
@@ -82,7 +82,7 @@ export default class HeadingExtraToolsComponent implements BundlePluginComponent
       name: 'Decrease Sibling Heading Level',
       icon: 'hash',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const wrapAround = getSetting('shiftSiblingHeadingsWrapAround');
+        const wrapAround = getSetting(plugin.app, 'shiftSiblingHeadingsWrapAround');
         shiftSiblingHeadingLevel(view,{step: -1, wrapAround});
       }
     });

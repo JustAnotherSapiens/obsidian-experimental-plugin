@@ -5,7 +5,9 @@ import { iso8601DurationToReadableFormat } from 'utils/time';
 
 import { getYouTubeParsedItems } from '../youtubeAPI/getYouTubeItems';
 
-import { getSetting } from 'utils/obsidian/settings';
+import {
+  getSetting
+} from 'utils/obsidian/settings';
 
 
 
@@ -23,9 +25,9 @@ export const VIDEO_REFERENCE_PARSERS: Record<string, CallableFunction> = {
 
 
 
-export default async function getYouTubeVideoReference(app: App, idSource: string): Promise<string[] | undefined> {
+export default async function getYouTubeVideoReference(app: App, apiKey: string, idSource: string): Promise<string[] | undefined> {
 
-  const parsedVideos = await getYouTubeParsedItems(idSource, 'videos');
+  const parsedVideos = await getYouTubeParsedItems(apiKey, idSource, 'videos');
   if (!parsedVideos) return;
   const sampleVideo = parsedVideos[0];
 
@@ -37,9 +39,20 @@ export default async function getYouTubeVideoReference(app: App, idSource: strin
   );
   if (!referenceSelection) return;
 
-  return parsedVideos.map(
-    (video: any) => VIDEO_REFERENCE_PARSERS[referenceSelection](video)
-  );
+  let parseFn = (video: any) => VIDEO_REFERENCE_PARSERS[referenceSelection](video);
+
+  const appendDurationToApaMla = getSetting(app, 'appendDurationToApaMla');
+  const isApaOrMla = referenceSelection === 'APA' || referenceSelection === 'MLA';
+
+  if (appendDurationToApaMla && isApaOrMla) {
+    parseFn = (video: any) => {
+      const reference = VIDEO_REFERENCE_PARSERS[referenceSelection](video);
+      const duration = iso8601DurationToReadableFormat(video.duration);
+      return `${reference} (${duration})`;
+    };
+  }
+
+  return parsedVideos.map(parseFn);
 }
 
 
@@ -48,9 +61,8 @@ function videoApaReference(video: any) {
   const date = moment(video.publishedAt).format('YYYY, MMMM D');
   const channel = video.channel.title.trim();
   let title = video.title.trim();
-  if (title.slice(-1) === ".") title = title.slice(0, -1);
-  return `${channel}. (${date}). _${title}_ [Video]. YouTube. ${video.url}`
-    + (getSetting('appendDurationToApaMla') ? ` (${iso8601DurationToReadableFormat(video.duration)})` : '');
+  if (title.slice(-1) === '.') title = title.slice(0, -1);
+  return `${channel}. (${date}). _${title}_ [Video]. YouTube. ${video.url}`;
 }
 
 
@@ -59,8 +71,7 @@ function videoMlaReference(video: any) {
   const channel = video.channel.title.trim();
   let title = video.title;
   if (!title.match(/(?:[.!?])$/)) title += '.';
-  return `"${title}" _YouTube_, uploaded by ${channel}, ${date}, ${video.url}.`
-    + (getSetting('appendDurationToApaMla') ? ` (${iso8601DurationToReadableFormat(video.duration)})` : '');
+  return `"${title}" _YouTube_, uploaded by ${channel}, ${date}, ${video.url}.`;
 }
 
 
@@ -151,7 +162,7 @@ function videoThumbnailReference(video: any) {
 
 
 
-/* CODE CEMENTERY */
+/* CODE GRAVEYARD */
 
 // if (referenceSelection === 'thumbnail') {
 //   return parsedVideos.map(
