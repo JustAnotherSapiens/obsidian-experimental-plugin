@@ -10,12 +10,12 @@ import {
   Editor,
 } from 'obsidian';
 
-import { getYouTubeParsedItems } from './youtubeAPI/getYouTubeItems';
-import getYouTubeVideoReference from './func/getYouTubeVideoReference';
-import getYouTubePlaylistReference from './func/getYouTubePlaylistReference';
-import getYouTubePlaylistItemsReference from './func/getYouTubePlaylistItemsReference';
-
 import { getSetting } from 'utils/obsidian/settings';
+
+import getYouTubeVideoReference from './youtubeReference/videoRef';
+import getYouTubeChannelReference from './youtubeReference/channelRef';
+import getYouTubePlaylistReference from './youtubeReference/playlistRef';
+import getYouTubePlaylistItemsReference from './youtubeReference/playlistItemRef';
 
 
 
@@ -50,7 +50,7 @@ export default class ReferencingComponent implements BundlePluginComponent {
 
 
     // Implicit text source => selection or clipboard
-    const getImplicitTextSource = async (editor: Editor) => {
+    const getImplicitTextSource = async (editor: Editor): Promise<string> => {
       if (editor.somethingSelected())
         return editor.getSelection();
       else return await navigator.clipboard.readText();
@@ -62,6 +62,14 @@ export default class ReferencingComponent implements BundlePluginComponent {
       editor.setLine(cursorLine, editor.getLine(cursorLine) + text);
     };
 
+    const getIndentSpaceAtCursor = (editor: Editor): string => {
+      const cursorLine = editor.getCursor('head').line;
+      const lineText = editor.getLine(cursorLine);
+      const match = lineText.match(/^\s*/);
+      if (!match) return '';
+      else return match[0];
+    };
+
 
     // YouTube Video Reference
     plugin.addCommand({
@@ -69,9 +77,23 @@ export default class ReferencingComponent implements BundlePluginComponent {
       name: 'Reference YouTube Video',
       icon: 'youtube',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const text = await getImplicitTextSource(editor);
-        const apiKey = getSetting(plugin.app, 'googleApiKey')
-        const references = await getYouTubeVideoReference(plugin.app, apiKey, text);
+        const apiKey = getSetting(plugin.app, 'googleApiKey');
+        const idSource = await getImplicitTextSource(editor);
+        const references = await getYouTubeVideoReference(plugin.app, { apiKey, idSource });
+        if (!references) return;
+        appendToCursorLine(editor, references.join('\n'));
+      }
+    });
+
+    // YouTube Channel Reference
+    plugin.addCommand({
+      id: 'reference-youtube-channel',
+      name: 'Reference YouTube Channel',
+      icon: 'tv-minimal-play',
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        const apiKey = getSetting(plugin.app, 'googleApiKey');
+        const idSource = await getImplicitTextSource(editor);
+        const references = await getYouTubeChannelReference(plugin.app, { apiKey, idSource });
         if (!references) return;
         appendToCursorLine(editor, references.join('\n'));
       }
@@ -83,38 +105,31 @@ export default class ReferencingComponent implements BundlePluginComponent {
       name: 'Reference YouTube Playlist',
       icon: 'list-video',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const text = await getImplicitTextSource(editor);
-        const apiKey = getSetting(plugin.app, 'googleApiKey')
-        const references = await getYouTubePlaylistReference(plugin.app, apiKey, text);
+        const apiKey = getSetting(plugin.app, 'googleApiKey');
+        const idSource = await getImplicitTextSource(editor);
+        const references = await getYouTubePlaylistReference(plugin.app, { apiKey, idSource });
         if (!references) return;
         appendToCursorLine(editor, references.join('\n'));
       }
     });
 
-    // TODO: It is more convenient to do this together with the playlist reference itself
     // YouTube Playlist Items Reference
     plugin.addCommand({
       id: 'reference-youtube-playlist-items',
       name: 'Reference YouTube Playlist Items',
       icon: 'list-video',
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const text = await getImplicitTextSource(editor);
         const apiKey = getSetting(plugin.app, 'googleApiKey')
-
-        const playlists = await getYouTubeParsedItems(apiKey, text, 'playlists');
-        if (!playlists) return;
-
-        let references: any[] = [];
-        for (const playlist of playlists) {
-          const playlistItemsRefs = await getYouTubePlaylistItemsReference(plugin.app, apiKey, playlist.id);
-          if (!playlistItemsRefs) continue;
-          references = references.concat(playlistItemsRefs);
-        }
-        if (references.length === 0) return;
-
-        appendToCursorLine(editor, references.join('\n'));
+        const idSource = await getImplicitTextSource(editor);
+        const references = await getYouTubePlaylistItemsReference(plugin.app, { apiKey, idSource });
+        if (!references) return;
+        const indentSpace = getIndentSpaceAtCursor(editor);
+        const indentedRefs = references.map(ref => indentSpace + ref);
+        appendToCursorLine(editor, '\n' + indentedRefs.join('\n'));
       }
     });
+
+    // TODO: Get Unlisted and Private items references
 
     // Toggle append duration to APA/MLA references
     plugin.addCommand({

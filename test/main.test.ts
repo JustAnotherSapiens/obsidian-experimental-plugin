@@ -1,7 +1,13 @@
-
 // Explicit import of all test files
+
 import 'utils/time.test';
+import 'utils/generic.test';
+
 import 'components/others/textFormat/func/clean.test';
+
+import 'components/others/referencing/youtubeHelpers/videoIDs.test';
+import 'components/others/referencing/youtubeHelpers/channelIDs.test';
+import 'components/others/referencing/youtubeHelpers/playlistIDs.test';
 
 
 // SAMPLE TEST STRUCTURE:

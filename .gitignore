@@ -1,10 +1,11 @@
-# custom
-trash/
-proto/
-docs/
+# DOCS: https://git-scm.com/docs/gitignore
 
-# powershell scripts
+# custom
 *.ps1
+docs/
+proto/
+trash/
+src/**/*.md
 
 # vscode
 .vscode 
