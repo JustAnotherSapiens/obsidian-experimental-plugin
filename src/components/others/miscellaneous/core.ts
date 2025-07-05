@@ -11,6 +11,7 @@ import moveCurrentTab from './func/moveCurrentTab';
 import toggleVimEnvironment from './func/toggleVimEnvironment';
 import togglePluginSuggest from './func/togglePluginSuggest';
 import openFileInGvim from './func/openFileInGvim';
+import openObsidianVimrcFile from './func/openVimrc';
 import insertTextAtCursor from './func/textInsertions';
 import {
 	customExplorerDirectorySuggest,
@@ -126,6 +127,14 @@ export default class MiscellaneousComponent implements BundlePluginComponent {
 				editorCallback: (editor: Editor, view: MarkdownView) => {
 					openFileInGvim(plugin.app, view.file!, editor.getCursor('head'));
 				},
+			});
+
+			// Open Obsidian Vimrc file in GVim
+			plugin.addCommand({
+				id: 'open-obsidian-vimrc-file-in-gvim',
+				name: 'Open Obsidian Vimrc File in GVim',
+				icon: 'file-output',
+				callback: async () => await openObsidianVimrcFile(plugin.app),
 			});
 
 		}
