@@ -21,6 +21,12 @@ import {
 	regexSortLinesInSelection,
 } from './func/sort';
 
+import {
+  toTitleCase,
+  toSentenceCase,
+} from './func/caseTransform';
+
+
 import { replaceSelectionOrCursorLine } from 'utils/obsidian/editor';
 
 import { runQuickPromptModal } from 'modals/promptModal';
@@ -96,8 +102,9 @@ export default class TextFormatComponent implements BundlePluginComponent {
 			},
 		});
 
-    /* TEXT CLEANING */
+    /* TEXT EDITING */
 
+    // Clean & Normalize
     // WARNING: The `id` here is used in the `.obsidian.vimrc` files.
     plugin.addCommand({
       id: 'clean-normalize-selection',
@@ -117,6 +124,27 @@ export default class TextFormatComponent implements BundlePluginComponent {
         replaceSelectionOrCursorLine(editor, removeWikiLinks);
       }
     });
+
+    // Title Case
+    plugin.addCommand({
+      id: 'title-case-in-selection',
+      name: 'Title Case in Selection',
+      icon: 'case-sensitive',
+      editorCallback: (editor: Editor) => {
+        replaceSelectionOrCursorLine(editor, toTitleCase);
+      }
+    });
+
+    // Sentence Case
+    plugin.addCommand({
+      id: 'sentence-case-in-selection',
+      name: 'Sentence Case in Selection',
+      icon: 'letter-text',
+      editorCallback: (editor: Editor) => {
+        replaceSelectionOrCursorLine(editor, toSentenceCase);
+      }
+    });
+
 
     /* MARKDOWN FORMATTING */
 

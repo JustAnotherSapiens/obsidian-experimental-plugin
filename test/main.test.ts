@@ -4,6 +4,7 @@ import 'utils/time.test';
 import 'utils/generic.test';
 
 import 'components/others/textFormat/func/clean.test';
+import 'components/others/textFormat/func/caseTransform.test';
 
 import 'components/others/referencing/youtubeHelpers/videoIDs.test';
 import 'components/others/referencing/youtubeHelpers/channelIDs.test';
